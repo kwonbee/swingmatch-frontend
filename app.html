@@ -636,7 +636,7 @@ async function loginWithGoogle() {
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.href
+      redirectTo: 'https://myswingmatch.com/app.html'
     }
   });
   if (error) showAuthError(error.message);
@@ -1152,6 +1152,18 @@ function initAdSlider() {
 checkSession();
 initAdSlider();
 showTab('analyze');
+
+// 구글 로그인 후 세션 감지
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session) {
+    currentUser = session.user;
+    updateUI(true);
+    closeModal();
+  } else if (event === 'SIGNED_OUT') {
+    currentUser = null;
+    updateUI(false);
+  }
+});
 </script>
 </body>
 </html>
