@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwingMatch — 스윙 분석</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Noto+Serif+KR:wght@200;300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#F0EDE6;--dark:#0C0C0A;--mid:#181815;--card:#1E1E1A;
+  --muted:#6B6B63;--accent:#7A6845;--accent-light:#B8966A;--accent-pale:#D4B896;
+  --border:rgba(255,255,255,0.07);--border-accent:rgba(184,150,106,0.25);
+  --success:#2D6A4F;--danger:#8B1A1A;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Pretendard Variable','Pretendard',-apple-system,sans-serif;background:var(--dark);color:var(--cream);font-weight:300;line-height:1.6;overflow-x:hidden;min-height:100vh}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:1.4rem 4rem;backdrop-filter:blur(24px);background:rgba(12,12,10,0.8);border-bottom:1px solid var(--border)}
+.logo{font-family:'Cormorant Garamond',serif;font-size:1.35rem;font-weight:400;letter-spacing:.14em;text-transform:uppercase;color:var(--cream);text-decoration:none}
+.logo span{color:var(--accent-light)}
+.nav-home{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .2s}
+.nav-home:hover{color:var(--cream)}
+
+/* MAIN */
+main{max-width:860px;margin:0 auto;padding:8rem 2rem 6rem}
+
+/* HEADER */
+.page-header{margin-bottom:3.5rem;padding-bottom:2rem;border-bottom:1px solid var(--border)}
+.page-tag{font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;color:var(--accent-light);margin-bottom:1rem;display:flex;align-items:center;gap:.8rem}
+.page-tag::after{content:'';width:2.5rem;height:1px;background:var(--accent)}
+.page-title{font-family:'Noto Serif KR',serif;font-size:clamp(2rem,4vw,3rem);font-weight:200;line-height:1.2;color:var(--cream);margin-bottom:.8rem;word-break:keep-all}
+.page-title em{font-style:italic;color:var(--accent-pale);font-family:'Cormorant Garamond',serif}
+.page-desc{font-size:.9rem;color:var(--muted);line-height:1.8;word-break:keep-all}
+
+/* UPLOAD ZONE */
+.upload-section{margin-bottom:2.5rem}
+.upload-zone{border:1.5px dashed var(--border-accent);border-radius:2px;padding:3rem 2rem;text-align:center;cursor:pointer;background:var(--mid);position:relative;transition:border-color .2s,background .2s}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent-light);background:var(--card)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-family:'Cormorant Garamond',serif;font-size:2.5rem;color:var(--accent);margin-bottom:1rem}
+.upload-zone h3{font-family:'Noto Serif KR',serif;font-size:1.1rem;font-weight:300;color:var(--cream);margin-bottom:.5rem;word-break:keep-all}
+.upload-zone p{font-size:.8rem;color:var(--muted)}
+
+/* VIDEO PREVIEW */
+.video-wrap{margin-top:1rem;border-radius:2px;overflow:hidden;border:1px solid var(--border);background:#000;display:none}
+.video-wrap video{width:100%;max-height:300px;object-fit:contain;display:block}
+.vmeta{padding:8px 14px;display:flex;gap:8px;flex-wrap:wrap;background:var(--mid)}
+.vtag{font-size:11px;color:var(--muted);background:var(--card);border-radius:2px;padding:2px 8px;border:.5px solid var(--border-accent)}
+
+/* FRAMES */
+.frames-section{margin-top:1.5rem;display:none}
+.sec-label{font-size:.65rem;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:.8rem}
+.frames-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.frame-item{aspect-ratio:4/3;border-radius:2px;overflow:hidden;border:.5px solid var(--border);position:relative;background:var(--mid)}
+.frame-item canvas{width:100%;height:100%;object-fit:cover;display:block}
+.frame-label{position:absolute;bottom:0;left:0;right:0;font-size:9px;text-align:center;padding:3px 2px;background:rgba(0,0,0,.65);color:rgba(240,237,230,.8)}
+
+/* ANALYZE BTN */
+.analyze-btn{margin-top:1.5rem;width:100%;padding:1rem 2rem;border:1px solid var(--border-accent);background:transparent;font-family:'Noto Serif KR',serif;font-size:1rem;font-weight:300;color:var(--cream);cursor:pointer;letter-spacing:.05em;display:none;align-items:center;justify-content:center;gap:.7rem;transition:background .2s,border-color .2s;position:relative;overflow:hidden}
+.analyze-btn:hover{background:var(--mid);border-color:var(--accent-light)}
+.analyze-btn:disabled{opacity:.4;cursor:not-allowed}
+.analyze-btn .btn-arrow{font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--accent-pale)}
+
+/* PROGRESS */
+.progress-wrap{margin-top:1rem;height:1px;background:var(--border);display:none;overflow:hidden}
+.progress-bar{height:100%;background:linear-gradient(to right,var(--accent),var(--accent-light));width:0%;transition:width .4s ease}
+.status-msg{font-size:.78rem;color:var(--muted);text-align:center;margin-top:.7rem;min-height:1.2rem;letter-spacing:.03em}
+
+/* ERROR */
+.err-box{margin-top:1rem;padding:.9rem 1.2rem;background:rgba(139,26,26,.12);border:.5px solid rgba(139,26,26,.35);color:#f08080;font-size:.82rem;line-height:1.6;display:none;word-break:keep-all}
+.err-box strong{display:block;margin-bottom:3px;font-weight:500}
+
+/* RESULTS */
+.results{margin-top:3rem;display:none}
+.result-divider{width:2.5rem;height:1px;background:var(--accent);margin:0 0 2rem}
+
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:2rem}
+.tab-btn{font-size:.75rem;font-weight:400;letter-spacing:.06em;padding:.7rem 1.4rem;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:1.5px solid transparent;margin-bottom:-1px;transition:color .15s;text-transform:uppercase}
+.tab-btn.on{color:var(--cream);border-bottom-color:var(--accent-light)}
+.tab-pane{display:none}.tab-pane.on{display:block}
+
+/* MATCH CARD */
+.match-card{background:var(--card);border:.5px solid var(--border);padding:2rem;position:relative;overflow:hidden}
+.match-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(to right,var(--accent),var(--accent-light),transparent)}
+.match-head{display:flex;align-items:flex-start;gap:1.5rem;margin-bottom:1.5rem}
+.match-emoji{width:56px;height:56px;border-radius:50%;background:var(--mid);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;border:.5px solid var(--border-accent)}
+.match-name{font-family:'Noto Serif KR',serif;font-size:1.6rem;font-weight:300;color:var(--cream);margin-bottom:.3rem;word-break:keep-all}
+.match-sub{font-size:.78rem;color:var(--muted)}
+.match-pct{margin-left:auto;text-align:right;flex-shrink:0}
+.match-pct .n{font-family:'Cormorant Garamond',serif;font-size:3rem;font-weight:300;color:var(--cream);line-height:1}
+.match-pct .l{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.5rem}
+.stat-box{background:var(--mid);padding:.9rem 1rem}
+.stat-l{font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem}
+.stat-v{font-size:1.1rem;font-weight:400;color:var(--cream)}
+
+.kw-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:1.5rem}
+.kw{font-size:.72rem;padding:3px 10px;border:.5px solid var(--border-accent);color:var(--accent-pale);letter-spacing:.04em}
+
+.prose{font-size:.85rem;color:var(--muted);line-height:1.85;word-break:keep-all}
+.prose h4{font-family:'Noto Serif KR',serif;font-size:.95rem;font-weight:300;color:var(--cream);margin:1.2rem 0 .5rem}
+.prose h4:first-child{margin-top:0}
+.prose ul{padding-left:1.2rem}
+.prose li{margin-bottom:.3rem}
+
+/* FRAME ANALYSIS */
+.frame-list{display:flex;flex-direction:column;gap:10px}
+.fa-row{display:flex;gap:1rem;align-items:flex-start;padding:1rem;background:var(--card);border:.5px solid var(--border)}
+.fa-thumb{width:72px;height:54px;border-radius:2px;overflow:hidden;flex-shrink:0;border:.5px solid var(--border);background:var(--mid)}
+.fa-thumb canvas{width:100%;height:100%;object-fit:cover}
+.fa-phase{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem}
+.fa-score{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:300;color:var(--cream);line-height:1;margin-bottom:.3rem}
+.fa-comment{font-size:.82rem;color:var(--muted);line-height:1.6;word-break:keep-all}
+.score-bar{height:1px;background:var(--border);margin-top:.5rem}
+.score-fill{height:100%;background:linear-gradient(to right,var(--accent),var(--accent-light))}
+
+/* SIMILAR */
+.sim-list{display:flex;flex-direction:column;gap:8px}
+.sim-row{display:flex;align-items:center;gap:1rem;padding:1rem 1.2rem;background:var(--card);border:.5px solid var(--border);transition:border-color .2s}
+.sim-row:hover{border-color:var(--border-accent)}
+.sim-emo{font-size:1.6rem;flex-shrink:0}
+.sim-name{font-family:'Noto Serif KR',serif;font-size:.95rem;font-weight:300;color:var(--cream)}
+.sim-tour{font-size:.72rem;color:var(--muted);margin-top:1px}
+.sim-pct{margin-left:auto;font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:300;color:var(--accent-pale);flex-shrink:0}
+
+/* RETRY BTN */
+.retry-btn{margin-top:2rem;display:flex;align-items:center;gap:.5rem;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;transition:color .2s}
+.retry-btn:hover{color:var(--cream)}
+
+@media(max-width:700px){
+  nav{padding:1.1rem 1.5rem}
+  main{padding:7rem 1.2rem 4rem}
+  .match-head{flex-wrap:wrap}
+  .match-pct{margin-left:0}
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .frames-grid{grid-template-columns:repeat(4,1fr)}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo">Swing<span>Match</span></a>
+  <a href="index.html" class="nav-home">← 홈으로</a>
+</nav>
+
+<main>
+  <div class="page-header">
+    <div class="page-tag">Golf Swing Analysis</div>
+    <h1 class="page-title">당신의 스윙을<br><em>분석합니다</em></h1>
+    <p class="page-desc">스윙 영상을 업로드하면 핵심 프레임을 자동 추출하고<br>200명의 프로 선수 데이터와 비교해 가장 닮은 선수를 찾아드립니다.</p>
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="upload-section">
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept="video/*">
+      <div class="upload-icon">↑</div>
+      <h3>스윙 영상을 여기에 드래그하거나 클릭해 선택</h3>
+      <p>MP4 · MOV · AVI · 최대 50MB · 5~10초 권장</p>
+    </div>
+
+    <div class="video-wrap" id="videoWrap">
+      <video id="videoEl" muted playsinline></video>
+      <div class="vmeta">
+        <span class="vtag" id="tagDur"></span>
+        <span class="vtag" id="tagSize"></span>
+        <span class="vtag" id="tagName"></span>
+      </div>
+    </div>
+
+    <div class="frames-section" id="framesSection">
+      <div class="sec-label">추출된 핵심 프레임</div>
+      <div class="frames-grid" id="framesGrid"></div>
+    </div>
+
+    <button class="analyze-btn" id="analyzeBtn">
+      <span>AI 스윙 분석 시작</span>
+      <span class="btn-arrow">→</span>
+    </button>
+
+    <div class="progress-wrap" id="progWrap">
+      <div class="progress-bar" id="progBar"></div>
+    </div>
+    <div class="status-msg" id="statusMsg"></div>
+    <div class="err-box" id="errBox"><strong id="errTitle">분석 오류</strong><span id="errText"></span></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results">
+    <div class="result-divider"></div>
+    <div class="tabs">
+      <button class="tab-btn on" data-t="main">가장 유사한 프로</button>
+      <button class="tab-btn" data-t="frames">프레임별 분석</button>
+      <button class="tab-btn" data-t="similar">유사 선수</button>
+    </div>
+    <div class="tab-pane on" id="tp-main"></div>
+    <div class="tab-pane" id="tp-frames"></div>
+    <div class="tab-pane" id="tp-similar"></div>
+    <button class="retry-btn" id="retryBtn">↺ 다른 영상 분석하기</button>
+  </div>
+</main>
+
+<script>
+const API = 'https://swingmatch-backend-production.up.railway.app';
+const PHASES = ['어드레스','테이크어웨이','백스윙 탑','다운스윙','임팩트','팔로스루','피니시'];
+let frames = [], videoFile = null;
+
+const $ = id => document.getElementById(id);
+const uz = $('uploadZone'), fi = $('fileInput');
+const vw = $('videoWrap'), vid = $('videoEl');
+const fsec = $('framesSection'), fg = $('framesGrid');
+const aBtn = $('analyzeBtn'), pw = $('progWrap'), pb = $('progBar');
+const st = $('statusMsg'), eb = $('errBox');
+const results = $('results');
+
+// ─── 드래그 앤 드롭 ───
+uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('drag'); });
+uz.addEventListener('dragleave', () => uz.classList.remove('drag'));
+uz.addEventListener('drop', e => { e.preventDefault(); uz.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+fi.addEventListener('change', e => handleFile(e.target.files[0]));
+
+function handleFile(f) {
+  if (!f || !f.type.startsWith('video/')) return showErr('동영상 파일만 가능합니다 (MP4, MOV, AVI)');
+  if (f.size > 52428800) return showErr('파일 크기가 너무 큽니다. 50MB 이하 파일을 사용해주세요.');
+  videoFile = f;
+  hideErr(); hideResults(); frames = [];
+  const url = URL.createObjectURL(f);
+  vid.src = url; vw.style.display = 'block';
+  const nm = f.name;
+  $('tagName').textContent = nm.length > 24 ? nm.slice(0,24)+'…' : nm;
+  $('tagSize').textContent = (f.size/1048576).toFixed(1)+'MB';
+  vid.onloadedmetadata = () => {
+    const d = vid.duration, m = Math.floor(d/60), s = Math.floor(d%60);
+    $('tagDur').textContent = m ? m+'분 '+s+'초' : s+'초';
+    setSt('프레임 추출 중…');
+    extractFrames(vid);
+  };
+  vid.load();
+}
+
+function extractFrames(v) {
+  const dur = v.duration;
+  const n = Math.min(7, Math.max(4, Math.round(dur * 1.5)));
+  const times = Array.from({length:n}, (_,i) => dur*.05 + dur*.88*i/(n-1));
+  fg.innerHTML = ''; frames = []; fsec.style.display = 'block';
+  const items = times.map((t,i) => {
+    const wrap = document.createElement('div'); wrap.className = 'frame-item';
+    const c = document.createElement('canvas'); c.width = 160; c.height = 120;
+    const lbl = document.createElement('div'); lbl.className = 'frame-label';
+    lbl.textContent = PHASES[i] || ('F'+(i+1));
+    wrap.appendChild(c); wrap.appendChild(lbl); fg.appendChild(wrap);
+    return { canvas:c, time:t, phase:PHASES[i]||('프레임 '+(i+1)) };
+  });
+  let idx = 0;
+  function nxt() {
+    if (idx >= items.length) {
+      aBtn.style.display = 'flex';
+      setSt(items.length+'개 프레임 추출 완료');
+      return;
+    }
+    const {canvas, time, phase} = items[idx];
+    v.currentTime = time;
+    v.onseeked = () => {
+      canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height);
+      frames.push({ canvas, phase });
+      idx++; nxt();
+    };
+  }
+  nxt();
+}
+
+// ─── 분석 시작 ───
+aBtn.addEventListener('click', async () => {
+  if (!videoFile || !frames.length) return;
+  aBtn.disabled = true;
+  hideErr(); hideResults();
+  pw.style.display = 'block';
+  setProgress(5, '서버로 전송 중…');
+
+  try {
+    const formData = new FormData();
+    formData.append('video', videoFile);
+
+    setProgress(15, '영상 업로드 중…');
+
+    const res = await fetch(API + '/api/analyze', {
+      method: 'POST',
+      body: formData,
+    });
+
+    setProgress(70, 'AI 분석 중… (10~20초 소요)');
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `서버 오류 (${res.status})`);
+    }
+
+    const data = await res.json();
+    setProgress(100, '분석 완료!');
+
+    setTimeout(() => {
+      pw.style.display = 'none';
+      setSt('');
+      renderResults(data.result);
+      aBtn.disabled = false;
+    }, 400);
+
+  } catch (err) {
+    pw.style.display = 'none';
+    setSt('');
+    aBtn.disabled = false;
+    showErr(err.message || '분석 중 오류가 발생했습니다. 다시 시도해주세요.');
+  }
+});
+
+// ─── 결과 렌더링 ───
+function renderResults(r) {
+  const t = r.topMatch || {};
+
+  // 탭1: 가장 유사한 프로
+  $('tp-main').innerHTML = `
+<div class="match-card">
+  <div class="match-head">
+    <div class="match-emoji">${t.emoji||'🏌️'}</div>
+    <div style="flex:1;min-width:0">
+      <div class="match-name">${t.name||'?'}</div>
+      <div class="match-sub">${t.nameEn||''} · ${t.tour||''} · ${t.nationality||''}</div>
+    </div>
+    <div class="match-pct">
+      <div class="n">${t.matchPct||0}%</div>
+      <div class="l">유사도</div>
+    </div>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-box"><div class="stat-l">스윙 파워</div><div class="stat-v">${t.power||'-'}</div></div>
+    <div class="stat-box"><div class="stat-l">정확도</div><div class="stat-v">${t.accuracy||'-'}</div></div>
+    <div class="stat-box"><div class="stat-l">템포</div><div class="stat-v">${t.tempo||'-'}</div></div>
+  </div>
+  <div class="kw-row">${(t.keywords||[]).map(k=>`<span class="kw">${k}</span>`).join('')}</div>
+  <div class="prose">
+    <p>${t.swingDesc||''}</p>
+    <h4>강점</h4>
+    <ul>${(t.strengths||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
+    <h4>개선 포인트</h4>
+    <ul>${(t.improvements||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
+  </div>
+</div>`;
+
+  // 탭2: 프레임별 분석
+  const faHtml = (r.frameAnalysis||[]).map((fa,i) => {
+    const id = 'fth'+i;
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el && frames[i]) {
+        const c = document.createElement('canvas');
+        c.width = frames[i].canvas.width; c.height = frames[i].canvas.height;
+        c.getContext('2d').drawImage(frames[i].canvas,0,0);
+        Object.assign(c.style, {width:'100%',height:'100%',objectFit:'cover'});
+        el.appendChild(c);
+      }
+    }, 0);
+    return `<div class="fa-row">
+      <div class="fa-thumb" id="${id}"></div>
+      <div style="flex:1;min-width:0">
+        <div class="fa-phase">${fa.phase}</div>
+        <div class="fa-score">${fa.score}점</div>
+        <div class="score-bar"><div class="score-fill" style="width:${fa.score}%"></div></div>
+        <div class="fa-comment" style="margin-top:.5rem">${fa.comment}</div>
+      </div>
+    </div>`;
+  }).join('');
+  $('tp-frames').innerHTML = `<div class="frame-list">${faHtml}</div>`;
+
+  // 탭3: 유사 선수
+  const simHtml = (r.similar||[]).map((s,i) => `
+<div class="sim-row" style="opacity:${1 - i*0.18}">
+  <div class="sim-emo">${s.emoji||'🏌️'}</div>
+  <div>
+    <div class="sim-name">${s.name}</div>
+    <div class="sim-tour">${s.tour}</div>
+  </div>
+  <div class="sim-pct">${s.pct}%</div>
+</div>`).join('');
+  $('tp-similar').innerHTML = `<div class="sim-list">${simHtml}</div>`;
+
+  results.style.display = 'block';
+  results.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+// 탭 전환
+document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.tab-pane').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  $('tp-'+b.dataset.t).classList.add('on');
+}));
+
+// 다시 분석하기
+$('retryBtn').addEventListener('click', () => {
+  hideResults();
+  aBtn.disabled = false;
+  videoFile = null;
+  frames = [];
+  vid.src = '';
+  vw.style.display = 'none';
+  fsec.style.display = 'none';
+  aBtn.style.display = 'none';
+  fg.innerHTML = '';
+  fi.value = '';
+  setSt('');
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+function setSt(m){st.textContent=m}
+function setProgress(p,m){pb.style.width=p+'%';if(m)setSt(m)}
+function showErr(m){eb.style.display='block';$('errText').textContent=m}
+function hideErr(){eb.style.display='none'}
+function hideResults(){results.style.display='none'}
+</script>
+</body>
+</html>
