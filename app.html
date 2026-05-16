@@ -158,6 +158,34 @@
     color: rgba(201,168,76,0.5); letter-spacing: 0.08em;
   }
 
+  /* ── 촬영 가이드 ── */
+  .upload-guide {
+    margin-top: 1.2rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1.2rem;
+  }
+  .guide-title {
+    font-size: 0.75rem; color: var(--gold);
+    letter-spacing: 0.1em; margin-bottom: 0.8rem;
+    font-weight: 400;
+  }
+  .guide-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+  .guide-item {
+    display: flex; align-items: flex-start; gap: 0.6rem;
+  }
+  .guide-icon { font-size: 1rem; margin-top: 0.1rem; }
+  .guide-label {
+    font-size: 0.72rem; color: var(--text);
+    font-weight: 500; margin-bottom: 0.1rem;
+  }
+  .guide-desc { font-size: 0.68rem; color: var(--text-muted); }
+
   /* ── 프레임 프리뷰 ── */
   #frames-preview {
     display: none;
@@ -338,6 +366,19 @@
   }
   canvas { max-height: 200px; }
 
+  /* ── 토스트 ── */
+  #toast {
+    position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+    background: var(--gold); color: #000;
+    padding: 0.7rem 1.4rem; border-radius: 2px;
+    font-size: 0.85rem; font-weight: 500;
+    z-index: 300; opacity: 0;
+    transition: opacity 0.3s ease;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; }
+
   /* ── 모달 ── */
   .modal-overlay {
     display: none; position: fixed; inset: 0; z-index: 200;
@@ -441,6 +482,8 @@
 
 <div id="ad-canvas"></div>
 <span id="ad-label">AD</span>
+<div id="toast"></div>
+
 <div id="app">
   <header>
     <a href="index.html" class="logo">SWINGMATCH</a>
@@ -472,6 +515,55 @@
         <div class="upload-title">골프 스윙 영상을 업로드하세요</div>
         <div class="upload-sub">드래그 앤 드롭 또는 클릭하여 선택</div>
         <div class="upload-formats">MP4 · MOV · AVI</div>
+      </div>
+
+      <!-- 촬영 가이드 -->
+      <div class="upload-guide">
+        <div class="guide-title">📋 영상 촬영 가이드</div>
+        <div class="guide-grid">
+          <div class="guide-item">
+            <span class="guide-icon">📁</span>
+            <div>
+              <div class="guide-label">파일 크기</div>
+              <div class="guide-desc">50MB 이내 권장</div>
+            </div>
+          </div>
+          <div class="guide-item">
+            <span class="guide-icon">🎞️</span>
+            <div>
+              <div class="guide-label">영상 길이</div>
+              <div class="guide-desc">3~15초 (1스윙 분량)</div>
+            </div>
+          </div>
+          <div class="guide-item">
+            <span class="guide-icon">📐</span>
+            <div>
+              <div class="guide-label">촬영 각도</div>
+              <div class="guide-desc">정면 또는 측면 (다운더라인)</div>
+            </div>
+          </div>
+          <div class="guide-item">
+            <span class="guide-icon">🔍</span>
+            <div>
+              <div class="guide-label">화질</div>
+              <div class="guide-desc">선명한 화질 권장</div>
+            </div>
+          </div>
+          <div class="guide-item">
+            <span class="guide-icon">☀️</span>
+            <div>
+              <div class="guide-label">촬영 환경</div>
+              <div class="guide-desc">밝은 환경, 전신이 보이게</div>
+            </div>
+          </div>
+          <div class="guide-item">
+            <span class="guide-icon">🎯</span>
+            <div>
+              <div class="guide-label">포함 동작</div>
+              <div class="guide-desc">어드레스~피니시 전체</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div id="frames-preview">
@@ -508,7 +600,7 @@
   <div class="modal" style="position:relative">
     <button class="modal-close" onclick="closeModal()">✕</button>
     <h2>SwingMatch</h2>
-    <p>회원가입 후 분석 히스토리를 무제한 저장하세요</p>
+    <p>회원가입 후 분석 히스토리를 무제한 저장하고<br>스윙 개선 그래프를 확인하세요</p>
     <div class="modal-tabs">
       <button class="modal-tab active" onclick="switchAuthTab('login')">로그인</button>
       <button class="modal-tab" onclick="switchAuthTab('signup')">회원가입</button>
@@ -617,6 +709,13 @@ async function loginWithGoogle() {
   });
   if (error) showAuthError(error.message);
 }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
 async function login() {
   const email = document.getElementById('login-email').value;
   const password = document.getElementById('login-password').value;
@@ -629,15 +728,21 @@ async function login() {
 async function signup() {
   const email = document.getElementById('signup-email').value;
   const password = document.getElementById('signup-password').value;
+  if (!email || !password) { showAuthError('이메일과 비밀번호를 입력해주세요.'); return; }
+  if (password.length < 6) { showAuthError('비밀번호는 6자 이상이어야 합니다.'); return; }
   const { data, error } = await sb.auth.signUp({ email, password });
   if (error) { showAuthError(error.message); return; }
   if (data.user && !data.session) {
-    showAuthError('이메일 확인 링크를 보냈습니다. 메일을 확인해주세요!');
+    // 이메일 확인 필요
+    document.getElementById('auth-error').style.color = 'var(--gold)';
+    document.getElementById('auth-error').style.display = 'block';
+    document.getElementById('auth-error').textContent = '📧 인증 메일을 보냈습니다. 메일함을 확인해주세요!';
     return;
   }
   currentUser = data.user;
   updateUI(true);
   closeModal();
+  showToast('🎉 환영합니다! SwingMatch 회원이 되셨어요.');
 }
 async function logout() {
   await sb.auth.signOut();
@@ -938,10 +1043,16 @@ function renderResult(data) {
 }
 
 async function saveResult() {
-  if (!currentUser) { openModal(); return; }
   if (!lastResult) return;
+
+  // 세션 재확인
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { openModal(); return; }
+  currentUser = session.user;
+
   const avg = Math.round(lastResult.frameAnalysis.reduce((a,f) => a+f.score, 0) / lastResult.frameAnalysis.length);
-  const { error } = await sb.from('swing_analyses').insert({
+
+  const insertData = {
     user_id: currentUser.id,
     pro_name: lastResult.topMatch.name,
     pro_name_en: lastResult.topMatch.nameEn,
@@ -953,13 +1064,17 @@ async function saveResult() {
     improvements: lastResult.topMatch.improvements,
     frame_analysis: lastResult.frameAnalysis,
     similar_pros: lastResult.similar,
-    created_at: new Date().toISOString()
-  });
+  };
+
+  const { data, error } = await sb.from('swing_analyses').insert(insertData).select();
+
   if (error) {
-    alert('저장 실패: ' + error.message);
+    console.error('저장 오류:', error);
+    alert('저장 실패: ' + error.message + '\n코드: ' + error.code);
   } else {
-    document.getElementById('save-btn').textContent = '✅ 저장 완료!';
-    document.getElementById('save-btn').disabled = true;
+    const btn = document.getElementById('save-btn');
+    if (btn) { btn.textContent = '✅ 저장 완료!'; btn.disabled = true; }
+    showToast('분석 결과가 저장됐습니다!');
   }
 }
 
