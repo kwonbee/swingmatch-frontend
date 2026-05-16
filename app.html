@@ -600,7 +600,7 @@
   <div class="modal" style="position:relative">
     <button class="modal-close" onclick="closeModal()">✕</button>
     <h2>SwingMatch</h2>
-    <p>회원가입 후 분석 히스토리를 무제한 저장하고<br>스윙 개선 그래프를 확인하세요</p>
+    <p>이메일은 분석 기록 저장을 위한<br>고유 식별 코드로만 사용됩니다.<br>마케팅 연락은 일절 없습니다.</p>
     <div class="modal-tabs">
       <button class="modal-tab active" onclick="switchAuthTab('login')">로그인</button>
       <button class="modal-tab" onclick="switchAuthTab('signup')">회원가입</button>
@@ -733,16 +733,16 @@ async function signup() {
   const { data, error } = await sb.auth.signUp({ email, password });
   if (error) { showAuthError(error.message); return; }
   if (data.user && !data.session) {
-    // 이메일 확인 필요
-    document.getElementById('auth-error').style.color = 'var(--gold)';
-    document.getElementById('auth-error').style.display = 'block';
-    document.getElementById('auth-error').textContent = '📧 인증 메일을 보냈습니다. 메일함을 확인해주세요!';
+    const errEl = document.getElementById('auth-error');
+    errEl.style.color = 'var(--gold)';
+    errEl.style.display = 'block';
+    errEl.textContent = '📧 인증 메일을 보냈습니다. 메일함을 확인해주세요!';
     return;
   }
   currentUser = data.user;
   updateUI(true);
   closeModal();
-  showToast('🎉 환영합니다! SwingMatch 회원이 되셨어요.');
+  setTimeout(() => showToast('🎉 환영합니다! 스윙 분석을 시작해보세요.'), 300);
 }
 async function logout() {
   await sb.auth.signOut();
