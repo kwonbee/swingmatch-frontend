@@ -949,7 +949,11 @@ function getDemoResult() {
     { name: '박인비', nameEn: 'Park In-bee', tour: 'LPGA Tour', pct: 83 },
     { name: '최경주', nameEn: 'Choi Kyung-ju', tour: 'PGA Tour Champions', pct: 76 },
   ];
-  const p = pros[Math.floor(Math.random() * pros.length)];
+  // 프레임 데이터 기반으로 고정 (같은 영상이면 같은 결과)
+  const seed = extractedFrames.length > 0
+    ? extractedFrames[0].dataUrl.length % pros.length
+    : 0;
+  const p = pros[seed];
   return {
     topMatch: {
       name: p.name, nameEn: p.nameEn, tour: p.tour,
