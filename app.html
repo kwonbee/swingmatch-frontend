@@ -21,9 +21,9 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .bg img{width:100%;height:100%;object-fit:cover;object-position:center 55%;filter:brightness(0.35) saturate(0.8)}
 
 /* ── 우측 고정 광고 (TaylorMade) ── */
-.ad-fixed{position:fixed;bottom:24px;right:24px;z-index:100;width:260px;border-radius:3px;
+.ad-fixed{position:fixed;bottom:24px;right:24px;z-index:100;width:240px;border-radius:3px;
     overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.07)}
-.ad-fixed img{width:100%;display:block;max-height:160px;object-fit:cover}
+.ad-fixed img{width:100%;display:block;height:240px;object-fit:cover;object-position:center top}
 .ad-lbl{position:absolute;top:5px;left:5px;background:rgba(0,0,0,0.5);
         color:rgba(255,255,255,0.45);font-size:9px;letter-spacing:.08em;padding:2px 5px;border-radius:2px}
 .ad-x{position:absolute;top:5px;right:5px;background:rgba(0,0,0,0.5);
@@ -43,7 +43,6 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 @media(max-width:768px){
   .ad-fixed{width:100%;bottom:0;right:0;left:0;border-radius:0;border-left:none;border-right:none;border-bottom:none}
   .ad-fixed img{max-height:64px}
-  .ad-inline img{max-height:90px}
 }
 
 /* ── NAV 1: 로고 + 인증 ── */
@@ -240,6 +239,21 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .club-bar-track{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
 .club-bar-fill{height:100%;background:var(--gold);border-radius:3px;transition:width .6s}
 .club-bar-cnt{font-size:.7rem;color:var(--gold);width:24px;text-align:right}
+
+
+/* ── 구글 로그인 버튼 ── */
+.btn-google{
+  width:100%;margin-top:12px;padding:12px 16px;
+  background:#fff;border:1px solid #ddd;border-radius:2px;
+  font-family:'Pretendard',sans-serif;font-size:.85rem;color:#3c4043;
+  cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;
+  letter-spacing:.02em;
+}
+.btn-google:hover{background:#f8f8f8;box-shadow:0 2px 8px rgba(0,0,0,0.15)}
+.btn-google svg{flex-shrink:0}
+.modal-divider{display:flex;align-items:center;gap:10px;margin:16px 0}
+.modal-divider::before,.modal-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.modal-divider span{font-size:.7rem;color:var(--muted);letter-spacing:.06em;white-space:nowrap}
 
 /* ── 모달 ── */
 .modal-overlay{display:none;position:fixed;inset:0;z-index:200;
@@ -484,6 +498,11 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
   <div class="modal">
     <button class="modal-close" onclick="closeModal('login')">✕</button>
     <h2>로그인</h2>
+    <button class="btn-google" onclick="doGoogleLogin()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Google로 로그인
+    </button>
+    <div class="modal-divider"><span>또는 이메일로 로그인</span></div>
     <div class="modal-field"><label>이메일</label><input type="email" id="login-email" placeholder="email@example.com"></div>
     <div class="modal-field"><label>비밀번호</label><input type="password" id="login-pw" placeholder="••••••••"></div>
     <div class="modal-err" id="login-err"></div>
@@ -497,6 +516,11 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
   <div class="modal">
     <button class="modal-close" onclick="closeModal('signup')">✕</button>
     <h2>회원가입</h2>
+    <button class="btn-google" onclick="doGoogleLogin()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Google로 가입
+    </button>
+    <div class="modal-divider"><span>또는 이메일로 가입</span></div>
     <div class="modal-field"><label>이메일</label><input type="email" id="signup-email" placeholder="email@example.com"></div>
     <div class="modal-field"><label>비밀번호</label><input type="password" id="signup-pw" placeholder="8자 이상"></div>
     <div class="modal-field"><label>비밀번호 확인</label><input type="password" id="signup-pw2" placeholder="비밀번호 재입력"></div>
@@ -506,13 +530,31 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 const BACKEND='https://swingmatch-backend-production.up.railway.app';
+const SUPABASE_URL='https://vldcmanngfexfwvvnqbb.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsZGNtYW5uZ2ZleGZ3dnZucWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4ODY0MTcsImV4cCI6MjA5NDQ2MjQxN30.3K_jL1HVdOKMEoSSsmacJGNVDkf6iFa2PU7XuEFuUBY';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 let file=null,club='driver';
 let swingHistory=JSON.parse(localStorage.getItem('swingHistory')||'[]');
-let currentUser=JSON.parse(localStorage.getItem('swingUser')||'null');
+let currentUser=null;
 let charts={};
+
+// ── Supabase 인증 상태 감지 ──
+supabase.auth.onAuthStateChange((event, session) => {
+  currentUser = session?.user || null;
+  initAuth();
+  // 로그인 성공 후 히스토리 서버에서 불러오기 (추후 구현)
+});
+
+// 페이지 로드 시 현재 세션 확인
+supabase.auth.getSession().then(( { data: { session } } ) => {
+  currentUser = session?.user || null;
+  initAuth();
+});
 
 function initAuth(){
   if(currentUser){
@@ -524,7 +566,15 @@ function initAuth(){
     document.getElementById('auth-user').style.display='none';
   }
 }
-initAuth();
+
+// ── 구글 로그인 (Supabase OAuth) ──
+async function doGoogleLogin(){
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname }
+  });
+  if(error) alert('구글 로그인 오류: ' + error.message);
+}
 
 function openModal(t){document.getElementById('modal-'+t).classList.add('open')}
 function closeModal(t){document.getElementById('modal-'+t).classList.remove('open')}
@@ -535,20 +585,18 @@ document.querySelectorAll('.modal-overlay').forEach(el=>{
 function showErr(id,msg){const e=document.getElementById(id);e.textContent=msg;e.style.display='block'}
 function hideErr(id){document.getElementById(id).style.display='none'}
 
-function doLogin(){
+async function doLogin(){
   hideErr('login-err');
   const email=document.getElementById('login-email').value.trim();
   const pw=document.getElementById('login-pw').value;
   if(!email||!pw){showErr('login-err','이메일과 비밀번호를 입력해주세요.');return}
-  const users=JSON.parse(localStorage.getItem('swingUsers')||'[]');
-  const user=users.find(u=>u.email===email&&u.pw===pw);
-  if(!user){showErr('login-err','이메일 또는 비밀번호가 올바르지 않습니다.');return}
-  currentUser={email};
-  localStorage.setItem('swingUser',JSON.stringify(currentUser));
+  const {data,error}=await supabase.auth.signInWithPassword({email,password:pw});
+  if(error){showErr('login-err','이메일 또는 비밀번호가 올바르지 않습니다.');return}
+  currentUser=data.user;
   closeModal('login');initAuth();
 }
 
-function doSignup(){
+async function doSignup(){
   hideErr('signup-err');
   const email=document.getElementById('signup-email').value.trim();
   const pw=document.getElementById('signup-pw').value;
@@ -556,16 +604,22 @@ function doSignup(){
   if(!email){showErr('signup-err','이메일을 입력해주세요.');return}
   if(pw.length<8){showErr('signup-err','비밀번호는 8자 이상이어야 합니다.');return}
   if(pw!==pw2){showErr('signup-err','비밀번호가 일치하지 않습니다.');return}
-  const users=JSON.parse(localStorage.getItem('swingUsers')||'[]');
-  if(users.find(u=>u.email===email)){showErr('signup-err','이미 가입된 이메일입니다.');return}
-  users.push({email,pw});
-  localStorage.setItem('swingUsers',JSON.stringify(users));
-  currentUser={email};
-  localStorage.setItem('swingUser',JSON.stringify(currentUser));
+  const {data,error}=await supabase.auth.signUp({email,password:pw});
+  if(error){showErr('signup-err',error.message);return}
+  if(data.user && !data.session){
+    showErr('signup-err','✅ 이메일 인증 링크를 보냈습니다. 확인 후 로그인해주세요.');
+    document.getElementById('signup-err').style.color='#7ecf8e';
+    return;
+  }
+  currentUser=data.user;
   closeModal('signup');initAuth();
 }
 
-function logout(){currentUser=null;localStorage.removeItem('swingUser');initAuth()}
+async function logout(){
+  await supabase.auth.signOut();
+  currentUser=null;
+  initAuth();
+}
 
 function showPanel(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
