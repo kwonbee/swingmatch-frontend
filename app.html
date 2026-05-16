@@ -6,7 +6,7 @@
 <title>SwingMatch — 스윙 분석</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@200;300;400&family=Pretendard:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   :root {
@@ -642,8 +642,7 @@
 // ── Supabase 초기화 ──
 const SUPABASE_URL = 'https://vldcmanngfexfwvvnqbb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsZGNtYW5uZ2ZleGZ3dnZucWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4ODY0MTcsImV4cCI6MjA5NDQ2MjQxN30.3K_jL1HVdOKMEoSSsmacJGNVDkf6iFa2PU7XuEFuUBY';
-const { createClient } = supabase;
-const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentUser = null;
 let extractedFrames = [];
