@@ -511,6 +511,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const BACKEND = 'https://swingmatch-backend-production.up.railway.app';
+let extractedFrames = [];
 let file = null, club = 'driver';
 let swingHistory = JSON.parse(localStorage.getItem('swingHistory') || '[]');
 let currentUser = null;
@@ -636,6 +637,91 @@ const uz = document.getElementById('uz');
 uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('over'); });
 uz.addEventListener('dragleave', () => uz.classList.remove('over'));
 uz.addEventListener('drop', e => { e.preventDefault(); uz.classList.remove('over'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+
+// ── 프레임 추출 ──
+const PHASES = ['어드레스','테이크어웨이','백스윙 탑','다운스윙','임팩트','팔로스루','피니시'];
+
+function extractFrames(file) {
+  const video = document.createElement('video');
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = 'metadata';
+
+  document.getElementById('fname').textContent = '⏳ 프레임 추출 중...';
+
+  video.addEventListener('loadedmetadata', () => {
+    const duration = video.duration;
+    if (!duration || duration === Infinity) {
+      video.play().then(() => video.pause()).catch(() => {});
+      return;
+    }
+    startCapture(video, duration, file);
+  });
+
+  video.addEventListener('durationchange', () => {
+    if (video.duration && video.duration !== Infinity) {
+      startCapture(video, video.duration, file);
+    }
+  });
+
+  video.src = URL.createObjectURL(file);
+  video.load();
+}
+
+function startCapture(video, duration, file) {
+  // 중복 실행 방지
+  if (video._capturing) return;
+  video._capturing = true;
+
+  const count = Math.min(7, Math.max(4, Math.round(duration * 1.5)));
+  const times = Array.from({ length: count }, (_, i) =>
+    duration * 0.05 + duration * 0.88 * i / (count - 1)
+  );
+
+  extractedFrames = [];
+  const framesGrid = document.getElementById('frames-grid');
+  const framesPreview = document.getElementById('frames-preview');
+  if (framesGrid) framesGrid.innerHTML = '';
+  if (framesPreview) framesPreview.style.display = 'block';
+
+  let idx = 0;
+
+  function captureNext() {
+    if (idx >= times.length) {
+      document.getElementById('fname').textContent = '✓ ' + file.name;
+      document.getElementById('abtn').disabled = false;
+      URL.revokeObjectURL(video.src);
+      return;
+    }
+    video.currentTime = times[idx];
+  }
+
+  video.onseeked = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 320; canvas.height = 180;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, 320, 180);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+      extractedFrames.push({ dataUrl, phase: PHASES[idx] || ('프레임 ' + (idx + 1)) });
+
+      if (framesGrid) {
+        const thumb = document.createElement('div');
+        thumb.className = 'frame-thumb';
+        thumb.innerHTML = '<img src="' + dataUrl + '"><div class="frame-label">' + (PHASES[idx] || ('프레임 ' + (idx + 1))) + '</div>';
+        framesGrid.appendChild(thumb);
+      }
+    } catch(e) {
+      console.warn('프레임 캡처 실패:', idx);
+    }
+    idx++;
+    captureNext();
+  };
+
+  captureNext();
+}
+
 function handleFile(f) {
   if (!f) return;
   file = f;
