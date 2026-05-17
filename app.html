@@ -92,7 +92,15 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .abtn:disabled{opacity:.35;cursor:not-allowed}
 
 /* 진행 */
-.prog{display:none;margin-top:20px}
+
+/* ── 분석 진행 표시 ── */
+.prog-bar-wrap{width:100%;margin-top:4px}
+.prog-bar-track{width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;margin-bottom:8px}
+.prog-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:2px;transition:width .8s ease}
+.prog-pct{font-size:.78rem;color:var(--gold);text-align:center;margin-bottom:4px;letter-spacing:.06em}
+.prog-msg{font-size:.72rem;color:var(--muted);text-align:center;letter-spacing:.04em}
+
+.prog{display:none;margin-top:16px;width:100%}
 .prog.on{display:block}
 .steps{display:flex;flex-direction:column;gap:9px}
 .step{display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--muted);transition:color .3s}
@@ -371,11 +379,10 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
     <button class="abtn" id="abtn" onclick="startAnalysis()" disabled>스윙 분석하기</button>
     <div id="daily-count" style="text-align:center;font-size:.72rem;margin-top:8px;color:var(--muted)"></div>
     <div class="prog" id="prog">
-      <div class="steps">
-        <div class="step" id="s1"><div class="dot"></div>영상에서 핵심 프레임 추출 중</div>
-        <div class="step" id="s2"><div class="dot"></div>200명의 프로 데이터와 비교 중</div>
-        <div class="step" id="s3"><div class="dot"></div>스윙 특성 분석 중</div>
-        <div class="step" id="s4"><div class="dot"></div>결과 생성 중</div>
+      <div class="prog-bar-wrap">
+        <div class="prog-pct" id="prog-pct">0%</div>
+        <div class="prog-bar-track"><div class="prog-bar-fill" id="prog-bar"></div></div>
+        <div class="prog-msg" id="prog-msg">영상에서 핵심 프레임 추출 중...</div>
       </div>
     </div>
   </div>
@@ -620,48 +627,49 @@ function shareKakao() {
   if (!result || !result.topMatch) return;
   const t = result.topMatch;
 
-  // 결과를 URL 파라미터로 인코딩
-  const params = new URLSearchParams({
-    name: t.name || '',
-    nameEn: t.nameEn || '',
-    tour: t.tour || '',
-    pct: t.matchPct || '',
-    emoji: t.emoji || '🏌️',
-    club: window._lastClub || 'driver'
-  });
+  const clubLabels = { driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터' };
+  const clubLabel = clubLabels[window._lastClub || 'driver'];
+  const keywords = (t.keywords || []).join(' · ');
+  const strengths = (t.strengths || []).map(s => '  · ' + s).join('\n');
+  const improvements = (t.improvements || []).map(s => '  · ' + s).join('\n');
 
   const shareUrl = 'https://myswingmatch.com';
-  const text = '⛳ 내 스윙이 ' + (t.emoji || '🏌️') + ' ' + t.name + '(' + t.nameEn + ')와 ' + t.matchPct + '% 닮았어요!\nAI가 내 스윙을 분석해줬어요 👇';
+  const text = [
+    '⛳  MySwingMatch 스윙 분석 결과',
+    '',
+    (t.emoji||'🏌️') + ' ' + t.name + ' (' + t.nameEn + ')',
+    t.tour + ' · ' + (t.nationality||''),
+    '매칭률: ' + t.matchPct + '%  |  클럽: ' + clubLabel,
+    '',
+    '📝 ' + (t.swingDesc||''),
+    keywords ? '\n🏷️ ' + keywords : '',
+    '',
+    '💪 스윙 강점',
+    strengths,
+    '',
+    '🎯 개선 포인트',
+    improvements,
+    '',
+    '👇 내 스윙도 분석해보세요',
+    shareUrl
+  ].filter(Boolean).join('\n');
 
-  // 카카오톡 공유 (kakao://send 스킴)
-  const kakaoUrl = 'https://sharer.kakao.com/talk/friends/picker/link?app_key=&link_ver=4.0&template_id=&template_args=';
-
-  // 모바일: 카카오톡 앱 딥링크
   const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-
   if (isMobile) {
-    // 모바일: 카카오톡 앱으로 공유
-    const encoded = encodeURIComponent(text + '\n' + shareUrl);
-    window.open('kakaotalk://msg/send?text=' + encoded, '_blank');
-
-    // 앱이 없을 경우 클립보드 복사로 대체
+    window.open('kakaotalk://msg/send?text=' + encodeURIComponent(text), '_blank');
     setTimeout(() => {
-      navigator.clipboard.writeText(text + '\n' + shareUrl).then(() => {
-        showShareFallback(text, shareUrl);
-      }).catch(() => {
-        showShareFallback(text, shareUrl);
-      });
+      navigator.clipboard.writeText(text).then(() => showShareFallback(text)).catch(() => showShareFallback(text));
     }, 1000);
   } else {
-    // PC: 클립보드 복사 + 안내
-    showShareFallback(text, shareUrl);
+    showShareFallback(text);
   }
 }
 
-function showShareFallback(text, url) {
-  const fullText = text + '\n' + url; // URL은 여기서 한번만
+
+function showShareFallback(text) {
+  const fullText = text; // URL은 여기서 한번만
   navigator.clipboard.writeText(fullText).then(() => {
-    alert('📋 공유 내용이 클립보드에 복사됐습니다!\n카카오톡을 열고 원하는 채팅방에 붙여넣기 해주세요.\n\n' + fullText);
+    alert('📋 클립보드에 복사됐습니다!\n카카오톡을 열고 원하는 채팅방에 붙여넣기 해주세요.');
   }).catch(() => {
     // 클립보드 접근 불가시 직접 보여주기
     alert('아래 내용을 복사해서 카카오톡에 공유해보세요!\n\n' + fullText);
@@ -839,14 +847,25 @@ async function startAnalysis() {
   if (!file) return;
   document.getElementById('abtn').disabled = true;
   const pg = document.getElementById('prog'); pg.classList.add('on');
-  const ss = ['s1','s2','s3','s4']; let si = 0;
-  const tick = () => ss.forEach((s, i) => { const e = document.getElementById(s); e.className = i < si ? 'step done' : i === si ? 'step active' : 'step'; });
-  tick();
-  const iv = setInterval(() => { si = Math.min(si + 1, 3); tick(); }, 1500);
+  const progSteps = [
+    { pct: 15, msg: '영상에서 핵심 프레임 추출 중...' },
+    { pct: 40, msg: '200명의 프로 데이터와 비교 중...' },
+    { pct: 70, msg: '스윙 특성 분석 중...' },
+    { pct: 90, msg: '결과 생성 중...' }
+  ];
+  let si = 0;
+  const setProgStep = (idx) => {
+    const s = progSteps[Math.min(idx, progSteps.length-1)];
+    document.getElementById('prog-pct').textContent = s.pct + '%';
+    document.getElementById('prog-bar').style.width = s.pct + '%';
+    document.getElementById('prog-msg').textContent = s.msg;
+  };
+  setProgStep(0);
+  const iv = setInterval(() => { si = Math.min(si+1, 3); setProgStep(si); }, 1500);
   try {
     const fd = new FormData(); fd.append('video', file); fd.append('club', club);
     const r = await fetch(BACKEND + '/api/analyze', { method: 'POST', body: fd });
-    clearInterval(iv); si = 3; tick();
+    clearInterval(iv); document.getElementById('prog-pct').textContent='분석 완료'; document.getElementById('prog-bar').style.width='100%'; document.getElementById('prog-msg').textContent='';
     if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || 'HTTP ' + r.status); }
     const data = await r.json();
     console.log('백엔드 응답:', JSON.stringify(data));
