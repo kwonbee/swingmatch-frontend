@@ -148,6 +148,12 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .sname{font-size:.8rem;color:var(--text)}.stour{font-size:.68rem;color:var(--muted)}
 .spct{font-family:'Noto Serif KR',serif;font-size:1rem;font-weight:200;color:var(--gold)}
 .save-notice{margin-top:12px;padding:11px 16px;background:rgba(42,106,58,.15);border:1px solid rgba(42,106,58,.3);border-radius:2px;font-size:.74rem;color:#7ecf8e;text-align:center}
+
+/* 카카오 공유 버튼 */
+.share-btn{width:100%;margin-top:8px;padding:13px;background:#FEE500;color:#000;border:none;border-radius:2px;font-family:'Pretendard',sans-serif;font-size:.82rem;font-weight:500;letter-spacing:.04em;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.share-btn:hover{background:#F5DC00}
+.share-btn svg{width:18px;height:18px;flex-shrink:0}
+
 .rbtn{width:100%;margin-top:12px;padding:12px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:2px;font-family:'Pretendard',sans-serif;font-size:.78rem;letter-spacing:.06em;cursor:pointer;transition:all .2s}
 .rbtn:hover{border-color:var(--gold);color:var(--gold)}
 
@@ -363,6 +369,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
     </div>
 
     <button class="abtn" id="abtn" onclick="startAnalysis()" disabled>스윙 분석하기</button>
+    <div id="daily-count" style="text-align:center;font-size:.72rem;margin-top:8px;color:var(--muted)"></div>
     <div class="prog" id="prog">
       <div class="steps">
         <div class="step" id="s1"><div class="dot"></div>영상에서 핵심 프레임 추출 중</div>
@@ -417,6 +424,10 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <div class="tc" id="tc-s"><div class="slist" id="r-sim"></div></div>
     </div>
     <div class="save-notice" id="saveNotice" style="display:none">✓ 분석 결과가 히스토리에 저장되었습니다</div>
+    <button class="share-btn" onclick="shareKakao()" id="share-btn" style="display:none">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.69 2 11.25c0 2.91 1.72 5.47 4.33 7.02L5.5 21l3.27-1.7c1.03.27 2.12.42 3.23.42 5.52 0 10-3.69 10-8.25S17.52 3 12 3z"/></svg>
+      카카오톡으로 공유하기
+    </button>
     <button class="rbtn" onclick="resetAnalysis()">↩ 다른 영상 분석하기</button>
 
   </div>
@@ -530,6 +541,7 @@ async function checkSession() {
   }
 }
 checkSession();
+updateCountDisplay();
 
 // ── 인증 상태 감지 ──
 sb.auth.onAuthStateChange((event, session) => {
@@ -601,6 +613,61 @@ async function doSignup() {
 }
 
 // ── 로그아웃 ──
+
+// ── 카카오톡 공유 (링크 방식) ──
+function shareKakao() {
+  const result = window._lastResult;
+  if (!result || !result.topMatch) return;
+  const t = result.topMatch;
+
+  // 결과를 URL 파라미터로 인코딩
+  const params = new URLSearchParams({
+    name: t.name || '',
+    nameEn: t.nameEn || '',
+    tour: t.tour || '',
+    pct: t.matchPct || '',
+    emoji: t.emoji || '🏌️',
+    club: window._lastClub || 'driver'
+  });
+
+  const shareUrl = 'https://myswingmatch.com';
+  const text = '⛳ 내 스윙이 ' + (t.emoji || '🏌️') + ' ' + t.name + '(' + t.nameEn + ')와 ' + t.matchPct + '% 닮았어요!\nAI가 내 스윙을 분석해줬어요 👇';
+
+  // 카카오톡 공유 (kakao://send 스킴)
+  const kakaoUrl = 'https://sharer.kakao.com/talk/friends/picker/link?app_key=&link_ver=4.0&template_id=&template_args=';
+
+  // 모바일: 카카오톡 앱 딥링크
+  const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    // 모바일: 카카오톡 앱으로 공유
+    const encoded = encodeURIComponent(text + '\n' + shareUrl);
+    window.open('kakaotalk://msg/send?text=' + encoded, '_blank');
+
+    // 앱이 없을 경우 클립보드 복사로 대체
+    setTimeout(() => {
+      navigator.clipboard.writeText(text + '\n' + shareUrl).then(() => {
+        showShareFallback(text, shareUrl);
+      }).catch(() => {
+        showShareFallback(text, shareUrl);
+      });
+    }, 1000);
+  } else {
+    // PC: 클립보드 복사 + 안내
+    showShareFallback(text, shareUrl);
+  }
+}
+
+function showShareFallback(text, url) {
+  const fullText = text + '\n' + url; // URL은 여기서 한번만
+  navigator.clipboard.writeText(fullText).then(() => {
+    alert('📋 공유 내용이 클립보드에 복사됐습니다!\n카카오톡을 열고 원하는 채팅방에 붙여넣기 해주세요.\n\n' + fullText);
+  }).catch(() => {
+    // 클립보드 접근 불가시 직접 보여주기
+    alert('아래 내용을 복사해서 카카오톡에 공유해보세요!\n\n' + fullText);
+  });
+}
+
 async function logout() {
   await sb.auth.signOut();
   currentUser = null;
@@ -732,6 +799,41 @@ function handleFile(f) {
   extractFrames(f);
 }
 
+
+// ── 하루 3회 제한 ──
+function getTodayKey() {
+  const d = new Date();
+  return 'swingCount_' + d.getFullYear() + '_' + (d.getMonth()+1) + '_' + d.getDate();
+}
+function getTodayCount() {
+  return parseInt(localStorage.getItem(getTodayKey()) || '0');
+}
+function incrementCount() {
+  const key = getTodayKey();
+  const count = getTodayCount() + 1;
+  localStorage.setItem(key, count);
+  return count;
+}
+function checkDailyLimit() {
+  const count = getTodayCount();
+  const LIMIT = 5;
+  if (count >= LIMIT) {
+    alert('오늘의 무료 분석 횟수(' + LIMIT + '회)를 모두 사용했습니다.\n내일 다시 이용해주세요! 😊\n\n더 많은 분석을 원하시면 Pro 구독을 이용해보세요.');
+    return false;
+  }
+  return true;
+}
+function updateCountDisplay() {
+  const count = getTodayCount();
+  const LIMIT = 5;
+  const remaining = LIMIT - count;
+  const el = document.getElementById('daily-count');
+  if (el) {
+    el.textContent = '오늘 남은 분석 횟수: ' + remaining + '/' + LIMIT + '회';
+    el.style.color = remaining <= 1 ? '#e27a7a' : 'var(--muted)';
+  }
+}
+
 // ── 분석 시작 ──
 async function startAnalysis() {
   if (!file) return;
@@ -755,12 +857,23 @@ async function startAnalysis() {
     if (!normalized || !normalized.topMatch) {
       throw new Error('응답 구조 오류: ' + JSON.stringify(data).slice(0,200));
     }
+    incrementCount();
+    updateCountDisplay();
     saveToHistory(normalized);
     renderResult(normalized);
   } catch(e) {
     clearInterval(iv); pg.classList.remove('on');
     document.getElementById('abtn').disabled = false;
-    alert('오류: ' + e.message);
+    const msg = e.message || '';
+    if (msg.includes('503') || msg.includes('overloaded') || msg.includes('rate') || msg.includes('fetch')) {
+      alert('⚠️ 현재 사용자가 많아 분석이 지연되고 있습니다.\n잠시 후 다시 시도해주세요.');
+    } else if (msg.includes('JSON') || msg.includes('parse') || msg.includes('파싱')) {
+      alert('⚠️ 분석 중 오류가 발생했습니다.\n영상이 너무 짧거나 화질이 불명확한 경우 발생할 수 있습니다.\n다른 영상으로 시도해주세요.');
+    } else if (msg.includes('프레임') || msg.includes('frame')) {
+      alert('⚠️ 영상에서 스윙을 감지하지 못했습니다.\n밝은 환경에서 전신이 보이는 영상으로 다시 시도해주세요.');
+    } else {
+      alert('⚠️ 분석 중 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.');
+    }
   }
 }
 
@@ -798,6 +911,10 @@ function renderResult(d) {
   document.getElementById('saveNotice').style.display = 'block';
   const rs = document.getElementById('result'); rs.classList.add('on');
   rs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  window._lastResult = d;
+  window._lastClub = club;
+  const sbtn = document.getElementById('share-btn');
+  if (sbtn) sbtn.style.display = 'flex';
   // 광고를 결과 아래로 이동
   const adEl = document.getElementById('ad-callaway');
   const resultEl = document.getElementById('result');
@@ -819,6 +936,8 @@ function resetAnalysis() {
   document.getElementById('prog').classList.remove('on');
   document.getElementById('result').classList.remove('on');
   document.getElementById('saveNotice').style.display = 'none';
+  const sbtn2 = document.getElementById('share-btn');
+  if (sbtn2) sbtn2.style.display = 'none';
   window.scrollTo({ top: 0, behavior: 'smooth' });
   // 광고를 원래 위치로 복원 (가이드 카드 바로 다음)
   const adEl2 = document.getElementById('ad-callaway');
