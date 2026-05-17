@@ -638,7 +638,7 @@ async function startAnalysis() {
   const iv = setInterval(() => { si = Math.min(si + 1, 3); tick(); }, 2200);
   try {
     const fd = new FormData(); fd.append('video', file); fd.append('club', club);
-    const r = await fetch(BACKEND + '/analyze', { method: 'POST', body: fd });
+    const r = await fetch(BACKEND + '/api/analyze', { method: 'POST', body: fd });
     clearInterval(iv); si = 3; tick();
     if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || 'HTTP ' + r.status); }
     const data = await r.json();
