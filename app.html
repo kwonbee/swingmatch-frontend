@@ -39,7 +39,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 
 /* 인라인 광고 */
 .ad-inline{width:100%;border-radius:2px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 16px rgba(0,0,0,0.4);margin-bottom:16px;position:relative;cursor:pointer}
-.ad-inline img{width:100%;display:block;max-height:320px;object-fit:cover;object-position:left bottom}
+.ad-inline img{width:100%;display:block;max-height:280px;object-fit:cover;object-position:left bottom}
 
 /* NAV 1 */
 .nav-top{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:16px 36px;background:rgba(10,14,11,0.72);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
@@ -72,7 +72,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .upload-card{width:100%;background:var(--card);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(20px);padding:28px 28px 24px;margin-bottom:16px}
 .club-label{font-size:.68rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:10px}
 .club-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:20px}
-.cb{background:transparent;border:1px solid var(--border);color:var(--muted);padding:12px 6px 10px;border-radius:2px;cursor:pointer;font-size:.68rem;font-family:'Pretendard',sans-serif;letter-spacing:.04em;text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:5px;line-height:1.3}
+.cb{background:transparent;border:1px solid var(--border);color:var(--muted);padding:7px 6px 6px;border-radius:2px;cursor:pointer;font-size:.68rem;font-family:'Pretendard',sans-serif;letter-spacing:.04em;text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.2}
 .cb:hover{border-color:var(--gold);color:var(--gold)}
 .cb.active{border-color:var(--gold);background:rgba(200,169,110,.1);color:var(--gold-light)}
 
@@ -102,14 +102,14 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .step.done .dot{background:#3a7a4a}
 
 /* 촬영 가이드 */
-.guide-card{width:100%;background:var(--card);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(20px);padding:22px 28px;margin-bottom:16px}
+.guide-card{width:100%;background:var(--card);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(20px);padding:14px 20px;margin-bottom:12px}
 .guide-title{font-size:.7rem;letter-spacing:.12em;color:var(--gold);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:6px}
-.guide-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 20px}
+.guide-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px 16px}
 .gi{display:flex;align-items:flex-start;gap:10px}
-.gi-ico{font-size:1.2rem;flex-shrink:0;margin-top:1px}
-.gi-text strong{display:block;font-size:.75rem;color:var(--text);margin-bottom:2px}
-.gi-text span{font-size:.7rem;color:var(--muted);line-height:1.5}
-.guide-tip{margin-top:14px;padding-top:14px;border-top:1px solid rgba(200,169,110,.1);font-size:.71rem;color:var(--muted);line-height:1.65}
+.gi-ico{font-size:1rem;flex-shrink:0;margin-top:1px}
+.gi-text strong{display:block;font-size:.72rem;color:var(--text);margin-bottom:1px}
+.gi-text span{font-size:.67rem;color:var(--muted);line-height:1.4}
+.guide-tip{margin-top:8px;padding-top:8px;border-top:1px solid rgba(200,169,110,.1);font-size:.71rem;color:var(--muted);line-height:1.65}
 .guide-tip strong{color:var(--gold)}
 
 /* 결과 */
@@ -132,7 +132,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .rdesc{font-size:.83rem;color:var(--muted);line-height:1.75;margin-bottom:18px}
 .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
 .tag{border:1px solid var(--border);color:var(--gold);font-size:.68rem;letter-spacing:.06em;padding:3px 8px;border-radius:1px}
-.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.rgrid{display:grid;grid-template-columns:1fr;gap:10px}
 .rblock h4{font-size:.66rem;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:7px}
 .rblock ul{list-style:none;display:flex;flex-direction:column;gap:5px}
 .rblock li{font-size:.76rem;color:var(--text);padding-left:10px;position:relative;line-height:1.5}
@@ -222,11 +222,11 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
   .nav-tab{padding:11px 13px;font-size:.75rem}
   .auth-email{display:none}
   .main{padding:24px 14px 80px}
-  .upload-card,.guide-card{padding:20px 16px}
+  .upload-card,.guide-card{padding:12px 14px}
   .guide-grid{grid-template-columns:1fr 1fr}
   .tc{padding:18px}
   .rgrid{grid-template-columns:1fr}
-  .fg{grid-template-columns:1fr 1fr}
+  .fg{grid-template-columns:1fr}
   .stat-row{grid-template-columns:repeat(3,1fr)}
   .modal{padding:28px 20px}
 }
@@ -738,7 +738,7 @@ async function startAnalysis() {
   const ss = ['s1','s2','s3','s4']; let si = 0;
   const tick = () => ss.forEach((s, i) => { const e = document.getElementById(s); e.className = i < si ? 'step done' : i === si ? 'step active' : 'step'; });
   tick();
-  const iv = setInterval(() => { si = Math.min(si + 1, 3); tick(); }, 2200);
+  const iv = setInterval(() => { si = Math.min(si + 1, 3); tick(); }, 1500);
   try {
     const fd = new FormData(); fd.append('video', file); fd.append('club', club);
     const r = await fetch(BACKEND + '/api/analyze', { method: 'POST', body: fd });
