@@ -724,7 +724,7 @@ function extractFrames(file) {
   video.playsInline = true;
   video.preload = 'metadata';
 
-  document.getElementById('fname').textContent = '⏳ 프레임 추출 중...';
+  document.getElementById('fname').textContent = '✓ ' + file.name;
 
   video.addEventListener('loadedmetadata', () => {
     const duration = video.duration;
@@ -834,11 +834,15 @@ function checkDailyLimit() {
 function updateCountDisplay() {
   const count = getTodayCount();
   const LIMIT = 5;
-  const remaining = LIMIT - count;
+  const remaining = Math.max(0, LIMIT - count);
   const el = document.getElementById('daily-count');
-  if (el) {
-    el.textContent = '오늘 남은 분석 횟수: ' + remaining + '/' + LIMIT + '회';
-    el.style.color = remaining <= 1 ? '#e27a7a' : 'var(--muted)';
+  if (!el) return;
+  if (remaining === 0) {
+    el.textContent = '오늘 무료 분석 횟수를 모두 사용했습니다';
+    el.style.color = '#e27a7a';
+  } else {
+    el.textContent = '오늘 남은 분석 횟수: ' + remaining + '/5회';
+    el.style.color = remaining <= 1 ? '#e27a7a' : 'rgba(255,255,255,0.35)';
   }
 }
 
