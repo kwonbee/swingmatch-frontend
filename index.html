@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SwingMatch — 당신의 스윙, 프로와 비교하다</title>
+<title>SwingMatch — 당신의 스윙, 세계적인 프로들과 비교하다</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Noto+Serif+KR:wght@200;300;400&family=Pretendard:wght@200;300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"/>
 <style>
@@ -38,7 +40,7 @@ body {
 
 /* 한글 세리프 */
 .serif-ko {
-  font-family: 'Noto Serif KR', 'Cormorant Garamond', serif;
+  font-family: 'Noto Sans KR', sans-serif;
 }
 
 /* ─── NAV ─── */
@@ -52,7 +54,7 @@ nav {
   transition: padding 0.3s;
 }
 .logo {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 1.35rem; font-weight: 400;
   letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--cream); text-decoration: none;
@@ -126,18 +128,28 @@ nav ul a:hover { color: var(--cream); }
   background: var(--accent-light); flex-shrink: 0;
 }
 .hero h1 {
-  font-family: 'Noto Serif KR', 'Cormorant Garamond', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: clamp(3rem, 6.5vw, 6.5rem);
   font-weight: 200; line-height: 1.12;
-  letter-spacing: -0.01em; max-width: 13ch;
+  letter-spacing: -0.01em; max-width: 20ch;
   margin-bottom: 2rem;
   word-break: keep-all;
   transform: translate3d(0,0,0);
   backface-visibility: hidden;
 }
+h2 em, h3 em, p em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--accent-pale);
+  white-space: nowrap;
+}
+
 .hero h1 em {
-  font-style: italic; color: var(--accent-pale);
-  font-family: 'Cormorant Garamond', serif;
+  font-style: normal;
+  font-weight: 400;
+  color: var(--accent-pale);
+  font-family: 'Noto Sans KR', sans-serif;
+  white-space: nowrap;
 }
 .hero-desc {
   font-size: 0.95rem; font-weight: 300;
@@ -192,7 +204,7 @@ nav ul a:hover { color: var(--cream); }
 }
 .stat:last-child { border-right: none; }
 .stat-n {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 2.4rem; font-weight: 300;
   color: var(--cream); display: block; line-height: 1;
 }
@@ -215,13 +227,13 @@ section { padding: 8rem 4rem; }
 .tag::after { content:''; width:2.5rem; height:1px; background:var(--accent); }
 
 .sec-title {
-  font-family: 'Noto Serif KR', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: clamp(2rem, 4vw, 3.4rem);
   font-weight: 200; line-height: 1.2;
   max-width: 18ch; margin-bottom: 1.2rem;
   word-break: keep-all;
 }
-.sec-title em { font-style: italic; color: var(--accent-pale); font-family: 'Cormorant Garamond', serif; }
+.sec-title em { font-style: normal; color: var(--accent-pale); font-family: 'Noto Sans KR', sans-serif; }
 .sec-desc {
   font-size: 0.9rem; font-weight: 300;
   color: var(--muted); max-width: 40ch;
@@ -244,13 +256,13 @@ section { padding: 8rem 4rem; }
 .step:first-child { border-top: 1px solid var(--border); }
 .step:hover .step-h { color: var(--accent-pale); }
 .step-n {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 0.85rem; font-weight: 400;
   color: var(--accent); flex-shrink: 0;
   width: 1.8rem; padding-top: 3px;
 }
 .step-h {
-  font-family: 'Noto Serif KR', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 1.25rem; font-weight: 300;
   color: var(--cream); margin-bottom: 0.5rem;
   transition: color 0.25s; word-break: keep-all;
@@ -315,16 +327,16 @@ section { padding: 8rem 4rem; }
   margin-right: auto;
 }
 .scene-quote {
-  font-family: 'Noto Serif KR', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: clamp(2.4rem, 5vw, 4.8rem);
   font-weight: 200; line-height: 1.35;
   color: var(--cream); margin-bottom: 0;
   word-break: keep-all; letter-spacing: -0.01em;
 }
 .scene-quote em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent-pale);
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Noto Sans KR', sans-serif;
 }
 
 /* ─── FEATURES ─── */
@@ -341,7 +353,7 @@ section { padding: 8rem 4rem; }
 }
 .feat:hover { background: var(--card); }
 .feat-ico {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 1.6rem; color: var(--accent);
   margin-bottom: 1.5rem; display: block;
   border: 1px solid var(--border-accent);
@@ -349,7 +361,7 @@ section { padding: 8rem 4rem; }
   display: flex; align-items: center; justify-content: center;
 }
 .feat h3 {
-  font-family: 'Noto Serif KR', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 1.1rem; font-weight: 300;
   color: var(--cream); margin-bottom: 0.7rem;
 }
@@ -398,7 +410,7 @@ section { padding: 8rem 4rem; }
   grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start;
 }
 .demo-h {
-  font-family: 'Noto Serif KR', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 1.8rem; font-weight: 200;
   line-height: 1.3; margin-bottom: 1rem;
   color: var(--cream); word-break: keep-all;
@@ -412,7 +424,7 @@ section { padding: 8rem 4rem; }
 }
 .upload-box:hover { border-color: var(--accent-light); }
 .upload-ico {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 2rem; color: var(--accent); margin-bottom: 0.8rem;
 }
 .upload-box strong {
@@ -430,7 +442,7 @@ section { padding: 8rem 4rem; }
 }
 .r-emo { font-size: 1.5rem; flex-shrink: 0; }
 .r-name {
-  font-family: 'Noto Serif KR', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 1rem; font-weight: 300; color: var(--cream);
 }
 .r-sub { font-size: 0.72rem; color: var(--muted); margin-top: 1px; }
@@ -438,7 +450,7 @@ section { padding: 8rem 4rem; }
 .r-fill { height: 100%; background: linear-gradient(to right, var(--accent), var(--accent-light)); }
 .r-pct {
   margin-left: auto; flex-shrink: 0;
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 1.6rem; font-weight: 300; color: var(--accent-pale);
 }
 
@@ -456,7 +468,7 @@ section { padding: 8rem 4rem; }
 .pro-item:hover { background: var(--dark); }
 .pro-emo { font-size: 1.3rem; margin-bottom: 0.4rem; }
 .pro-nm {
-  font-family: 'Noto Serif KR', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 0.82rem; font-weight: 300; color: var(--cream);
 }
 .pro-tour { font-size: 0.6rem; color: var(--muted); letter-spacing: 0.04em; margin-top: 1px; }
@@ -464,9 +476,11 @@ section { padding: 8rem 4rem; }
   background: var(--dark) !important;
   display: flex !important;
   align-items: center; justify-content: center;
+  cursor: default;
+  pointer-events: none;
 }
 .pro-more-n {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 1.5rem; color: var(--accent-light);
   display: block; line-height: 1;
 }
@@ -492,15 +506,15 @@ section { padding: 8rem 4rem; }
   text-align: center; padding: 0 2rem;
 }
 .scene2-content h2 {
-  font-family: 'Noto Serif KR', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: clamp(2rem, 5vw, 4rem);
   font-weight: 200; line-height: 1.2;
   color: var(--cream); margin-bottom: 1.5rem;
   word-break: keep-all;
 }
 .scene2-content h2 em {
-  font-style: italic; color: var(--accent-pale);
-  font-family: 'Cormorant Garamond', serif;
+  font-style: normal; color: var(--accent-pale);
+  font-family: 'Noto Sans KR', sans-serif;
 }
 .scene2-content p {
   font-size: 0.9rem; color: rgba(240,237,230,0.55);
@@ -516,7 +530,7 @@ footer {
   display: flex; align-items: center; justify-content: space-between;
 }
 .f-logo {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Noto Sans KR', sans-serif;
   font-size: 1.1rem; font-weight: 400;
   letter-spacing: 0.14em; text-transform: uppercase; color: var(--cream);
 }
@@ -728,7 +742,7 @@ footer {
 
 <!-- NAV -->
 <nav>
-  <a href="#" style="display:flex;align-items:center;text-decoration:none"><svg width="auto" height="36" viewBox="0 0 16557 7162" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+  <a href="#" style="display:flex;align-items:center;text-decoration:none"><svg width="auto" height="56" viewBox="0 0 16557 7162" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
     <g transform="matrix(1,0,0,1,-6485.69,-3800.96)">
         <g transform="matrix(1,0,0,1,0,1315.04)">
             <g transform="matrix(1.07325,0,0,1.07325,814.659,1900.62)">
@@ -813,7 +827,7 @@ footer {
   <div class="hero-line"></div>
   <div class="hero-body">
     <div class="hero-badge">Golf Swing Analysis</div>
-    <h1>당신의 스윙,<br><em>프로와</em><br>비교하다</h1>
+    <h1>당신의 스윙,<br><em>세계적인 프로들과</em> 비교해보세요</h1>
     <p class="hero-desc">영상 하나로 충분합니다. PGA, LPGA, LIV Golf, KPGA, KLPGA의 프로 선수 데이터와 당신의 스윙을 비교하고, 가장 닮은 선수를 찾아드립니다.</p>
     <div class="hero-btns">
       <a href="https://swingmatch-frontend.vercel.app/app.html" target="_blank" class="btn-main">
@@ -821,6 +835,7 @@ footer {
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 6.5h10M8 2.5l4 4-4 4"/></svg>
       </a>
     </div>
+  <p style="font-size:0.72rem;color:rgba(255,255,255,0.35);margin-top:12px;letter-spacing:0.04em">베타 서비스 · 무료 운영 중</p>
     </div>
     <div class="hero-scroll">
       <div class="scroll-line"></div>
@@ -844,8 +859,8 @@ footer {
     <span class="stat-l">분석 소요 시간</span>
   </div>
   <div class="stat">
-    <span class="stat-n">무료</span>
-    <span class="stat-l">베타 기간 무제한</span>
+    <span class="stat-n">베타 서비스</span>
+    <span class="stat-l">무료 운영 중</span>
   </div>
 </div>
 
@@ -890,7 +905,7 @@ footer {
   <div class="scene-img"></div>
   <div class="scene-overlay"></div>
   <div class="scene-content">
-    <p class="scene-quote">당신의 스윙 안에<br>이미 답이 있습니다.<br><em>어떤 프로와 닮았는지,</em><br>얼마나 더 나아갈 수 있는지.</p>
+    <p class="scene-quote">당신의 스윙 안에<br>이미 답이 있습니다.<br><em>누구의 스윙과 닮았는지,</em><br>얼마나 더 나아갈 수 있는지.</p>
   </div>
 </section>
 
@@ -969,7 +984,7 @@ footer {
     <div class="pro-item pro-more">
       <div style="text-align:center">
         <span class="pro-more-n">200+</span>
-        <div class="pro-more-l">전체 선수 보기</div>
+        
       </div>
     </div>
   </div>
