@@ -620,156 +620,36 @@ const uz = document.getElementById('uz');
 uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('over'); });
 uz.addEventListener('dragleave', () => uz.classList.remove('over'));
 uz.addEventListener('drop', e => { e.preventDefault(); uz.classList.remove('over'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
-function handleFile(file) {
-  if (!file.type.startsWith('video/')) {
-    alert('영상 파일(MP4, MOV, AVI)을 업로드해주세요.');
-    return;
-  }
-  extractFrames(file);
+function handleFile(f) {
+  if (!f) return;
+  file = f;
+  document.getElementById('fname').textContent = '✓ ' + f.name;
+  document.getElementById('abtn').disabled = false;
 }
 
-// ── 프레임 추출 ──
-const PHASES = ['어드레스','테이크어웨이','백스윙 탑','다운스윙','임팩트','팔로스루','피니시'];
-
-function extractFrames(file) {
-  const video = document.createElement('video');
-  video.muted = true;
-  video.playsInline = true;
-  video.preload = 'metadata';
-
-  const uploadZoneEl = document.getElementById('upload-zone');
-  uploadZoneEl.querySelector('.upload-title').textContent = '영상 로딩 중...';
-
-  video.addEventListener('loadedmetadata', () => {
-    const duration = video.duration;
-    if (!duration || duration === Infinity) {
-      // duration 못 읽으면 바로 재생해서 강제 로드
-      video.play().then(() => video.pause()).catch(() => {});
-      return;
-    }
-    startCapture(video, duration, file);
-  });
-
-  video.addEventListener('durationchange', () => {
-    if (video.duration && video.duration !== Infinity) {
-      startCapture(video, video.duration, file);
-    }
-  });
-
-  video.src = URL.createObjectURL(file);
-  video.load();
-}
-
-function startCapture(video, duration, file) {
-  const count = Math.min(7, Math.max(4, Math.round(duration)));
-  const times = [];
-  for (let i = 0; i < count; i++) times.push((duration / (count + 1)) * (i + 1));
-
-  extractedFrames = [];
-  const framesGrid = document.getElementById('frames-grid');
-  framesGrid.innerHTML = '';
-  document.getElementById('frames-preview').style.display = 'block';
-
-  const uploadTitle = document.querySelector('.upload-title');
-  if (uploadTitle) uploadTitle.textContent = '프레임 추출 중...';
-
-  let idx = 0;
-  let seekTimeout = null;
-
-  function captureFrame() {
-    if (idx >= times.length) {
-      document.getElementById('analyze-btn').style.display = 'block';
-      if (uploadTitle) uploadTitle.textContent = '골프 스윙 영상을 업로드하세요';
-      URL.revokeObjectURL(video.src);
-      return;
-    }
-
-    seekTimeout = setTimeout(() => {
-      // 타임아웃 시 빈 프레임 건너뜀
-      idx++;
-      captureFrame();
-    }, 3000);
-
-    video.currentTime = times[idx];
-  }
-
-  video.onseeked = () => {
-    clearTimeout(seekTimeout);
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 320; canvas.height = 180;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, 320, 180);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-
-      extractedFrames.push({ dataUrl, phase: PHASES[idx] || `프레임 ${idx + 1}` });
-
-      const thumb = document.createElement('div');
-      thumb.className = 'frame-thumb';
-      thumb.innerHTML = `<img src="${dataUrl}"><div class="frame-label">${PHASES[idx] || '프레임 ' + (idx + 1)}</div>`;
-      framesGrid.appendChild(thumb);
-    } catch(e) {}
-
-    idx++;
-    captureFrame();
-  };
-
-  captureFrame();
-}
-
-// ── AI 분석 ──
-
+// ── 분석 시작 ──
 async function startAnalysis() {
-  if (extractedFrames.length === 0) return;
-
-  document.getElementById('analyze-btn').disabled = true;
-  document.getElementById('progress-area').style.display = 'block';
-  document.getElementById('result-area').style.display = 'none';
-
-  const steps = [
-    { pct: 20, msg: '프레임 분석 중...' },
-    { pct: 45, msg: '프로 선수 DB와 비교 중...' },
-    { pct: 70, msg: '스윙 특성 매칭 중...' },
-    { pct: 90, msg: '결과 생성 중...' },
-  ];
-
-  let stepIdx = 0;
-  const interval = setInterval(() => {
-    if (stepIdx < steps.length) {
-      setProgress(steps[stepIdx].pct, steps[stepIdx].msg);
-      stepIdx++;
-    }
-  }, 1200);
-
+  if (!file) return;
+  document.getElementById('abtn').disabled = true;
+  const pg = document.getElementById('prog'); pg.classList.add('on');
+  const ss = ['s1','s2','s3','s4']; let si = 0;
+  const tick = () => ss.forEach((s, i) => { const e = document.getElementById(s); e.className = i < si ? 'step done' : i === si ? 'step active' : 'step'; });
+  tick();
+  const iv = setInterval(() => { si = Math.min(si + 1, 3); tick(); }, 2200);
   try {
-    const frames = extractedFrames.map(f => f.dataUrl.split(',')[1]);
-    const res = await fetch('https://swingmatch-backend-production.up.railway.app/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ frames, phases: extractedFrames.map(f => f.phase) })
-    });
-
-    clearInterval(interval);
-    setProgress(100, '분석 완료!');
-
-    if (res.ok) {
-      const json = await res.json();
-      lastResult = json;
-      renderResult(json);
-    } else {
-      throw new Error('백엔드 오류');
-    }
-  } catch (e) {
-    clearInterval(interval);
-    setProgress(100, '분석 완료!');
-    const demo = getDemoResult();
-    lastResult = demo;
-    renderResult(demo);
+    const fd = new FormData(); fd.append('video', file); fd.append('club', club);
+    const r = await fetch(BACKEND + '/api/analyze', { method: 'POST', body: fd });
+    clearInterval(iv); si = 3; tick();
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || 'HTTP ' + r.status); }
+    const data = await r.json();
+    saveToHistory(data);
+    renderResult(data);
+  } catch(e) {
+    clearInterval(iv); pg.classList.remove('on');
+    document.getElementById('abtn').disabled = false;
+    alert('오류: ' + e.message);
   }
-
-  document.getElementById('analyze-btn').disabled = false;
 }
-
 
 function saveToHistory(data) {
   const labels = { driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터' };
@@ -779,73 +659,28 @@ function saveToHistory(data) {
   localStorage.setItem('swingHistory', JSON.stringify(swingHistory));
 }
 
-function renderResult(data) {
-  const { topMatch: m, frameAnalysis: fa, similar } = data;
-  document.getElementById('progress-area').style.display = 'none';
-  const area = document.getElementById('result-area');
-  area.style.display = 'block';
-
-  const frameHTML = fa.map(f => `
-    <div class="frame-score-item">
-      <div class="frame-score-label">${f.phase}</div>
-      <div class="frame-score-bar"><div class="frame-score-fill" style="width:${f.score}%"></div></div>
-      <div class="frame-score-num">${f.score}점</div>
-      <div class="frame-score-comment">${f.comment}</div>
-    </div>
-  `).join('');
-
-  const similarHTML = similar.map(s => `
-    <div class="similar-item">
-      <div>
-        <div class="similar-name">${s.emoji} ${s.name}</div>
-        <div class="similar-tour">${s.tour}</div>
-      </div>
-      <div class="similar-pct">${s.pct}%</div>
-    </div>
-  `).join('');
-
-  area.innerHTML = `
-    <div class="result-header">
-      <div class="match-pct">${m.matchPct}<span>%</span></div>
-      <div class="match-info">
-        <h2>${m.emoji} ${m.name}</h2>
-        <div class="en-name">${m.nameEn} · ${m.tour} · ${m.nationality}</div>
-        <div class="match-badges">
-          ${(m.keywords||[]).map(k => `<span class="badge">${k}</span>`).join('')}
-        </div>
-      </div>
-    </div>
-    <div class="result-grid">
-      <div class="result-card">
-        <h3>스윙 분석</h3>
-        <p>${m.swingDesc}</p>
-        <br>
-        <div style="display:flex;gap:1rem;font-size:0.78rem;color:var(--text-muted)">
-          <span>파워 ${m.power}</span>
-          <span>정확도 ${m.accuracy}</span>
-          <span>템포 ${m.tempo}</span>
-        </div>
-      </div>
-      <div class="result-card">
-        <h3>강점</h3>
-        <ul>${(m.strengths||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
-        <br>
-        <h3 style="margin-bottom:0.5rem">개선 포인트</h3>
-        <ul>${(m.improvements||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
-      </div>
-    </div>
-    <div class="result-card" style="margin-bottom:1rem">
-      <h3>구간별 분석</h3>
-      <div class="frame-scores">${frameHTML}</div>
-    </div>
-    <div class="result-card" style="margin-bottom:1rem">
-      <h3>유사 선수</h3>
-      <div class="similar-list">${similarHTML}</div>
-    </div>
-    <button id="save-btn" onclick="saveResult()">📁 분석 결과 저장하기</button>
-  `;
+function renderResult(d) {
+  const t = d.topMatch;
+  document.getElementById('r-emoji').textContent = t.emoji || '🏌️';
+  document.getElementById('r-name').textContent = t.name;
+  document.getElementById('r-en').textContent = t.nameEn;
+  document.getElementById('r-tour').textContent = t.tour + ' · ' + t.nationality;
+  document.getElementById('r-pct').textContent = t.matchPct + '%';
+  document.getElementById('r-desc').textContent = t.swingDesc;
+  const tg = document.getElementById('r-tags'); tg.innerHTML = '';
+  (t.keywords||[]).forEach(k => { const s = document.createElement('span'); s.className = 'tag'; s.textContent = k; tg.appendChild(s); });
+  const sl = document.getElementById('r-str'); sl.innerHTML = '';
+  (t.strengths||[]).forEach(s => { const li = document.createElement('li'); li.textContent = s; sl.appendChild(li); });
+  const im = document.getElementById('r-imp'); im.innerHTML = '';
+  (t.improvements||[]).forEach(s => { const li = document.createElement('li'); li.textContent = s; im.appendChild(li); });
+  const fr = document.getElementById('r-frames'); fr.innerHTML = '';
+  (d.frameAnalysis||[]).forEach(f => { fr.innerHTML += `<div class="fi"><div class="fph">${f.phase}</div><div class="fsc">${f.score}</div><div class="fco">${f.comment}</div></div>`; });
+  const sm = document.getElementById('r-sim'); sm.innerHTML = '';
+  (d.similar||[]).forEach(s => { sm.innerHTML += `<div class="si"><span class="sico">${s.emoji||'🏌️'}</span><div class="sinfo"><div class="sname">${s.name}</div><div class="stour">${s.tour}</div></div><span class="spct">${s.pct}%</span></div>`; });
+  document.getElementById('saveNotice').style.display = 'block';
+  const rs = document.getElementById('result'); rs.classList.add('on');
+  rs.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-
 
 function showTab(id, btn) {
   document.querySelectorAll('.tbtn').forEach(b => b.classList.remove('active'));
