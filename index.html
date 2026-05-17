@@ -68,6 +68,19 @@ nav ul a {
   transition: color 0.25s;
 }
 nav ul a:hover { color: var(--cream); }
+.nav-biz {
+  font-size: 0.72rem; letter-spacing: 0.1em;
+  text-transform: uppercase; font-weight: 400;
+  color: rgba(255,255,255,0.85); text-decoration: none;
+  padding: 0.55rem 1.2rem;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 2px; cursor: pointer;
+  background: transparent;
+  transition: all 0.25s; white-space: nowrap;
+}
+.nav-biz:hover { color: #fff; border-color: rgba(255,255,255,0.7); }
+@media(max-width: 480px) { .nav-biz { font-size: .6rem; padding: .45rem .8rem; } }
+
 .nav-cta {
   font-size: 0.72rem; letter-spacing: 0.1em;
   text-transform: uppercase; font-weight: 400;
@@ -574,7 +587,20 @@ footer {
   nav {
     padding: 1rem 1.4rem;
   }
-  .nav-cta {
+  .nav-biz {
+  font-size: 0.72rem; letter-spacing: 0.1em;
+  text-transform: uppercase; font-weight: 400;
+  color: rgba(255,255,255,0.85); text-decoration: none;
+  padding: 0.55rem 1.2rem;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 2px; cursor: pointer;
+  background: transparent;
+  transition: all 0.25s; white-space: nowrap;
+}
+.nav-biz:hover { color: #fff; border-color: rgba(255,255,255,0.7); }
+@media(max-width: 480px) { .nav-biz { font-size: .6rem; padding: .45rem .8rem; } }
+
+.nav-cta {
     padding: 0.45rem 1rem;
     font-size: 0.78rem;
   }
@@ -816,6 +842,7 @@ footer {
     <li><a href="#features">기능</a></li>
     <li><a href="#pros">프로 DB</a></li>
   </ul>
+  <button class="nav-biz" onclick="copyBizEmail()">비즈니스 문의</button>
   <a href="https://swingmatch-frontend.vercel.app/app.html" target="_blank" class="nav-cta">스윙 분석하기</a>
 </nav>
 
@@ -1144,6 +1171,16 @@ footer {
       if (files.length > 0) handleFile(files[0]);
     });
   }
+
+function copyBizEmail() {
+  const email = 'kwonbee@gmail.com';
+  navigator.clipboard.writeText(email).then(() => {
+    alert('📋 이메일이 복사됐습니다!\n\n' + email + '\n\n비즈니스 문의를 보내주세요 😊');
+  }).catch(() => {
+    alert('📧 비즈니스 문의 이메일\n\n' + email + '\n\n위 주소로 연락해주세요!');
+  });
+}
+
 </script>
 </body>
 </html>

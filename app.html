@@ -46,6 +46,12 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .logo{font-family:'Noto Serif KR',serif;font-weight:200;font-size:1.05rem;letter-spacing:.15em;color:var(--gold);text-decoration:none}
 .auth-area{display:flex;align-items:center;gap:10px}
 .auth-email{font-size:.75rem;color:var(--muted);letter-spacing:.03em}
+
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-biz{font-size:.65rem;color:rgba(255,255,255,0.7);letter-spacing:.06em;text-transform:uppercase;padding:5px 10px;border:1px solid rgba(255,255,255,.2);border-radius:2px;transition:all .2s;white-space:nowrap;cursor:pointer;background:transparent}
+.nav-biz:hover{color:#fff;border-color:rgba(255,255,255,.5)}
+@media(max-width:480px){.nav-biz{font-size:.58rem;padding:4px 8px;letter-spacing:.03em}}
+
 .btn-auth{font-family:'Pretendard',sans-serif;font-size:.75rem;letter-spacing:.05em;padding:7px 16px;border-radius:2px;cursor:pointer;transition:all .2s}
 .btn-login{background:transparent;border:1px solid var(--border);color:var(--muted)}
 .btn-login:hover{border-color:var(--gold);color:var(--gold)}
@@ -325,13 +331,16 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
         </g>
     </g>
 </svg></a>
-  <div class="auth-area" id="auth-guest">
-    <button class="btn-auth btn-login" onclick="openModal('login')">로그인</button>
-    <button class="btn-auth btn-signup" onclick="openModal('signup')">회원가입</button>
-  </div>
-  <div class="auth-area" id="auth-user" style="display:none">
-    <span class="auth-email" id="auth-email-txt"></span>
-    <button class="btn-auth btn-logout" onclick="logout()">로그아웃</button>
+  <div class="nav-right">
+    <button class="nav-biz" onclick="copyBizEmail()">비즈니스 문의</button>
+    <div class="auth-area" id="auth-guest">
+      <button class="btn-auth btn-login" onclick="openModal('login')">로그인</button>
+      <button class="btn-auth btn-signup" onclick="openModal('signup')">회원가입</button>
+    </div>
+    <div class="auth-area" id="auth-user" style="display:none">
+      <span class="auth-email" id="auth-email-txt"></span>
+      <button class="btn-auth btn-logout" onclick="logout()">로그아웃</button>
+    </div>
   </div>
 </div>
 
@@ -673,6 +682,16 @@ function showShareFallback(text) {
   }).catch(() => {
     // 클립보드 접근 불가시 직접 보여주기
     alert('아래 내용을 복사해서 카카오톡에 공유해보세요!\n\n' + fullText);
+  });
+}
+
+
+function copyBizEmail() {
+  const email = 'kwonbee@gmail.com';
+  navigator.clipboard.writeText(email).then(() => {
+    alert('📋 이메일이 복사됐습니다!\n\n' + email + '\n\n비즈니스 문의를 보내주세요 😊');
+  }).catch(() => {
+    alert('📧 비즈니스 문의 이메일\n\n' + email + '\n\n위 주소로 연락해주세요!');
   });
 }
 
