@@ -642,8 +642,16 @@ async function startAnalysis() {
     clearInterval(iv); si = 3; tick();
     if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || 'HTTP ' + r.status); }
     const data = await r.json();
-    saveToHistory(data);
-    renderResult(data);
+    console.log('백엔드 응답:', JSON.stringify(data));
+    // 응답 구조 정규화
+    const normalized = data.topMatch ? data : 
+      (data.result ? data.result : 
+      (data.data ? data.data : null));
+    if (!normalized || !normalized.topMatch) {
+      throw new Error('응답 구조 오류: ' + JSON.stringify(data).slice(0,200));
+    }
+    saveToHistory(normalized);
+    renderResult(normalized);
   } catch(e) {
     clearInterval(iv); pg.classList.remove('on');
     document.getElementById('abtn').disabled = false;
