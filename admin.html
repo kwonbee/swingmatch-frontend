@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MySwingMatch — Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root {
+  --bg: #0a0e0b;
+  --surface: #111510;
+  --surface2: #161c17;
+  --border: rgba(255,255,255,0.07);
+  --gold: #c8a96e;
+  --gold-dim: rgba(200,169,110,0.15);
+  --green: #4ade80;
+  --red: #f87171;
+  --blue: #60a5fa;
+  --text: rgba(255,255,255,0.9);
+  --muted: rgba(255,255,255,0.4);
+  --dim: rgba(255,255,255,0.15);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Pretendard',-apple-system,sans-serif; min-height:100vh; }
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+/* ── 로그인 ── */
+#login-screen {
+  display:flex; align-items:center; justify-content:center;
+  min-height:100vh; flex-direction:column; gap:24px;
+}
+.login-box {
+  background:var(--surface); border:1px solid var(--border);
+  padding:40px; width:360px; text-align:center;
+}
+.login-box h1 { font-size:1.2rem; font-weight:500; letter-spacing:.1em; color:var(--gold); margin-bottom:8px; }
+.login-box p { font-size:.78rem; color:var(--muted); margin-bottom:28px; }
+.login-box input {
+  width:100%; padding:11px 14px; background:var(--bg);
+  border:1px solid var(--border); color:var(--text);
+  font-size:.82rem; margin-bottom:10px; outline:none;
+}
+.login-box input:focus { border-color:var(--gold); }
+.btn-login {
+  width:100%; padding:12px; background:var(--gold); color:#000;
+  border:none; font-size:.78rem; font-weight:500; letter-spacing:.08em;
+  text-transform:uppercase; cursor:pointer;
+}
+.login-error { font-size:.72rem; color:var(--red); margin-top:8px; }
+
+/* ── 레이아웃 ── */
+#admin { display:none; }
+.admin-nav {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  background:rgba(10,14,11,0.9); backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  padding:14px 32px; display:flex; align-items:center; justify-content:space-between;
+}
+.admin-nav .logo { font-size:.85rem; letter-spacing:.12em; color:var(--gold); font-weight:500; }
+.admin-nav .nav-right { display:flex; align-items:center; gap:20px; }
+.nav-tab {
+  font-size:.72rem; letter-spacing:.06em; color:var(--muted);
+  cursor:pointer; padding:6px 0; border-bottom:1px solid transparent; transition:.2s;
+}
+.nav-tab:hover, .nav-tab.active { color:var(--text); border-color:var(--gold); }
+.btn-logout {
+  font-size:.68rem; color:var(--muted); cursor:pointer;
+  padding:5px 10px; border:1px solid var(--border); background:none;
+  transition:.2s;
+}
+.btn-logout:hover { color:var(--red); border-color:var(--red); }
+
+.admin-main { padding:80px 32px 40px; max-width:1200px; margin:0 auto; }
+
+.section { display:none; }
+.section.active { display:block; }
+
+/* ── 카드 그리드 ── */
+.stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+.stat-card {
+  background:var(--surface); border:1px solid var(--border); padding:20px 22px;
+}
+.stat-card .label { font-size:.68rem; letter-spacing:.08em; color:var(--muted); text-transform:uppercase; margin-bottom:8px; }
+.stat-card .value { font-size:2rem; font-weight:300; color:var(--text); }
+.stat-card .sub { font-size:.72rem; color:var(--muted); margin-top:4px; }
+.stat-card.gold .value { color:var(--gold); }
+.stat-card.green .value { color:var(--green); }
+
+/* ── 섹션 헤더 ── */
+.section-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--border);
+}
+.section-header h2 { font-size:.82rem; letter-spacing:.1em; font-weight:500; text-transform:uppercase; }
+
+/* ── 테이블 ── */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:.78rem; }
+th {
+  text-align:left; padding:10px 14px; font-size:.65rem;
+  letter-spacing:.08em; color:var(--muted); text-transform:uppercase;
+  border-bottom:1px solid var(--border); font-weight:400;
+}
+td { padding:11px 14px; border-bottom:1px solid rgba(255,255,255,0.04); }
+tr:hover td { background:rgba(255,255,255,0.02); }
+.badge {
+  display:inline-block; padding:2px 8px; font-size:.65rem;
+  letter-spacing:.06em; text-transform:uppercase;
+}
+.badge.active { background:rgba(74,222,128,0.1); color:var(--green); }
+.badge.free { background:rgba(255,255,255,0.06); color:var(--muted); }
+.badge.pro { background:var(--gold-dim); color:var(--gold); }
+.badge.cancelled { background:rgba(248,113,113,0.1); color:var(--red); }
+
+/* ── 차트 ── */
+.chart-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:28px; }
+.chart-card { background:var(--surface); border:1px solid var(--border); padding:22px; }
+.chart-card h3 { font-size:.7rem; letter-spacing:.08em; color:var(--muted); text-transform:uppercase; margin-bottom:16px; }
+
+/* ── 결제 취소 모달 ── */
+.modal-bg {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center;
+}
+.modal-bg.open { display:flex; }
+.modal {
+  background:var(--surface2); border:1px solid var(--border);
+  padding:32px; width:400px;
+}
+.modal h3 { font-size:.9rem; font-weight:500; margin-bottom:20px; color:var(--gold); }
+.modal label { font-size:.72rem; color:var(--muted); display:block; margin-bottom:6px; }
+.modal input, .modal select, .modal textarea {
+  width:100%; padding:10px 12px; background:var(--bg);
+  border:1px solid var(--border); color:var(--text);
+  font-size:.78rem; margin-bottom:14px; outline:none;
+}
+.modal textarea { height:80px; resize:vertical; }
+.modal-btns { display:flex; gap:10px; margin-top:6px; }
+.btn-cancel-sub {
+  flex:1; padding:11px; background:var(--red); color:#fff;
+  border:none; font-size:.75rem; font-weight:500; cursor:pointer; letter-spacing:.04em;
+}
+.btn-close-modal {
+  flex:1; padding:11px; background:transparent; color:var(--muted);
+  border:1px solid var(--border); font-size:.75rem; cursor:pointer;
+}
+
+/* ── 필터 ── */
+.filter-row { display:flex; gap:10px; margin-bottom:16px; align-items:center; }
+.filter-row select, .filter-row input {
+  padding:8px 12px; background:var(--surface); border:1px solid var(--border);
+  color:var(--text); font-size:.75rem; outline:none;
+}
+.btn-refresh {
+  padding:8px 16px; background:var(--gold-dim); color:var(--gold);
+  border:1px solid rgba(200,169,110,0.3); font-size:.72rem; cursor:pointer; letter-spacing:.04em;
+}
+
+/* ── 로딩 ── */
+.loading { text-align:center; padding:40px; color:var(--muted); font-size:.78rem; }
+
+@media(max-width:900px) {
+  .stat-grid { grid-template-columns:repeat(2,1fr); }
+  .chart-row { grid-template-columns:1fr; }
+  .admin-main { padding:70px 16px 30px; }
+  .admin-nav { padding:12px 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- 로그인 화면 -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>MYSWINGMATCH</h1>
+    <p>Admin Dashboard</p>
+    <input type="email" id="admin-email" placeholder="이메일" />
+    <input type="password" id="admin-pw" placeholder="비밀번호" />
+    <button class="btn-login" onclick="adminLogin()">로그인</button>
+    <div class="login-error" id="login-err"></div>
+  </div>
+</div>
+
+<!-- 어드민 대시보드 -->
+<div id="admin">
+  <nav class="admin-nav">
+    <div class="logo">MYSWINGMATCH ADMIN</div>
+    <div class="nav-right">
+      <div class="nav-tab active" onclick="showSection('dashboard',this)">대시보드</div>
+      <div class="nav-tab" onclick="showSection('users',this)">유저</div>
+      <div class="nav-tab" onclick="showSection('analytics',this)">분석 로그</div>
+      <div class="nav-tab" onclick="showSection('subscriptions',this)">구독/결제</div>
+      <button class="btn-logout" onclick="adminLogout()">로그아웃</button>
+    </div>
+  </nav>
+
+  <main class="admin-main">
+
+    <!-- 대시보드 -->
+    <div id="sec-dashboard" class="section active">
+      <div class="stat-grid">
+        <div class="stat-card gold">
+          <div class="label">전체 가입자</div>
+          <div class="value" id="stat-total-users">—</div>
+          <div class="sub">누적</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">오늘 신규 가입</div>
+          <div class="value" id="stat-today-signup">—</div>
+          <div class="sub" id="stat-yesterday-signup">어제: —</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">오늘 분석 횟수</div>
+          <div class="value" id="stat-today-analysis">—</div>
+          <div class="sub" id="stat-month-analysis">이번 달: —</div>
+        </div>
+        <div class="stat-card green">
+          <div class="label">Pro 구독자</div>
+          <div class="value" id="stat-pro-users">—</div>
+          <div class="sub" id="stat-pro-revenue">예상 월 수익: —</div>
+        </div>
+      </div>
+
+      <div class="chart-row">
+        <div class="chart-card">
+          <h3>일별 분석 횟수 (최근 14일)</h3>
+          <canvas id="chart-daily" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>클럽별 사용 비율</h3>
+          <canvas id="chart-club" height="200"></canvas>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <h2>최근 분석 로그</h2>
+        <button class="btn-refresh" onclick="loadDashboard()">↻ 새로고침</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>시간</th><th>유저</th><th>클럽</th><th>매칭 선수</th><th>매칭률</th>
+            </tr>
+          </thead>
+          <tbody id="recent-logs"><tr><td colspan="5" class="loading">로딩 중...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 유저 관리 -->
+    <div id="sec-users" class="section">
+      <div class="section-header">
+        <h2>유저 목록</h2>
+        <button class="btn-refresh" onclick="loadUsers()">↻ 새로고침</button>
+      </div>
+      <div class="filter-row">
+        <select id="user-plan-filter" onchange="loadUsers()">
+          <option value="">전체 플랜</option>
+          <option value="free">무료</option>
+          <option value="pro">Pro</option>
+        </select>
+        <input type="text" id="user-search" placeholder="이메일 검색" onkeyup="loadUsers()" />
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>이메일</th><th>플랜</th><th>총 분석 횟수</th><th>마지막 분석</th><th>가입일</th>
+            </tr>
+          </thead>
+          <tbody id="user-table"><tr><td colspan="5" class="loading">로딩 중...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 분석 로그 -->
+    <div id="sec-analytics" class="section">
+      <div class="section-header">
+        <h2>분석 로그</h2>
+        <button class="btn-refresh" onclick="loadAnalytics()">↻ 새로고침</button>
+      </div>
+      <div class="filter-row">
+        <select id="log-club-filter" onchange="loadAnalytics()">
+          <option value="">전체 클럽</option>
+          <option value="driver">드라이버</option>
+          <option value="iron">아이언</option>
+          <option value="wedge">웨지</option>
+          <option value="putter">퍼터</option>
+        </select>
+        <input type="date" id="log-date-filter" onchange="loadAnalytics()" />
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>시간</th><th>유저</th><th>클럽</th><th>매칭 선수</th><th>매칭률</th><th>투어</th>
+            </tr>
+          </thead>
+          <tbody id="analytics-table"><tr><td colspan="6" class="loading">로딩 중...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 구독/결제 -->
+    <div id="sec-subscriptions" class="section">
+      <div class="section-header">
+        <h2>구독 & 결제 관리</h2>
+        <button class="btn-refresh" onclick="loadSubscriptions()">↻ 새로고침</button>
+      </div>
+      <div class="filter-row">
+        <select id="sub-status-filter" onchange="loadSubscriptions()">
+          <option value="">전체 상태</option>
+          <option value="active">활성</option>
+          <option value="cancelled">취소됨</option>
+          <option value="expired">만료됨</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>유저</th><th>플랜</th><th>상태</th><th>시작일</th><th>만료일</th><th>결제키</th><th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="sub-table"><tr><td colspan="7" class="loading">로딩 중...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- 결제 취소 모달 -->
+<div class="modal-bg" id="cancel-modal">
+  <div class="modal">
+    <h3>구독 취소</h3>
+    <input type="hidden" id="cancel-sub-id" />
+    <label>유저 이메일</label>
+    <input type="text" id="cancel-user-email" readonly />
+    <label>취소 사유</label>
+    <select id="cancel-reason-select">
+      <option value="user_request">유저 요청</option>
+      <option value="payment_fail">결제 실패</option>
+      <option value="admin_manual">관리자 수동 취소</option>
+      <option value="abuse">어뷰징 의심</option>
+    </select>
+    <label>메모 (선택)</label>
+    <textarea id="cancel-memo" placeholder="추가 메모..."></textarea>
+    <div class="modal-btns">
+      <button class="btn-cancel-sub" onclick="confirmCancel()">구독 취소 확인</button>
+      <button class="btn-close-modal" onclick="closeModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Supabase 설정 ──
+const SUPABASE_URL = 'https://vldcmanngfexfwvvnqbb.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsZGNtYW5uZ2ZleGZ3dnZucWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4ODY0MTcsImV4cCI6MjA5NDQ2MjQxN30.3K_jL1HVdOKMEoSSsmacJGNVDkf6iFa2PU7XuEFuUBY';
+const ADMIN_EMAILS = ['myswingmatch@gmail.com', 'kwonbee@gmail.com']; // 어드민 계정
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let charts = {};
+
+// ── 로그인 ──
+async function adminLogin() {
+  const email = document.getElementById('admin-email').value;
+  const pw = document.getElementById('admin-pw').value;
+  const err = document.getElementById('login-err');
+
+  // 어드민 계정만 접근 허용
+  if (!ADMIN_EMAILS.includes(email)) {
+    err.textContent = '접근 권한이 없습니다.';
+    return;
+  }
+
+  const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+  if (error) {
+    err.textContent = '로그인 실패: ' + error.message;
+    return;
+  }
+
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin').style.display = 'block';
+  loadDashboard();
+}
+
+async function adminLogout() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+// 자동 로그인 체크
+sb.auth.getSession().then(({ data }) => {
+  if (data.session?.user?.email && ADMIN_EMAILS.includes(data.session.user.email)) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin').style.display = 'block';
+    loadDashboard();
+  }
+});
+
+// Enter 키 로그인
+document.addEventListener('keyup', e => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') {
+    adminLogin();
+  }
+});
+
+// ── 섹션 전환 ──
+function showSection(name, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  el.classList.add('active');
+
+  if (name === 'users') loadUsers();
+  if (name === 'analytics') loadAnalytics();
+  if (name === 'subscriptions') loadSubscriptions();
+}
+
+// ── 날짜 포맷 ──
+function fmt(dt) {
+  if (!dt) return '—';
+  const d = new Date(dt);
+  return d.toLocaleDateString('ko-KR', { month:'2-digit', day:'2-digit' })
+    + ' ' + d.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' });
+}
+function fmtDate(dt) {
+  if (!dt) return '—';
+  return new Date(dt).toLocaleDateString('ko-KR');
+}
+
+// ── 대시보드 ──
+async function loadDashboard() {
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now()-86400000).toISOString().split('T')[0];
+  const monthStart = today.slice(0,7) + '-01';
+
+  try {
+    // 전체 가입자 (auth.users는 service role 필요, user_profiles로 대체)
+    const { count: totalUsers } = await sb.from('user_profiles').select('*', { count:'exact', head:true });
+    document.getElementById('stat-total-users').textContent = totalUsers ?? '—';
+
+    // 오늘 신규 가입
+    const { count: todaySignup } = await sb.from('user_profiles')
+      .select('*', { count:'exact', head:true })
+      .gte('created_at', today + 'T00:00:00');
+    document.getElementById('stat-today-signup').textContent = todaySignup ?? 0;
+
+    // 어제 신규 가입
+    const { count: ystSignup } = await sb.from('user_profiles')
+      .select('*', { count:'exact', head:true })
+      .gte('created_at', yesterday + 'T00:00:00')
+      .lt('created_at', today + 'T00:00:00');
+    document.getElementById('stat-yesterday-signup').textContent = '어제: ' + (ystSignup ?? 0);
+
+    // 오늘 분석 횟수
+    const { count: todayAnalysis } = await sb.from('analysis_logs')
+      .select('*', { count:'exact', head:true })
+      .gte('created_at', today + 'T00:00:00');
+    document.getElementById('stat-today-analysis').textContent = todayAnalysis ?? 0;
+
+    // 이번 달 분석
+    const { count: monthAnalysis } = await sb.from('analysis_logs')
+      .select('*', { count:'exact', head:true })
+      .gte('created_at', monthStart + 'T00:00:00');
+    document.getElementById('stat-month-analysis').textContent = '이번 달: ' + (monthAnalysis ?? 0);
+
+    // Pro 구독자
+    const { count: proCount } = await sb.from('subscriptions')
+      .select('*', { count:'exact', head:true })
+      .eq('status', 'active').eq('plan', 'pro');
+    document.getElementById('stat-pro-users').textContent = proCount ?? 0;
+    document.getElementById('stat-pro-revenue').textContent =
+      '예상 월 수익: ₩' + ((proCount ?? 0) * 9900).toLocaleString();
+
+    // 최근 로그
+    const { data: recentLogs } = await sb.from('analysis_logs')
+      .select('*').order('created_at', { ascending:false }).limit(10);
+    const tbody = document.getElementById('recent-logs');
+    tbody.innerHTML = (recentLogs && recentLogs.length)
+      ? recentLogs.map(r => `<tr>
+          <td>${fmt(r.created_at)}</td>
+          <td style="color:var(--muted)">${r.is_guest ? '비회원' : (r.user_id?.slice(0,8) + '...')}</td>
+          <td>${clubLabel(r.club)}</td>
+          <td>${r.pro_name || '—'}</td>
+          <td style="color:var(--gold)">${r.match_pct ? r.match_pct + '%' : '—'}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="5" class="loading">데이터 없음</td></tr>';
+
+    // 차트 - 일별 분석
+    await loadDailyChart();
+    await loadClubChart();
+
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+async function loadDailyChart() {
+  const days = Array.from({length:14}, (_,i) => {
+    const d = new Date(Date.now() - (13-i)*86400000);
+    return d.toISOString().split('T')[0];
+  });
+
+  const counts = await Promise.all(days.map(async day => {
+    const { count } = await sb.from('analysis_logs')
+      .select('*', { count:'exact', head:true })
+      .gte('created_at', day + 'T00:00:00')
+      .lt('created_at', day + 'T23:59:59');
+    return count ?? 0;
+  }));
+
+  if (charts.daily) charts.daily.destroy();
+  const ctx = document.getElementById('chart-daily').getContext('2d');
+  charts.daily = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: days.map(d => d.slice(5)),
+      datasets: [{ data: counts, backgroundColor: 'rgba(200,169,110,0.4)', borderColor: '#c8a96e', borderWidth: 1 }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+}
+
+async function loadClubChart() {
+  const clubs = ['driver','iron','wedge','putter'];
+  const counts = await Promise.all(clubs.map(async c => {
+    const { count } = await sb.from('analysis_logs')
+      .select('*', { count:'exact', head:true }).eq('club', c);
+    return count ?? 0;
+  }));
+
+  if (charts.club) charts.club.destroy();
+  const ctx = document.getElementById('chart-club').getContext('2d');
+  charts.club = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['드라이버','아이언','웨지','퍼터'],
+      datasets: [{ data: counts,
+        backgroundColor: ['rgba(200,169,110,0.7)','rgba(96,165,250,0.7)','rgba(74,222,128,0.7)','rgba(248,113,113,0.7)'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      plugins: { legend: { labels: { color: 'rgba(255,255,255,0.6)', font: { size: 11 } } } }
+    }
+  });
+}
+
+// ── 유저 목록 ──
+async function loadUsers() {
+  const plan = document.getElementById('user-plan-filter').value;
+  const search = document.getElementById('user-search').value;
+
+  let q = sb.from('user_profiles').select('*').order('created_at', { ascending:false }).limit(100);
+  if (plan) q = q.eq('plan', plan);
+  if (search) q = q.ilike('email', '%' + search + '%');
+
+  const { data } = await q;
+  const tbody = document.getElementById('user-table');
+  tbody.innerHTML = (data && data.length)
+    ? data.map(u => `<tr>
+        <td>${u.email || '—'}</td>
+        <td><span class="badge ${u.plan || 'free'}">${u.plan === 'pro' ? 'PRO' : 'FREE'}</span></td>
+        <td>${u.total_analysis_count ?? 0}</td>
+        <td>${fmtDate(u.last_analysis_date)}</td>
+        <td>${fmtDate(u.created_at)}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" class="loading">데이터 없음</td></tr>';
+}
+
+// ── 분석 로그 ──
+async function loadAnalytics() {
+  const club = document.getElementById('log-club-filter').value;
+  const date = document.getElementById('log-date-filter').value;
+
+  let q = sb.from('analysis_logs').select('*').order('created_at', { ascending:false }).limit(100);
+  if (club) q = q.eq('club', club);
+  if (date) q = q.gte('created_at', date + 'T00:00:00').lte('created_at', date + 'T23:59:59');
+
+  const { data } = await q;
+  const tbody = document.getElementById('analytics-table');
+  tbody.innerHTML = (data && data.length)
+    ? data.map(r => `<tr>
+        <td>${fmt(r.created_at)}</td>
+        <td style="color:var(--muted)">${r.is_guest ? '비회원' : (r.user_id?.slice(0,8) + '...')}</td>
+        <td>${clubLabel(r.club)}</td>
+        <td>${r.pro_name || '—'}</td>
+        <td style="color:var(--gold)">${r.match_pct ? r.match_pct + '%' : '—'}</td>
+        <td style="color:var(--muted)">${r.pro_tour || '—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" class="loading">데이터 없음</td></tr>';
+}
+
+// ── 구독 관리 ──
+async function loadSubscriptions() {
+  const status = document.getElementById('sub-status-filter').value;
+  let q = sb.from('subscriptions').select('*, user_profiles(email)').order('created_at', { ascending:false }).limit(100);
+  if (status) q = q.eq('status', status);
+
+  const { data } = await q;
+  const tbody = document.getElementById('sub-table');
+  tbody.innerHTML = (data && data.length)
+    ? data.map(s => `<tr>
+        <td>${s.user_profiles?.email || s.user_id?.slice(0,12) + '...'}</td>
+        <td><span class="badge ${s.plan}">${s.plan?.toUpperCase()}</span></td>
+        <td><span class="badge ${s.status}">${statusLabel(s.status)}</span></td>
+        <td>${fmtDate(s.started_at)}</td>
+        <td>${fmtDate(s.expires_at)}</td>
+        <td style="color:var(--muted);font-size:.68rem">${s.payment_key?.slice(0,12) || '—'}...</td>
+        <td>
+          ${s.status === 'active'
+            ? `<button onclick="openCancelModal('${s.id}','${s.user_profiles?.email || ''}')"
+                style="padding:4px 10px;background:rgba(248,113,113,0.1);color:var(--red);border:1px solid rgba(248,113,113,0.3);font-size:.65rem;cursor:pointer">취소</button>`
+            : '<span style="color:var(--dim)">—</span>'}
+        </td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" class="loading">데이터 없음 (결제 도입 후 표시)</td></tr>';
+}
+
+// ── 결제 취소 ──
+function openCancelModal(subId, email) {
+  document.getElementById('cancel-sub-id').value = subId;
+  document.getElementById('cancel-user-email').value = email;
+  document.getElementById('cancel-modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('cancel-modal').classList.remove('open');
+}
+
+async function confirmCancel() {
+  const subId = document.getElementById('cancel-sub-id').value;
+  const reason = document.getElementById('cancel-reason-select').value;
+  const memo = document.getElementById('cancel-memo').value;
+
+  if (!confirm('정말 구독을 취소하시겠습니까?')) return;
+
+  const { error } = await sb.from('subscriptions').update({
+    status: 'cancelled',
+    cancelled_at: new Date().toISOString(),
+    cancel_reason: reason + (memo ? ': ' + memo : '')
+  }).eq('id', subId);
+
+  if (error) {
+    alert('취소 실패: ' + error.message);
+    return;
+  }
+
+  alert('구독이 취소되었습니다.');
+  closeModal();
+  loadSubscriptions();
+}
+
+// ── 유틸 ──
+function clubLabel(c) {
+  return { driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터' }[c] || c || '—';
+}
+function statusLabel(s) {
+  return { active:'활성', cancelled:'취소됨', expired:'만료됨' }[s] || s;
+}
+</script>
+</body>
+</html>
