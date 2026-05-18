@@ -161,10 +161,10 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .sname{font-size:.8rem;color:var(--text)}.stour{font-size:.68rem;color:var(--muted)}
 .spct{font-family:'Noto Serif KR',serif;font-size:1rem;font-weight:200;color:var(--gold)}
 .save-notice{margin-top:12px;padding:11px 16px;background:rgba(42,106,58,.15);border:1px solid rgba(42,106,58,.3);border-radius:2px;font-size:.74rem;color:#7ecf8e;text-align:center}
-.video-link{display:inline-block;padding:10px 18px;background:linear-gradient(135deg,#c8a96e,#a08756);color:#1a1a1a;text-decoration:none;border-radius:6px;font-size:.85rem;font-weight:600;letter-spacing:.02em;transition:transform .15s,box-shadow .15s}
-.video-link:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(200,169,110,.3);text-decoration:none}
-.hist-video-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(200,169,110,.15);color:#c8a96e;border:1px solid rgba(200,169,110,.3);border-radius:4px;font-size:.7rem;text-decoration:none;margin-left:6px;transition:background .15s}
-.hist-video-btn:hover{background:rgba(200,169,110,.25);text-decoration:none}
+.video-link{display:inline-block;padding:10px 18px;background:linear-gradient(135deg,#c8a96e,#a08756);color:#1a1a1a;border:none;border-radius:6px;font-size:.85rem;font-weight:600;letter-spacing:.02em;transition:transform .15s,box-shadow .15s;cursor:pointer;font-family:inherit}
+.video-link:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(200,169,110,.3)}
+.hist-video-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(200,169,110,.15);color:#c8a96e;border:1px solid rgba(200,169,110,.3);border-radius:4px;font-size:.7rem;margin-left:6px;transition:background .15s;cursor:pointer;font-family:inherit}
+.hist-video-btn:hover{background:rgba(200,169,110,.25)}
 
 /* 카카오 공유 버튼 */
 .share-btn{width:100%;margin-top:8px;padding:13px;background:#FEE500;color:#000;border:none;border-radius:2px;font-family:'Pretendard',sans-serif;font-size:.82rem;font-weight:500;letter-spacing:.04em;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
@@ -670,6 +670,20 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
   </div>
 </div>
 
+<!-- 영상 재생 모달 -->
+<div class="modal-overlay" id="modal-video">
+  <div class="modal" style="max-width:720px;padding:20px">
+    <button class="modal-close" onclick="closeVideoModal()">✕</button>
+    <h2 style="margin-bottom:14px">🎥 분석된 영상</h2>
+    <video id="video-player" controls playsinline style="width:100%;border-radius:6px;background:#000;max-height:70vh">
+      브라우저가 영상을 지원하지 않습니다.
+    </video>
+    <div style="text-align:center;margin-top:12px;font-size:.75rem;color:rgba(245,239,224,0.6)">
+      💡 영상은 Pro 회원에게 최대 1년간 보관됩니다 (30개 한도)
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Supabase 초기화 (어제 검증된 방식) ──
 const SUPABASE_URL = 'https://vldcmanngfexfwvvnqbb.supabase.co';
@@ -1035,6 +1049,28 @@ async function logout() {
 // ── 모달 ──
 function openModal(t) { document.getElementById('modal-' + t).classList.add('open'); }
 function closeModal(t) { document.getElementById('modal-' + t).classList.remove('open'); }
+
+// 영상 재생 모달
+function openVideoModal(videoUrl) {
+  if (!videoUrl) {
+    alert('영상을 찾을 수 없습니다.');
+    return;
+  }
+  const player = document.getElementById('video-player');
+  player.src = videoUrl;
+  document.getElementById('modal-video').classList.add('open');
+  // 자동 재생 시도
+  setTimeout(() => {
+    player.play().catch(() => {/* 자동 재생 차단된 경우 무시 */});
+  }, 300);
+}
+
+function closeVideoModal() {
+  const player = document.getElementById('video-player');
+  player.pause();
+  player.src = '';
+  document.getElementById('modal-video').classList.remove('open');
+}
 function switchModal(a, b) { closeModal(a); openModal(b); }
 document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
@@ -1582,7 +1618,8 @@ function renderResult(d, videoInfo) {
   const videoBadge = document.getElementById('r-video-badge');
   if (videoBadge) {
     if (videoInfo && videoInfo.url) {
-      videoBadge.innerHTML = `<a href="${videoInfo.url}" target="_blank" rel="noopener" class="video-link">🎥 분석된 영상 보기</a>`;
+      const safeUrl = videoInfo.url.replace(/'/g, "\\'");
+      videoBadge.innerHTML = `<button type="button" class="video-link" onclick="openVideoModal('${safeUrl}')">🎥 분석된 영상 보기</button>`;
       videoBadge.style.display = 'block';
     } else {
       videoBadge.style.display = 'none';
@@ -1651,8 +1688,9 @@ function renderHistory() {
   fempty.style.display = 'none'; list.style.display = 'flex'; list.innerHTML = '';
   filtered.forEach(h => {
     const scores = (h.frameAnalysis||[]).map(f => `<span class="hscore">${f.phase} <span>${f.score}</span></span>`).join('');
+    const safeUrl = h.videoUrl ? h.videoUrl.replace(/'/g, "\\'") : '';
     const videoBtn = h.videoUrl 
-      ? `<a href="${h.videoUrl}" target="_blank" rel="noopener" class="hist-video-btn" onclick="event.stopPropagation()">🎥 영상</a>` 
+      ? `<button type="button" class="hist-video-btn" onclick="openVideoModal('${safeUrl}')">🎥 영상</button>` 
       : '';
     list.innerHTML += `<div class="hist-item"><div class="hist-top"><div class="hist-emoji">${h.topMatch?.emoji||'🏌️'}</div><div class="hist-pro"><div class="hpname">${h.topMatch?.name||'—'}</div><div class="hpen">${h.topMatch?.nameEn||''}</div></div><div class="hmeta"><div class="hpct">${h.topMatch?.matchPct||'—'}%</div><span class="hdate">${h.date}</span></div></div><div class="hbottom"><span class="hbadge">${h.clubLabel||''}</span>${scores}${videoBtn}</div></div>`;
   });
