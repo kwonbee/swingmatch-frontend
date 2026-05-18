@@ -546,17 +546,46 @@ async function loadUsers() {
   if (plan) q = q.eq('plan', plan);
   if (search) q = q.ilike('email', '%' + search + '%');
 
-  const { data } = await q;
+  const { data: users } = await q;
   const tbody = document.getElementById('user-table');
-  tbody.innerHTML = (data && data.length)
-    ? data.map(u => `<tr>
-        <td>${u.email || '—'}</td>
-        <td><span class="badge ${u.plan || 'free'}">${u.plan === 'pro' ? 'PRO' : 'FREE'}</span></td>
-        <td>${u.total_analysis_count ?? 0}</td>
-        <td>${fmtDate(u.last_analysis_date)}</td>
-        <td>${fmtDate(u.created_at)}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="5" class="loading">데이터 없음</td></tr>';
+  
+  if (!users || !users.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="loading">데이터 없음</td></tr>';
+    return;
+  }
+  
+  // 각 유저의 실제 분석 횟수와 최근 분석일을 analysis_logs에서 직접 조회
+  tbody.innerHTML = '<tr><td colspan="5" class="loading">분석 횟수 집계 중...</td></tr>';
+  
+  const userIds = users.map(u => u.id).filter(Boolean);
+  
+  // 한 번에 모든 분석 로그 가져오기 (해당 유저들 것만)
+  const { data: logs } = await sb
+    .from('analysis_logs')
+    .select('user_id, created_at')
+    .in('user_id', userIds)
+    .order('created_at', { ascending: false });
+  
+  // 유저별 카운트와 최근 분석일 집계
+  const userStats = {};
+  (logs || []).forEach(log => {
+    if (!log.user_id) return;
+    if (!userStats[log.user_id]) {
+      userStats[log.user_id] = { count: 0, lastDate: log.created_at };
+    }
+    userStats[log.user_id].count++;
+  });
+  
+  tbody.innerHTML = users.map(u => {
+    const stats = userStats[u.id] || { count: 0, lastDate: null };
+    return `<tr>
+      <td>${u.email || '—'}</td>
+      <td><span class="badge ${u.plan || 'free'}">${u.plan === 'pro' ? 'PRO' : 'FREE'}</span></td>
+      <td>${stats.count}</td>
+      <td>${fmtDate(stats.lastDate)}</td>
+      <td>${fmtDate(u.created_at)}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ── 분석 로그 ──
