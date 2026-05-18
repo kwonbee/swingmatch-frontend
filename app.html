@@ -616,9 +616,34 @@ async function doLogin() {
   hideErr('login-err');
   const email = document.getElementById('login-email').value.trim();
   const pw = document.getElementById('login-pw').value;
-  if (!email || !pw) { showErr('login-err', '이메일과 비밀번호를 입력해주세요.'); return; }
+  if (!email || !pw) { showErr('login-err', '⚠️ 이메일과 비밀번호를 입력해주세요.'); return; }
+  
+  // 로딩 표시
+  const errEl = document.getElementById('login-err');
+  errEl.style.display = 'block';
+  errEl.style.color = '#c8a96e';
+  errEl.style.background = 'rgba(200,169,110,0.1)';
+  errEl.style.padding = '10px';
+  errEl.style.borderRadius = '6px';
+  errEl.textContent = '🔐 로그인 중...';
+  
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
-  if (error) { showErr('login-err', '이메일 또는 비밀번호가 올바르지 않습니다.'); return; }
+  if (error) { 
+    console.error('[Auth] 로그인 실패:', error);
+    const msg = (error.message || '').toLowerCase();
+    if (msg.includes('invalid') || msg.includes('credentials')) {
+      showErr('login-err', '❌ 이메일 또는 비밀번호가 올바르지 않아요.'); 
+    } else if (msg.includes('email') && msg.includes('confirm')) {
+      showErr('login-err', '📧 이메일 인증을 먼저 완료해주세요. 메일함을 확인해보세요.'); 
+    } else if (msg.includes('rate') || error.status === 429) {
+      showErr('login-err', '⏰ 너무 자주 시도하셨어요. 잠시 후 다시 시도해주세요.'); 
+    } else if (msg.includes('network')) {
+      showErr('login-err', '📡 네트워크 오류. 인터넷 연결을 확인해주세요.'); 
+    } else {
+      showErr('login-err', '❌ 로그인 실패: ' + (error.message || '잠시 후 다시 시도해주세요')); 
+    }
+    return; 
+  }
   currentUser = data.user;
   closeModal('login');
   initAuth();
@@ -630,16 +655,42 @@ async function doSignup() {
   const email = document.getElementById('signup-email').value.trim();
   const pw = document.getElementById('signup-pw').value;
   const pw2 = document.getElementById('signup-pw2').value;
-  if (!email) { showErr('signup-err', '이메일을 입력해주세요.'); return; }
-  if (pw.length < 8) { showErr('signup-err', '비밀번호는 8자 이상이어야 합니다.'); return; }
-  if (pw !== pw2) { showErr('signup-err', '비밀번호가 일치하지 않습니다.'); return; }
+  if (!email) { showErr('signup-err', '⚠️ 이메일을 입력해주세요.'); return; }
+  if (!email.includes('@')) { showErr('signup-err', '⚠️ 올바른 이메일 형식이 아닙니다.'); return; }
+  if (pw.length < 8) { showErr('signup-err', '⚠️ 비밀번호는 8자 이상이어야 합니다.'); return; }
+  if (pw !== pw2) { showErr('signup-err', '⚠️ 비밀번호가 일치하지 않습니다.'); return; }
+  
+  // 로딩 표시
+  const errEl = document.getElementById('signup-err');
+  errEl.style.display = 'block';
+  errEl.style.color = '#c8a96e';
+  errEl.style.background = 'rgba(200,169,110,0.1)';
+  errEl.style.padding = '10px';
+  errEl.style.borderRadius = '6px';
+  errEl.textContent = '📝 가입 중...';
+  
   const { data, error } = await sb.auth.signUp({ email, password: pw });
-  if (error) { showErr('signup-err', error.message); return; }
+  if (error) { 
+    console.error('[Auth] 회원가입 실패:', error);
+    const msg = (error.message || '').toLowerCase();
+    if (msg.includes('already') || msg.includes('registered')) {
+      showErr('signup-err', '⚠️ 이미 가입된 이메일이에요. 로그인을 시도해보세요.'); 
+    } else if (msg.includes('rate') || error.status === 429) {
+      showErr('signup-err', '⏰ 너무 자주 시도하셨어요. 잠시 후 다시 시도해주세요.'); 
+    } else if (msg.includes('password')) {
+      showErr('signup-err', '⚠️ 비밀번호가 너무 약합니다. 더 복잡하게 만들어주세요.'); 
+    } else if (msg.includes('email') && msg.includes('invalid')) {
+      showErr('signup-err', '⚠️ 올바른 이메일 형식이 아닙니다.'); 
+    } else {
+      showErr('signup-err', '❌ 가입 실패: ' + (error.message || '잠시 후 다시 시도해주세요')); 
+    }
+    return; 
+  }
   if (data.user && !data.session) {
-    const errEl = document.getElementById('signup-err');
-    errEl.textContent = '✅ 이메일 인증 링크를 보냈습니다. 확인 후 로그인해주세요.';
-    errEl.style.color = '#7ecf8e';
-    errEl.style.display = 'block';
+    errEl.style.color = '#4ade80';
+    errEl.style.background = 'rgba(74,222,128,0.1)';
+    errEl.innerHTML = '✅ <strong>가입 신청 완료!</strong><br>' +
+      '<span style="font-size:0.8rem;opacity:0.85">' + email + '로 인증 메일을 보냈어요.<br>메일함을 확인하고 인증 후 로그인해주세요. (스팸함도 확인!)</span>';
     return;
   }
   currentUser = data.user;
@@ -718,13 +769,15 @@ function copyBizEmail() {
 async function forgotPassword() {
   console.log('[Auth] 비밀번호 찾기 클릭됨');
   const errEl = document.getElementById('login-err');
-  errEl.style.color = '';
+  
+  // 메시지 영역 표시 + 기본 스타일
+  errEl.style.display = 'block';
   errEl.style.fontSize = '0.85rem';
   errEl.style.fontWeight = '500';
   errEl.style.padding = '10px';
   errEl.style.borderRadius = '6px';
   errEl.style.marginBottom = '8px';
-  errEl.style.background = 'rgba(200,169,110,0.1)';
+  errEl.style.textAlign = 'left';
 
   const email = document.getElementById('login-email').value.trim();
   if (!email) {
@@ -740,7 +793,9 @@ async function forgotPassword() {
     return;
   }
 
+  // 발송 중 표시
   errEl.style.color = '#c8a96e';
+  errEl.style.background = 'rgba(200,169,110,0.1)';
   errEl.textContent = '📧 이메일 발송 중...';
 
   const { error } = await sb.auth.resetPasswordForEmail(email, {
@@ -751,17 +806,29 @@ async function forgotPassword() {
     console.error('[Auth] 재설정 이메일 발송 실패:', error);
     errEl.style.color = '#f87171';
     errEl.style.background = 'rgba(248,113,113,0.1)';
-    if (error.message && error.message.toLowerCase().includes('rate')) {
-      errEl.textContent = '⏰ 너무 많이 요청하셨습니다. 1분 후 다시 시도해주세요.';
-    } else if (error.status === 429) {
-      errEl.textContent = '⏰ 잠시 후 다시 시도해주세요. (요청 제한)';
+    
+    const msg = (error.message || '').toLowerCase();
+    
+    if (msg.includes('rate limit') || error.status === 429) {
+      errEl.innerHTML = '⏰ <strong>너무 자주 시도하셨어요!</strong><br>' +
+        '<span style="font-size:0.8rem;opacity:0.85">잠시 후(약 1시간 후) 다시 시도해주세요.<br>' +
+        '급하시면 <a href="https://pf.kakao.com/myswingmatch" target="_blank" style="color:#c8a96e;text-decoration:underline">카카오톡 문의</a>해주세요.</span>';
+    } else if (msg.includes('not found') || msg.includes('user not')) {
+      errEl.innerHTML = '⚠️ <strong>등록되지 않은 이메일이에요</strong><br>' +
+        '<span style="font-size:0.8rem;opacity:0.85">회원가입을 먼저 해주시거나, Google 로그인을 이용해보세요.</span>';
+    } else if (msg.includes('network') || msg.includes('fetch')) {
+      errEl.innerHTML = '📡 <strong>네트워크 오류</strong><br>' +
+        '<span style="font-size:0.8rem;opacity:0.85">인터넷 연결을 확인하고 다시 시도해주세요.</span>';
     } else {
-      errEl.textContent = '❌ ' + (error.message || '오류가 발생했습니다');
+      errEl.innerHTML = '❌ <strong>이메일 발송 실패</strong><br>' +
+        '<span style="font-size:0.8rem;opacity:0.85">' + (error.message || '잠시 후 다시 시도해주세요.') + '</span>';
     }
   } else {
     errEl.style.color = '#4ade80';
     errEl.style.background = 'rgba(74,222,128,0.1)';
-    errEl.textContent = '✅ 비밀번호 재설정 링크를 이메일로 보냈습니다! 메일함을 확인해주세요.';
+    errEl.innerHTML = '✅ <strong>재설정 메일을 보냈어요!</strong><br>' +
+      '<span style="font-size:0.8rem;opacity:0.85">' + email + ' 메일함을 확인해주세요.<br>' +
+      '(스팸함도 확인해보세요)</span>';
   }
 }
 
@@ -769,21 +836,44 @@ async function doResetPassword() {
   const pw = document.getElementById('reset-pw').value;
   const pw2 = document.getElementById('reset-pw2').value;
   const errEl = document.getElementById('reset-err');
-  errEl.style.color = '';
+  
+  // 메시지 표시 기본 스타일
+  errEl.style.display = 'block';
+  errEl.style.fontSize = '0.85rem';
+  errEl.style.fontWeight = '500';
+  errEl.style.padding = '10px';
+  errEl.style.borderRadius = '6px';
+  errEl.style.marginBottom = '8px';
+  errEl.style.textAlign = 'left';
+  
   if (!pw || pw.length < 8) {
-    errEl.textContent = '비밀번호는 8자 이상이어야 합니다.';
+    errEl.style.color = '#f87171';
+    errEl.style.background = 'rgba(248,113,113,0.1)';
+    errEl.textContent = '⚠️ 비밀번호는 8자 이상이어야 합니다.';
     return;
   }
   if (pw !== pw2) {
-    errEl.textContent = '비밀번호가 일치하지 않습니다.';
+    errEl.style.color = '#f87171';
+    errEl.style.background = 'rgba(248,113,113,0.1)';
+    errEl.textContent = '⚠️ 비밀번호가 일치하지 않습니다.';
     return;
   }
+  
+  errEl.style.color = '#c8a96e';
+  errEl.style.background = 'rgba(200,169,110,0.1)';
+  errEl.textContent = '🔐 비밀번호 변경 중...';
+  
   const { error } = await sb.auth.updateUser({ password: pw });
   if (error) {
-    errEl.textContent = '오류: ' + error.message;
+    errEl.style.color = '#f87171';
+    errEl.style.background = 'rgba(248,113,113,0.1)';
+    errEl.innerHTML = '❌ <strong>변경 실패</strong><br>' +
+      '<span style="font-size:0.8rem;opacity:0.85">' + (error.message || '잠시 후 다시 시도해주세요') + '</span>';
   } else {
     errEl.style.color = '#4ade80';
-    errEl.textContent = '✅ 비밀번호가 변경되었습니다. 잠시 후 자동 로그인됩니다.';
+    errEl.style.background = 'rgba(74,222,128,0.1)';
+    errEl.innerHTML = '✅ <strong>비밀번호가 변경되었어요!</strong><br>' +
+      '<span style="font-size:0.8rem;opacity:0.85">잠시 후 자동 로그인됩니다...</span>';
     // URL 해시 정리
     if (window.history.replaceState) {
       window.history.replaceState(null, '', window.location.pathname);
@@ -809,7 +899,17 @@ function switchModal(a, b) { closeModal(a); openModal(b); }
 document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
-function showErr(id, msg) { const e = document.getElementById(id); e.textContent = msg; e.style.color = '#e27a7a'; e.style.display = 'block'; }
+function showErr(id, msg) { 
+  const e = document.getElementById(id); 
+  e.textContent = msg; 
+  e.style.color = '#f87171'; 
+  e.style.background = 'rgba(248,113,113,0.1)';
+  e.style.padding = '10px';
+  e.style.borderRadius = '6px';
+  e.style.marginBottom = '8px';
+  e.style.fontWeight = '500';
+  e.style.display = 'block'; 
+}
 function hideErr(id) { document.getElementById(id).style.display = 'none'; }
 
 // ── 패널 전환 ──
