@@ -509,7 +509,9 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
     <div class="modal-field"><label>비밀번호</label><input type="password" id="login-pw" placeholder="••••••••"></div>
     <div class="modal-err" id="login-err"></div>
     <button class="modal-submit" onclick="doLogin()">로그인</button>
-    <div class="modal-switch" style="margin-top:8px"><a onclick="forgotPassword()" style="color:var(--gold-dim,rgba(200,169,110,0.6));font-size:.72rem;cursor:pointer">비밀번호를 잊으셨나요?</a></div>
+    <div style="text-align:center;margin-top:12px">
+      <button type="button" onclick="forgotPassword()" style="background:transparent;border:none;color:rgba(200,169,110,0.8);font-size:.8rem;cursor:pointer;text-decoration:underline;padding:8px 16px;font-family:inherit">비밀번호를 잊으셨나요?</button>
+    </div>
     <div class="modal-switch">계정이 없으신가요? <a onclick="switchModal('login','signup')">회원가입</a></div>
   </div>
 </div>
@@ -714,19 +716,25 @@ function copyBizEmail() {
 
 
 async function forgotPassword() {
+  console.log('[Auth] 비밀번호 찾기 클릭됨');
+  const errEl = document.getElementById('login-err');
+  errEl.style.color = '';
   const email = document.getElementById('login-email').value;
   if (!email) {
-    document.getElementById('login-err').textContent = '이메일을 먼저 입력해주세요.';
+    errEl.textContent = '이메일을 먼저 입력해주세요.';
     return;
   }
+  errEl.style.color = 'rgba(200,169,110,0.7)';
+  errEl.textContent = '이메일 발송 중...';
   const { error } = await sb.auth.resetPasswordForEmail(email, {
     redirectTo: window.location.origin + '/app.html'
   });
   if (error) {
-    document.getElementById('login-err').textContent = '오류: ' + error.message;
+    errEl.style.color = '';
+    errEl.textContent = '오류: ' + error.message;
   } else {
-    document.getElementById('login-err').style.color = '#4ade80';
-    document.getElementById('login-err').textContent = '✅ 비밀번호 재설정 링크를 이메일로 보냈습니다!';
+    errEl.style.color = '#4ade80';
+    errEl.textContent = '✅ 비밀번호 재설정 링크를 이메일로 보냈습니다!';
   }
 }
 
