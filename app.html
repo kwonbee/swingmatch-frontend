@@ -1525,13 +1525,20 @@ async function startAnalysis() {
     }
     await updateCountDisplay();
     
-    // Pro 회원: 영상을 Supabase Storage에 업로드 (백그라운드)
-    let videoInfo = null;
+    // ★ 결과 먼저 표시 (영상 업로드 기다리지 않음!)
+    saveToHistory(normalized, null);
+    renderResult(normalized, null);
+    
+    // ★ Pro 회원: 영상을 백그라운드로 업로드 (결과는 이미 보임)
     if (isProUser()) {
-      try {
-        videoInfo = await uploadVideoToStorage(file);
-        if (videoInfo) {
-          // analysis_logs에 video_path, video_url 저장 (가장 최근 로그 업데이트)
+      uploadVideoToStorage(file).then(async videoInfo => {
+        if (!videoInfo) {
+          console.log('[Video] 업로드 실패 또는 스킵');
+          return;
+        }
+        
+        try {
+          // analysis_logs에 video 정보 저장
           await sb.from('analysis_logs')
             .update({ 
               video_path: videoInfo.path, 
@@ -1541,21 +1548,31 @@ async function startAnalysis() {
             .order('created_at', { ascending: false })
             .limit(1);
           console.log('[Video] DB에 영상 정보 저장 완료');
+          
+          // 히스토리에도 영상 정보 추가 (가장 최근 항목)
+          if (swingHistory[0]) {
+            swingHistory[0].videoPath = videoInfo.path;
+            swingHistory[0].videoUrl = videoInfo.url;
+            localStorage.setItem('swingHistory', JSON.stringify(swingHistory));
+          }
+          
+          // 결과 화면에 "영상 보기" 버튼 추가 (이미 결과 보이는 상태에서)
+          const videoBadge = document.getElementById('r-video-badge');
+          if (videoBadge && videoInfo.url) {
+            const safeUrl = videoInfo.url.replace(/'/g, "\\'");
+            videoBadge.innerHTML = `<button type="button" class="video-link" onclick="openVideoModal('${safeUrl}')">🎥 분석된 영상 보기</button>`;
+            videoBadge.style.display = 'block';
+          }
+        } catch (e) {
+          console.warn('[Video] DB 업데이트 실패:', e);
         }
-      } catch (videoErr) {
-        console.warn('[Video] 저장 실패 (분석 결과는 정상):', videoErr);
-      }
-      
-      // 30개 초과 시 가장 오래된 영상 자동 삭제
-      try {
-        await cleanupOldVideos();
-      } catch (e) {
-        console.warn('[Video] 오래된 영상 정리 실패:', e);
-      }
+        
+        // 30개 초과 시 가장 오래된 영상 자동 삭제 (백그라운드)
+        cleanupOldVideos().catch(e => console.warn('[Video] cleanup 실패:', e));
+      }).catch(err => {
+        console.warn('[Video] 업로드 실패 (분석 결과는 정상):', err);
+      });
     }
-    
-    saveToHistory(normalized, videoInfo);
-    renderResult(normalized, videoInfo);
   } catch(e) {
     clearInterval(iv); pg.classList.remove('on');
     document.getElementById('abtn').disabled = false;
