@@ -424,47 +424,40 @@ async function loadDashboard() {
   const yesterday = new Date(Date.now()-86400000).toISOString().split('T')[0];
   const monthStart = today.slice(0,7) + '-01';
 
+  console.log('[Admin] 대시보드 로드 시작');
+
   try {
-    // 전체 가입자 (auth.users는 service role 필요, user_profiles로 대체)
-    const { count: totalUsers } = await sb.from('user_profiles').select('*', { count:'exact', head:true });
-    document.getElementById('stat-total-users').textContent = totalUsers ?? '—';
+    // 전체 가입자 - 데이터를 직접 가져와서 카운트
+    const { data: allUsers, error: e1 } = await sb.from('user_profiles').select('id, created_at');
+    if (e1) console.error('[Admin] user_profiles 조회 실패:', e1);
+    else console.log('[Admin] user_profiles 결과:', allUsers?.length, '명');
+    const totalUsers = allUsers?.length || 0;
+    const todaySignup = allUsers?.filter(u => u.created_at >= today + 'T00:00:00').length || 0;
+    const ystSignup = allUsers?.filter(u => u.created_at >= yesterday + 'T00:00:00' && u.created_at < today + 'T00:00:00').length || 0;
+    document.getElementById('stat-total-users').textContent = totalUsers;
+    document.getElementById('stat-today-signup').textContent = todaySignup;
+    document.getElementById('stat-yesterday-signup').textContent = '어제: ' + ystSignup;
 
-    // 오늘 신규 가입
-    const { count: todaySignup } = await sb.from('user_profiles')
-      .select('*', { count:'exact', head:true })
-      .gte('created_at', today + 'T00:00:00');
-    document.getElementById('stat-today-signup').textContent = todaySignup ?? 0;
-
-    // 어제 신규 가입
-    const { count: ystSignup } = await sb.from('user_profiles')
-      .select('*', { count:'exact', head:true })
-      .gte('created_at', yesterday + 'T00:00:00')
-      .lt('created_at', today + 'T00:00:00');
-    document.getElementById('stat-yesterday-signup').textContent = '어제: ' + (ystSignup ?? 0);
-
-    // 오늘 분석 횟수
-    const { count: todayAnalysis } = await sb.from('analysis_logs')
-      .select('*', { count:'exact', head:true })
-      .gte('created_at', today + 'T00:00:00');
-    document.getElementById('stat-today-analysis').textContent = todayAnalysis ?? 0;
-
-    // 이번 달 분석
-    const { count: monthAnalysis } = await sb.from('analysis_logs')
-      .select('*', { count:'exact', head:true })
-      .gte('created_at', monthStart + 'T00:00:00');
-    document.getElementById('stat-month-analysis').textContent = '이번 달: ' + (monthAnalysis ?? 0);
+    // 분석 로그 - 데이터를 직접 가져와서 카운트
+    const { data: allLogs, error: e2 } = await sb.from('analysis_logs').select('id, created_at, club');
+    if (e2) console.error('[Admin] analysis_logs 조회 실패:', e2);
+    else console.log('[Admin] analysis_logs 결과:', allLogs?.length, '건');
+    const todayAnalysis = allLogs?.filter(l => l.created_at >= today + 'T00:00:00').length || 0;
+    const monthAnalysis = allLogs?.filter(l => l.created_at >= monthStart + 'T00:00:00').length || 0;
+    document.getElementById('stat-today-analysis').textContent = todayAnalysis;
+    document.getElementById('stat-month-analysis').textContent = '이번 달: ' + monthAnalysis;
 
     // Pro 구독자
-    const { count: proCount } = await sb.from('subscriptions')
-      .select('*', { count:'exact', head:true })
-      .eq('status', 'active').eq('plan', 'pro');
-    document.getElementById('stat-pro-users').textContent = proCount ?? 0;
-    document.getElementById('stat-pro-revenue').textContent =
-      '예상 월 수익: ₩' + ((proCount ?? 0) * 9900).toLocaleString();
+    const { data: subs, error: e3 } = await sb.from('subscriptions').select('*').eq('status', 'active').eq('plan', 'pro');
+    if (e3) console.error('[Admin] subscriptions 조회 실패:', e3);
+    const proCount = subs?.length || 0;
+    document.getElementById('stat-pro-users').textContent = proCount;
+    document.getElementById('stat-pro-revenue').textContent = '예상 월 수익: ₩' + (proCount * 9900).toLocaleString();
 
     // 최근 로그
-    const { data: recentLogs } = await sb.from('analysis_logs')
+    const { data: recentLogs, error: e4 } = await sb.from('analysis_logs')
       .select('*').order('created_at', { ascending:false }).limit(10);
+    if (e4) console.error('[Admin] 최근 로그 조회 실패:', e4);
     const tbody = document.getElementById('recent-logs');
     tbody.innerHTML = (recentLogs && recentLogs.length)
       ? recentLogs.map(r => `<tr>
@@ -481,7 +474,8 @@ async function loadDashboard() {
     await loadClubChart();
 
   } catch(e) {
-    console.error(e);
+    console.error('[Admin] 대시보드 전체 에러:', e);
+    alert('데이터 로드 중 오류 발생. 콘솔(F12)을 확인해주세요.\n' + e.message);
   }
 }
 
@@ -492,11 +486,12 @@ async function loadDailyChart() {
   });
 
   const counts = await Promise.all(days.map(async day => {
-    const { count } = await sb.from('analysis_logs')
-      .select('*', { count:'exact', head:true })
+    const { data, error } = await sb.from('analysis_logs')
+      .select('id')
       .gte('created_at', day + 'T00:00:00')
       .lt('created_at', day + 'T23:59:59');
-    return count ?? 0;
+    if (error) console.error('[Admin] 일별 차트 ' + day + ' 실패:', error);
+    return data?.length || 0;
   }));
 
   if (charts.daily) charts.daily.destroy();
@@ -520,9 +515,9 @@ async function loadDailyChart() {
 async function loadClubChart() {
   const clubs = ['driver','iron','wedge','putter'];
   const counts = await Promise.all(clubs.map(async c => {
-    const { count } = await sb.from('analysis_logs')
-      .select('*', { count:'exact', head:true }).eq('club', c);
-    return count ?? 0;
+    const { data, error } = await sb.from('analysis_logs').select('id').eq('club', c);
+    if (error) console.error('[Admin] 클럽 차트 ' + c + ' 실패:', error);
+    return data?.length || 0;
   }));
 
   if (charts.club) charts.club.destroy();
