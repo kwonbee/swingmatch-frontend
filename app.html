@@ -161,6 +161,10 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .sname{font-size:.8rem;color:var(--text)}.stour{font-size:.68rem;color:var(--muted)}
 .spct{font-family:'Noto Serif KR',serif;font-size:1rem;font-weight:200;color:var(--gold)}
 .save-notice{margin-top:12px;padding:11px 16px;background:rgba(42,106,58,.15);border:1px solid rgba(42,106,58,.3);border-radius:2px;font-size:.74rem;color:#7ecf8e;text-align:center}
+.video-link{display:inline-block;padding:10px 18px;background:linear-gradient(135deg,#c8a96e,#a08756);color:#1a1a1a;text-decoration:none;border-radius:6px;font-size:.85rem;font-weight:600;letter-spacing:.02em;transition:transform .15s,box-shadow .15s}
+.video-link:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(200,169,110,.3);text-decoration:none}
+.hist-video-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(200,169,110,.15);color:#c8a96e;border:1px solid rgba(200,169,110,.3);border-radius:4px;font-size:.7rem;text-decoration:none;margin-left:6px;transition:background .15s}
+.hist-video-btn:hover{background:rgba(200,169,110,.25);text-decoration:none}
 
 /* 카카오 공유 버튼 */
 .share-btn{width:100%;margin-top:8px;padding:13px;background:#FEE500;color:#000;border:none;border-radius:2px;font-family:'Pretendard',sans-serif;font-size:.82rem;font-weight:500;letter-spacing:.04em;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
@@ -498,7 +502,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <div class="gi"><span class="gi-ico">☀️</span><div class="gi-text"><strong>촬영 환경</strong><span>밝은 환경, 전신이 보이게</span></div></div>
       <div class="gi"><span class="gi-ico">🎯</span><div class="gi-text"><strong>포함 동작</strong><span>어드레스~피니시 전체</span></div></div>
     </div>
-    <div class="guide-tip">💡 <strong>Tip.</strong> 연습장에서 핸드폰을 삼각대나 카트에 올려두고 측면에서 촬영하면 가장 정확한 분석이 가능합니다.</div>
+    <div class="guide-tip">💡 <strong>Tip.</strong> 연습장에서 핸드폰을 삼각대나 카트에 올려두고 측면에서 촬영하면 가장 정확한 분석이 가능합니다.<br><span style="color:rgba(200,169,110,0.8);font-size:.7rem">✨ Pro 회원은 분석한 영상을 30개까지 자동 저장하여 언제든 다시 볼 수 있어요</span></div>
   </div>
   <!-- Callaway 광고 -->
   <div class="ad-inline" id="ad-callaway">
@@ -531,6 +535,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <div class="tc" id="tc-s"><div class="slist" id="r-sim"></div></div>
     </div>
     <div class="save-notice" id="saveNotice" style="display:none">✓ 분석 결과가 히스토리에 저장되었습니다</div>
+    <div id="r-video-badge" style="display:none;text-align:center;margin:12px 0"></div>
     <button class="share-btn" onclick="shareKakao()" id="share-btn" style="display:none">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.69 2 11.25c0 2.91 1.72 5.47 4.33 7.02L5.5 21l3.27-1.7c1.03.27 2.12.42 3.23.42 5.52 0 10-3.69 10-8.25S17.52 3 12 3z"/></svg>
       카카오톡으로 공유하기
@@ -1171,8 +1176,16 @@ function startCapture(video, duration, file) {
 
 function handleFile(f) {
   if (!f) return;
+  
+  // 파일 크기 체크 (50MB 안내)
+  const sizeMB = f.size / (1024 * 1024);
+  if (sizeMB > 50) {
+    alert(`⚠️ 영상 파일이 너무 큽니다.\n\n현재 크기: ${sizeMB.toFixed(1)}MB\n최대 크기: 50MB\n\n💡 해결 방법:\n• 더 짧게 촬영 (10초 내외 권장)\n• 화질을 HD(1080p)로 변경 (4K 대신)\n• 슬로우 모션 대신 일반 속도로 촬영`);
+    return;
+  }
+  
   file = f;
-  document.getElementById('fname').textContent = '✓ ' + f.name;
+  document.getElementById('fname').textContent = '✓ ' + f.name + ' (' + sizeMB.toFixed(1) + 'MB)';
   document.getElementById('abtn').disabled = true; // 프레임 추출 완료 후 활성화
   extractFrames(f);
 }
@@ -1247,6 +1260,102 @@ async function refreshProStatus() {
 
 function isProUser() {
   return cachedProStatus;
+}
+
+// ── Pro 회원: 영상을 Supabase Storage에 업로드 ──
+async function uploadVideoToStorage(videoFile) {
+  // Pro 회원이 아니면 업로드 안 함
+  if (!isProUser() || !currentUser || !currentUser.id) {
+    console.log('[Video] Pro 회원 아님 - 영상 저장 스킵');
+    return null;
+  }
+  
+  try {
+    // 파일 경로: {user_id}/{timestamp}_{filename}
+    const timestamp = Date.now();
+    const safeName = videoFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filePath = `${currentUser.id}/${timestamp}_${safeName}`;
+    
+    console.log('[Video] 업로드 시작:', filePath, '(' + (videoFile.size / (1024*1024)).toFixed(1) + 'MB)');
+    
+    const { data, error } = await sb.storage
+      .from('swing-videos')
+      .upload(filePath, videoFile, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: videoFile.type || 'video/mp4'
+      });
+    
+    if (error) {
+      console.error('[Video] 업로드 실패:', error.message);
+      return null;
+    }
+    
+    // 인증된 사용자만 볼 수 있는 signed URL 생성 (7일간 유효)
+    const { data: urlData, error: urlError } = await sb.storage
+      .from('swing-videos')
+      .createSignedUrl(filePath, 60 * 60 * 24 * 7); // 7일
+    
+    const videoUrl = urlError ? null : urlData.signedUrl;
+    
+    console.log('[Video] ✅ 업로드 성공:', filePath);
+    return {
+      path: filePath,
+      url: videoUrl
+    };
+  } catch (e) {
+    console.error('[Video] 업로드 예외:', e);
+    return null;
+  }
+}
+
+// ── 영상 URL 새로고침 (signed URL 만료 시) ──
+async function refreshVideoUrl(videoPath) {
+  if (!videoPath) return null;
+  try {
+    const { data, error } = await sb.storage
+      .from('swing-videos')
+      .createSignedUrl(videoPath, 60 * 60 * 24 * 7); // 7일
+    if (error) return null;
+    return data.signedUrl;
+  } catch (e) {
+    return null;
+  }
+}
+
+// ── Pro 회원 영상 30개 초과 시 가장 오래된 영상 삭제 ──
+async function cleanupOldVideos() {
+  if (!isProUser() || !currentUser || !currentUser.id) return;
+  
+  try {
+    // 본인 폴더의 모든 영상 조회
+    const { data: files, error } = await sb.storage
+      .from('swing-videos')
+      .list(currentUser.id, {
+        limit: 100,
+        sortBy: { column: 'created_at', order: 'asc' } // 오래된 순
+      });
+    
+    if (error || !files || files.length <= 30) return;
+    
+    // 30개 초과한 만큼 가장 오래된 것부터 삭제
+    const toDelete = files.slice(0, files.length - 30);
+    const pathsToDelete = toDelete.map(f => `${currentUser.id}/${f.name}`);
+    
+    console.log(`[Video] 30개 초과 - ${toDelete.length}개 영상 자동 삭제`);
+    
+    const { error: delError } = await sb.storage
+      .from('swing-videos')
+      .remove(pathsToDelete);
+    
+    if (delError) {
+      console.warn('[Video] 영상 삭제 실패:', delError);
+    } else {
+      console.log('[Video] ✅ 오래된 영상 삭제 완료');
+    }
+  } catch (e) {
+    console.error('[Video] cleanup 오류:', e);
+  }
 }
 
 // 통합 일일 횟수 체크 (비동기)
@@ -1379,8 +1488,38 @@ async function startAnalysis() {
       incrementGuestCount();
     }
     await updateCountDisplay();
-    saveToHistory(normalized);
-    renderResult(normalized);
+    
+    // Pro 회원: 영상을 Supabase Storage에 업로드 (백그라운드)
+    let videoInfo = null;
+    if (isProUser()) {
+      try {
+        videoInfo = await uploadVideoToStorage(file);
+        if (videoInfo) {
+          // analysis_logs에 video_path, video_url 저장 (가장 최근 로그 업데이트)
+          await sb.from('analysis_logs')
+            .update({ 
+              video_path: videoInfo.path, 
+              video_url: videoInfo.url 
+            })
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          console.log('[Video] DB에 영상 정보 저장 완료');
+        }
+      } catch (videoErr) {
+        console.warn('[Video] 저장 실패 (분석 결과는 정상):', videoErr);
+      }
+      
+      // 30개 초과 시 가장 오래된 영상 자동 삭제
+      try {
+        await cleanupOldVideos();
+      } catch (e) {
+        console.warn('[Video] 오래된 영상 정리 실패:', e);
+      }
+    }
+    
+    saveToHistory(normalized, videoInfo);
+    renderResult(normalized, videoInfo);
   } catch(e) {
     clearInterval(iv); pg.classList.remove('on');
     document.getElementById('abtn').disabled = false;
@@ -1397,15 +1536,25 @@ async function startAnalysis() {
   }
 }
 
-function saveToHistory(data) {
+function saveToHistory(data, videoInfo) {
   const labels = { driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터' };
-  const entry = { id: Date.now(), date: new Date().toLocaleDateString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}), club, clubLabel: labels[club], topMatch: data.topMatch, frameAnalysis: data.frameAnalysis, similar: data.similar };
+  const entry = { 
+    id: Date.now(), 
+    date: new Date().toLocaleDateString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}), 
+    club, 
+    clubLabel: labels[club], 
+    topMatch: data.topMatch, 
+    frameAnalysis: data.frameAnalysis, 
+    similar: data.similar,
+    videoPath: videoInfo ? videoInfo.path : null,
+    videoUrl: videoInfo ? videoInfo.url : null
+  };
   swingHistory.unshift(entry);
   if (swingHistory.length > 50) swingHistory = swingHistory.slice(0, 50);
   localStorage.setItem('swingHistory', JSON.stringify(swingHistory));
 }
 
-function renderResult(d) {
+function renderResult(d, videoInfo) {
   const t = d.topMatch;
   document.getElementById('r-emoji').textContent = t.emoji || '🏌️';
   document.getElementById('r-name').textContent = t.name;
@@ -1428,6 +1577,18 @@ function renderResult(d) {
   });
   const sm = document.getElementById('r-sim'); sm.innerHTML = '';
   (d.similar||[]).forEach(s => { sm.innerHTML += `<div class="si"><span class="sico">${s.emoji||'🏌️'}</span><div class="sinfo"><div class="sname">${s.name}</div><div class="stour">${s.tour}</div></div><span class="spct">${s.pct}%</span></div>`; });
+  
+  // Pro 회원: 영상 보기 링크 표시
+  const videoBadge = document.getElementById('r-video-badge');
+  if (videoBadge) {
+    if (videoInfo && videoInfo.url) {
+      videoBadge.innerHTML = `<a href="${videoInfo.url}" target="_blank" rel="noopener" class="video-link">🎥 분석된 영상 보기</a>`;
+      videoBadge.style.display = 'block';
+    } else {
+      videoBadge.style.display = 'none';
+    }
+  }
+  
   document.getElementById('saveNotice').style.display = 'block';
   const rs = document.getElementById('result'); rs.classList.add('on');
   rs.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1490,7 +1651,10 @@ function renderHistory() {
   fempty.style.display = 'none'; list.style.display = 'flex'; list.innerHTML = '';
   filtered.forEach(h => {
     const scores = (h.frameAnalysis||[]).map(f => `<span class="hscore">${f.phase} <span>${f.score}</span></span>`).join('');
-    list.innerHTML += `<div class="hist-item"><div class="hist-top"><div class="hist-emoji">${h.topMatch?.emoji||'🏌️'}</div><div class="hist-pro"><div class="hpname">${h.topMatch?.name||'—'}</div><div class="hpen">${h.topMatch?.nameEn||''}</div></div><div class="hmeta"><div class="hpct">${h.topMatch?.matchPct||'—'}%</div><span class="hdate">${h.date}</span></div></div><div class="hbottom"><span class="hbadge">${h.clubLabel||''}</span>${scores}</div></div>`;
+    const videoBtn = h.videoUrl 
+      ? `<a href="${h.videoUrl}" target="_blank" rel="noopener" class="hist-video-btn" onclick="event.stopPropagation()">🎥 영상</a>` 
+      : '';
+    list.innerHTML += `<div class="hist-item"><div class="hist-top"><div class="hist-emoji">${h.topMatch?.emoji||'🏌️'}</div><div class="hist-pro"><div class="hpname">${h.topMatch?.name||'—'}</div><div class="hpen">${h.topMatch?.nameEn||''}</div></div><div class="hmeta"><div class="hpct">${h.topMatch?.matchPct||'—'}%</div><span class="hdate">${h.date}</span></div></div><div class="hbottom"><span class="hbadge">${h.clubLabel||''}</span>${scores}${videoBtn}</div></div>`;
   });
 }
 
