@@ -533,6 +533,18 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-reset">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('reset')">✕</button>
+    <h2>새 비밀번호 설정</h2>
+    <p style="font-size:.78rem;color:rgba(245,239,224,0.7);margin:-6px 0 14px">이메일 인증이 확인되었습니다. 새로 사용하실 비밀번호를 입력해주세요.</p>
+    <div class="modal-field"><label>새 비밀번호</label><input type="password" id="reset-pw" placeholder="8자 이상"></div>
+    <div class="modal-field"><label>비밀번호 확인</label><input type="password" id="reset-pw2" placeholder="비밀번호 재입력"></div>
+    <div class="modal-err" id="reset-err"></div>
+    <button class="modal-submit" onclick="doResetPassword()">비밀번호 변경</button>
+  </div>
+</div>
+
 <script>
 // ── Supabase 초기화 (어제 검증된 방식) ──
 const SUPABASE_URL = 'https://vldcmanngfexfwvvnqbb.supabase.co';
@@ -561,6 +573,11 @@ updateCountDisplay();
 
 // ── 인증 상태 감지 ──
 sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    // 비밀번호 재설정 이메일 링크 클릭 → 모달 오픈
+    openModal('reset');
+    return;
+  }
   if (event === 'SIGNED_IN' && session) {
     currentUser = session.user;
     initAuth();
@@ -710,6 +727,37 @@ async function forgotPassword() {
   } else {
     document.getElementById('login-err').style.color = '#4ade80';
     document.getElementById('login-err').textContent = '✅ 비밀번호 재설정 링크를 이메일로 보냈습니다!';
+  }
+}
+
+async function doResetPassword() {
+  const pw = document.getElementById('reset-pw').value;
+  const pw2 = document.getElementById('reset-pw2').value;
+  const errEl = document.getElementById('reset-err');
+  errEl.style.color = '';
+  if (!pw || pw.length < 8) {
+    errEl.textContent = '비밀번호는 8자 이상이어야 합니다.';
+    return;
+  }
+  if (pw !== pw2) {
+    errEl.textContent = '비밀번호가 일치하지 않습니다.';
+    return;
+  }
+  const { error } = await sb.auth.updateUser({ password: pw });
+  if (error) {
+    errEl.textContent = '오류: ' + error.message;
+  } else {
+    errEl.style.color = '#4ade80';
+    errEl.textContent = '✅ 비밀번호가 변경되었습니다. 잠시 후 자동 로그인됩니다.';
+    // URL 해시 정리
+    if (window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+    setTimeout(() => {
+      closeModal('reset');
+      document.getElementById('reset-pw').value = '';
+      document.getElementById('reset-pw2').value = '';
+    }, 1500);
   }
 }
 
