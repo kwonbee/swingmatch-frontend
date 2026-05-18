@@ -234,6 +234,98 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .modal-switch a{color:var(--gold);cursor:pointer}
 .modal-close{position:absolute;top:14px;right:16px;background:transparent;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer}
 .modal-err{font-size:.74rem;color:#e27a7a;margin-top:8px;display:none;text-align:center}
+.modal-submit:disabled{background:rgba(200,169,110,0.3);cursor:not-allowed;color:rgba(10,14,11,0.5)}
+.modal-submit:disabled:hover{background:rgba(200,169,110,0.3)}
+
+/* 약관 동의 박스 */
+.agreement-box{
+  margin-top:14px;
+  padding:14px;
+  background:rgba(200,169,110,0.05);
+  border:1px solid rgba(200,169,110,0.15);
+  border-radius:4px
+}
+.agree-row{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  padding:6px 0;
+  font-size:.78rem;
+  color:rgba(229,229,229,0.85);
+  cursor:pointer;
+  line-height:1.45
+}
+.agree-row.agree-all{
+  font-weight:500;
+  color:#fff;
+  font-size:.82rem
+}
+.agree-row input[type="checkbox"]{
+  width:16px;
+  height:16px;
+  accent-color:#c8a96e;
+  cursor:pointer;
+  flex-shrink:0;
+  margin-top:1px
+}
+.agree-row span{flex:1}
+.agree-row a{color:#c8a96e;text-decoration:underline;cursor:pointer}
+.agree-row a:hover{color:#d4b87a}
+.agree-divider{
+  height:1px;
+  background:rgba(200,169,110,0.12);
+  margin:4px 0
+}
+.agree-row strong{color:#c8a96e;font-weight:500}
+
+/* 사이트 푸터 */
+.site-footer{
+  margin-top:80px;
+  padding:40px 24px 32px;
+  border-top:1px solid rgba(200,169,110,0.1);
+  background:rgba(0,0,0,0.3)
+}
+.footer-inner{
+  max-width:980px;
+  margin:0 auto;
+  text-align:center
+}
+.footer-links{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-bottom:18px
+}
+.footer-links a{
+  color:rgba(200,169,110,0.85);
+  text-decoration:none;
+  font-size:.82rem;
+  transition:color .2s
+}
+.footer-links a:hover{color:#c8a96e}
+.footer-links a strong{color:inherit}
+.footer-sep{
+  color:rgba(200,169,110,0.3);
+  font-size:.75rem
+}
+.footer-info{
+  font-size:.72rem;
+  color:rgba(229,229,229,0.4);
+  line-height:1.7;
+  margin-bottom:14px;
+  letter-spacing:0.02em
+}
+.footer-copyright{
+  font-size:.72rem;
+  color:rgba(229,229,229,0.3)
+}
+@media (max-width:600px){
+  .site-footer{padding:32px 18px 24px;margin-top:60px}
+  .footer-links{gap:10px;font-size:.78rem}
+  .footer-info{font-size:.7rem}
+}
 
 @media(max-width:768px){
   .nav-top{padding:13px 16px}
@@ -529,6 +621,32 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
     <div class="modal-field"><label>이메일</label><input type="email" id="signup-email" placeholder="email@example.com"></div>
     <div class="modal-field"><label>비밀번호</label><input type="password" id="signup-pw" placeholder="8자 이상"></div>
     <div class="modal-field"><label>비밀번호 확인</label><input type="password" id="signup-pw2" placeholder="비밀번호 재입력"></div>
+    
+    <!-- 약관 동의 영역 -->
+    <div class="agreement-box">
+      <label class="agree-row agree-all">
+        <input type="checkbox" id="agree-all" onchange="toggleAllAgree()">
+        <span>전체 동의</span>
+      </label>
+      <div class="agree-divider"></div>
+      <label class="agree-row">
+        <input type="checkbox" class="agree-item" id="agree-age" onchange="checkAllAgree()">
+        <span>[필수] 만 19세 이상입니다</span>
+      </label>
+      <label class="agree-row">
+        <input type="checkbox" class="agree-item" id="agree-tos" onchange="checkAllAgree()">
+        <span>[필수] <a href="/terms.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">이용약관</a>에 동의합니다</span>
+      </label>
+      <label class="agree-row">
+        <input type="checkbox" class="agree-item" id="agree-privacy" onchange="checkAllAgree()">
+        <span>[필수] <a href="/privacy.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">개인정보처리방침</a>에 동의합니다</span>
+      </label>
+      <label class="agree-row">
+        <input type="checkbox" class="agree-item" id="agree-video" onchange="checkAllAgree()">
+        <span>[필수] 업로드한 스윙 영상이 AI 분석 정확도 개선을 위해 <strong>최대 1년</strong> 보관됨에 동의합니다</span>
+      </label>
+    </div>
+    
     <div class="modal-err" id="signup-err"></div>
     <button class="modal-submit" onclick="doSignup()">회원가입</button>
     <div class="modal-switch">이미 계정이 있으신가요? <a onclick="switchModal('signup','login')">로그인</a></div>
@@ -659,6 +777,16 @@ async function doSignup() {
   if (!email.includes('@')) { showErr('signup-err', '⚠️ 올바른 이메일 형식이 아닙니다.'); return; }
   if (pw.length < 8) { showErr('signup-err', '⚠️ 비밀번호는 8자 이상이어야 합니다.'); return; }
   if (pw !== pw2) { showErr('signup-err', '⚠️ 비밀번호가 일치하지 않습니다.'); return; }
+  
+  // 약관 동의 검증
+  const agreeAge = document.getElementById('agree-age').checked;
+  const agreeTos = document.getElementById('agree-tos').checked;
+  const agreePrivacy = document.getElementById('agree-privacy').checked;
+  const agreeVideo = document.getElementById('agree-video').checked;
+  if (!agreeAge) { showErr('signup-err', '⚠️ 만 19세 이상 확인이 필요합니다.'); return; }
+  if (!agreeTos) { showErr('signup-err', '⚠️ 이용약관 동의가 필요합니다.'); return; }
+  if (!agreePrivacy) { showErr('signup-err', '⚠️ 개인정보처리방침 동의가 필요합니다.'); return; }
+  if (!agreeVideo) { showErr('signup-err', '⚠️ 영상 보관 정책 동의가 필요합니다.'); return; }
   
   // 로딩 표시
   const errEl = document.getElementById('signup-err');
@@ -911,6 +1039,21 @@ function showErr(id, msg) {
   e.style.display = 'block'; 
 }
 function hideErr(id) { document.getElementById(id).style.display = 'none'; }
+
+// ── 약관 전체 동의 토글 ──
+function toggleAllAgree() {
+  const allChecked = document.getElementById('agree-all').checked;
+  document.querySelectorAll('.agree-item').forEach(cb => {
+    cb.checked = allChecked;
+  });
+}
+
+// ── 개별 체크 시 전체 동의 상태 동기화 ──
+function checkAllAgree() {
+  const items = document.querySelectorAll('.agree-item');
+  const allChecked = Array.from(items).every(cb => cb.checked);
+  document.getElementById('agree-all').checked = allChecked;
+}
 
 // ── 패널 전환 ──
 function showPanel(id, btn) {
@@ -1267,5 +1410,21 @@ function renderGraph() {
   Object.entries(clubMap).forEach(([k, v]) => { const pct = Math.round(v / swingHistory.length * 100); dist.innerHTML += `<div class="club-bar"><span class="club-bar-label">${k}</span><div class="club-bar-track"><div class="club-bar-fill" style="width:${pct}%"></div></div><span class="club-bar-cnt">${v}회</span></div>`; });
 }
 </script>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-links">
+      <a href="/terms.html" target="_blank">이용약관</a>
+      <span class="footer-sep">·</span>
+      <a href="/privacy.html" target="_blank"><strong>개인정보처리방침</strong></a>
+      <span class="footer-sep">·</span>
+      <a href="#" onclick="copyBizEmail();return false;">고객문의</a>
+    </div>
+    <div class="footer-info">
+      포스터 POSTERSHOPCOMPANY | 대표: 권오병 | 사업자등록번호: 473-26-00945<br>
+      경기도 안양시 동안구 안양천동로 162 | 문의: myswingmatch@gmail.com
+    </div>
+    <div class="footer-copyright">© 2026 MySwingMatch. All rights reserved.</div>
+  </div>
+</footer>
 </body>
 </html>
