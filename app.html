@@ -43,6 +43,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 
 /* NAV 1 */
 .nav-top{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:16px 36px;background:rgba(10,14,11,0.72);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+.nav-actions{display:flex;align-items:center;gap:10px}
 .logo{font-family:'Noto Serif KR',serif;font-weight:200;font-size:1.05rem;letter-spacing:.15em;color:var(--gold);text-decoration:none}
 .auth-area{display:flex;align-items:center;gap:10px}
 .auth-email{font-size:.75rem;color:var(--muted);letter-spacing:.03em}
@@ -330,8 +331,8 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
         </g>
     </g>
 </svg></a>
-  <button class="nav-biz" onclick="openBizContact()">비즈니스 문의</button>
   <div class="nav-right">
+    <button class="nav-biz" onclick="copyBizEmail()">비즈니스 문의</button>
     <div class="auth-area" id="auth-guest">
       <button class="btn-auth btn-login" onclick="openModal('login')">로그인</button>
       <button class="btn-auth btn-signup" onclick="openModal('signup')">회원가입</button>
@@ -686,6 +687,16 @@ function showShareFallback(text) {
 
 
 function copyBizEmail() {
+  const email = 'kwonbee@gmail.com';
+  navigator.clipboard.writeText(email).then(() => {
+    alert('📋 이메일이 복사됐습니다!\n\n' + email + '\n\n비즈니스 문의를 보내주세요 😊');
+  }).catch(() => {
+    alert('📧 비즈니스 문의 이메일\n\n' + email + '\n\n위 주소로 연락해주세요!');
+  });
+}
+
+
+function openBizContact() {
   const email = 'kwonbee@gmail.com';
   navigator.clipboard.writeText(email).then(() => {
     alert('📋 이메일이 복사됐습니다!\n\n' + email + '\n\n비즈니스 문의를 보내주세요 😊');
