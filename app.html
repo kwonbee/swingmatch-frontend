@@ -46,15 +46,10 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .logo{font-family:'Noto Serif KR',serif;font-weight:200;font-size:1.05rem;letter-spacing:.15em;color:var(--gold);text-decoration:none}
 .auth-area{display:flex;align-items:center;gap:10px}
 .auth-email{font-size:.75rem;color:var(--muted);letter-spacing:.03em}
-.nav-biz {
-  font-size:.68rem;color:rgba(255,255,255,0.6);letter-spacing:.08em;
-  text-transform:uppercase;text-decoration:none;
-  padding:6px 12px;border:1px solid rgba(255,255,255,.2);
-  border-radius:2px;transition:all .2s;white-space:nowrap;
-  cursor:pointer;background:transparent;
-}
-.nav-biz:hover{color:rgba(255,255,255,.9);border-color:rgba(255,255,255,.5)}
-@media(max-width:768px){.nav-biz{display:none}}
+
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-biz{font-family:'Pretendard',sans-serif;font-size:.75rem;letter-spacing:.05em;padding:7px 16px;border-radius:2px;cursor:pointer;transition:all .2s;background:transparent;color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.3)}
+.nav-biz:hover{color:#fff;border-color:rgba(255,255,255,0.7)}
 
 .btn-auth{font-family:'Pretendard',sans-serif;font-size:.75rem;letter-spacing:.05em;padding:7px 16px;border-radius:2px;cursor:pointer;transition:all .2s}
 .btn-login{background:transparent;border:1px solid var(--border);color:var(--muted)}
@@ -335,14 +330,16 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
         </g>
     </g>
 </svg></a>
-  <button class="nav-biz" onclick="copyBizEmail()">비즈니스 문의</button>
-  <div class="auth-area" id="auth-guest">
-    <button class="btn-auth btn-login" onclick="openModal('login')">로그인</button>
-    <button class="btn-auth btn-signup" onclick="openModal('signup')">회원가입</button>
-  </div>
-  <div class="auth-area" id="auth-user" style="display:none">
-    <span class="auth-email" id="auth-email-txt"></span>
-    <button class="btn-auth btn-logout" onclick="logout()">로그아웃</button>
+  <button class="nav-biz" onclick="openBizContact()">비즈니스 문의</button>
+  <div class="nav-right">
+    <div class="auth-area" id="auth-guest">
+      <button class="btn-auth btn-login" onclick="openModal('login')">로그인</button>
+      <button class="btn-auth btn-signup" onclick="openModal('signup')">회원가입</button>
+    </div>
+    <div class="auth-area" id="auth-user" style="display:none">
+      <span class="auth-email" id="auth-email-txt"></span>
+      <button class="btn-auth btn-logout" onclick="logout()">로그아웃</button>
+    </div>
   </div>
 </div>
 
