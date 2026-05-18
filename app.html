@@ -629,51 +629,70 @@ async function doSignup() {
 
 // ── 로그아웃 ──
 
-// ── 카카오톡 공유 ──
+// ── 카카오톡 공유 (링크 방식) ──
 function shareKakao() {
-  const d = window._lastResult;
-  if (!d || !d.topMatch) {
-    alert('먼저 스윙 분석을 완료해주세요!');
-    return;
-  }
-  const t = d.topMatch;
-  const clubLabel = {driver:'드라이버',iron:'아이언',wedge:'웨지',putter:'퍼터'}[window._lastClub||'driver'];
+  const result = window._lastResult;
+  if (!result || !result.topMatch) return;
+  const t = result.topMatch;
 
-  // 텍스트 조합
-  let msg = '⛳  MySwingMatch 스윙 분석 결과\n\n';
-  msg += (t.emoji||'🏌️') + ' ' + (t.name||'') + ' (' + (t.nameEn||'') + ')\n';
-  msg += (t.tour||'') + ' · ' + (t.nationality||'') + '\n';
-  msg += '매칭률: ' + (t.matchPct||'') + '%  |  클럽: ' + clubLabel + '\n\n';
-  if (t.swingDesc) msg += '📝 ' + t.swingDesc + '\n\n';
-  if (t.keywords && t.keywords.length) msg += '🏷️ ' + t.keywords.join(' · ') + '\n\n';
-  if (t.strengths && t.strengths.length) {
-    msg += '💪 스윙 강점\n';
-    t.strengths.forEach(s => { msg += '  · ' + s + '\n'; });
-    msg += '\n';
-  }
-  if (t.improvements && t.improvements.length) {
-    msg += '🎯 개선 포인트\n';
-    t.improvements.forEach(s => { msg += '  · ' + s + '\n'; });
-    msg += '\n';
-  }
-  msg += '👇 내 스윙도 분석해보세요\nhttps://myswingmatch.com';
+  const clubLabels = { driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터' };
+  const clubLabel = clubLabels[window._lastClub || 'driver'];
+  const keywords = (t.keywords || []).join(' · ');
+  const strengths = (t.strengths || []).map(s => '  · ' + s).join('\n');
+  const improvements = (t.improvements || []).map(s => '  · ' + s).join('\n');
 
-  // 클립보드 복사 후 안내
-  navigator.clipboard.writeText(msg).then(() => {
-    alert('📋 클립보드에 복사됐습니다!\n\n카카오톡을 열고 원하는 채팅방에 붙여넣기 해주세요 😊');
+  const shareUrl = 'https://myswingmatch.com';
+  const text = [
+    '⛳  MySwingMatch 스윙 분석 결과',
+    '',
+    (t.emoji||'🏌️') + ' ' + t.name + ' (' + t.nameEn + ')',
+    t.tour + ' · ' + (t.nationality||''),
+    '매칭률: ' + t.matchPct + '%  |  클럽: ' + clubLabel,
+    '',
+    '📝 ' + (t.swingDesc||''),
+    keywords ? '\n🏷️ ' + keywords : '',
+    '',
+    '💪 스윙 강점',
+    strengths,
+    '',
+    '🎯 개선 포인트',
+    improvements,
+    '',
+    '👇 내 스윙도 분석해보세요',
+    shareUrl
+  ].filter(Boolean).join('\n');
+
+  const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+  if (isMobile) {
+    window.open('kakaotalk://msg/send?text=' + encodeURIComponent(text), '_blank');
+    setTimeout(() => {
+      navigator.clipboard.writeText(text).then(() => showShareFallback(text)).catch(() => showShareFallback(text));
+    }, 1000);
+  } else {
+    showShareFallback(text);
+  }
+}
+
+
+function showShareFallback(text) {
+  const fullText = text; // URL은 여기서 한번만
+  navigator.clipboard.writeText(fullText).then(() => {
+    alert('📋 클립보드에 복사됐습니다!\n카카오톡을 열고 원하는 채팅방에 붙여넣기 해주세요.');
   }).catch(() => {
-    // 클립보드 실패 시 직접 텍스트 보여주기
-    const ta = document.createElement('textarea');
-    ta.value = msg;
-    ta.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:200px;z-index:9999;font-size:12px;padding:10px';
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    alert('위 텍스트를 길게 눌러 복사한 후\n카카오톡에 붙여넣기 해주세요!');
-    setTimeout(() => document.body.removeChild(ta), 5000);
+    // 클립보드 접근 불가시 직접 보여주기
+    alert('아래 내용을 복사해서 카카오톡에 공유해보세요!\n\n' + fullText);
   });
 }
 
+
+function copyBizEmail() {
+  const email = 'myswingmatch@gmail.com';
+  navigator.clipboard.writeText(email).then(() => {
+    alert('📋 이메일이 복사됐습니다!\n\n' + email + '\n\n비즈니스 문의를 보내주세요 😊');
+  }).catch(() => {
+    alert('📧 비즈니스 문의 이메일\n\n' + email + '\n\n위 주소로 연락해주세요!');
+  });
+}
 
 async function logout() {
   await sb.auth.signOut();
