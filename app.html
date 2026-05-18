@@ -719,22 +719,49 @@ async function forgotPassword() {
   console.log('[Auth] 비밀번호 찾기 클릭됨');
   const errEl = document.getElementById('login-err');
   errEl.style.color = '';
-  const email = document.getElementById('login-email').value;
+  errEl.style.fontSize = '0.85rem';
+  errEl.style.fontWeight = '500';
+  errEl.style.padding = '10px';
+  errEl.style.borderRadius = '6px';
+  errEl.style.marginBottom = '8px';
+  errEl.style.background = 'rgba(200,169,110,0.1)';
+
+  const email = document.getElementById('login-email').value.trim();
   if (!email) {
-    errEl.textContent = '이메일을 먼저 입력해주세요.';
+    errEl.style.color = '#f87171';
+    errEl.style.background = 'rgba(248,113,113,0.1)';
+    errEl.textContent = '⚠️ 이메일을 먼저 입력해주세요.';
     return;
   }
-  errEl.style.color = 'rgba(200,169,110,0.7)';
-  errEl.textContent = '이메일 발송 중...';
+  if (!email.includes('@')) {
+    errEl.style.color = '#f87171';
+    errEl.style.background = 'rgba(248,113,113,0.1)';
+    errEl.textContent = '⚠️ 올바른 이메일 형식이 아닙니다.';
+    return;
+  }
+
+  errEl.style.color = '#c8a96e';
+  errEl.textContent = '📧 이메일 발송 중...';
+
   const { error } = await sb.auth.resetPasswordForEmail(email, {
     redirectTo: window.location.origin + '/app.html'
   });
+
   if (error) {
-    errEl.style.color = '';
-    errEl.textContent = '오류: ' + error.message;
+    console.error('[Auth] 재설정 이메일 발송 실패:', error);
+    errEl.style.color = '#f87171';
+    errEl.style.background = 'rgba(248,113,113,0.1)';
+    if (error.message && error.message.toLowerCase().includes('rate')) {
+      errEl.textContent = '⏰ 너무 많이 요청하셨습니다. 1분 후 다시 시도해주세요.';
+    } else if (error.status === 429) {
+      errEl.textContent = '⏰ 잠시 후 다시 시도해주세요. (요청 제한)';
+    } else {
+      errEl.textContent = '❌ ' + (error.message || '오류가 발생했습니다');
+    }
   } else {
     errEl.style.color = '#4ade80';
-    errEl.textContent = '✅ 비밀번호 재설정 링크를 이메일로 보냈습니다!';
+    errEl.style.background = 'rgba(74,222,128,0.1)';
+    errEl.textContent = '✅ 비밀번호 재설정 링크를 이메일로 보냈습니다! 메일함을 확인해주세요.';
   }
 }
 
