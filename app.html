@@ -223,7 +223,18 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .compare-side-date{font-size:.72rem;color:rgba(229,229,229,.5);margin-top:2px}
 .compare-side-pct{font-size:1.4rem;font-weight:700;color:#c8a96e;line-height:1;text-align:right}
 .compare-side-pct small{font-size:.65rem;color:rgba(229,229,229,.5);font-weight:400;display:block;margin-top:2px}
-.compare-side video{width:100%;border-radius:4px;background:#000;aspect-ratio:16/9}
+.compare-side video{width:100%;border-radius:4px;background:#000;max-height:60vh;object-fit:contain;display:block;pointer-events:none}
+.compare-video-wrap{position:relative;background:#000;border-radius:4px;overflow:hidden;cursor:pointer}
+.compare-video-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:transparent;cursor:pointer;transition:opacity .2s;z-index:5}
+.compare-video-overlay::after{content:'';width:60px;height:60px;background:rgba(0,0,0,0.55);border-radius:50%;display:flex;align-items:center;justify-content:center;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M8 5v14l11-7z'/></svg>");background-repeat:no-repeat;background-position:center;background-size:24px;transition:opacity .2s}
+.compare-video-overlay.hide::after{opacity:0}
+.compare-video-overlay.hide{background:transparent}
+.compare-video-time{position:absolute;bottom:6px;left:8px;font-size:.7rem;color:rgba(255,255,255,0.95);text-shadow:0 1px 3px rgba(0,0,0,0.9);font-variant-numeric:tabular-nums;background:rgba(0,0,0,0.5);padding:2px 6px;border-radius:3px;pointer-events:none;z-index:6}
+/* iOS Safari 비디오 컨트롤 강제 숨김 */
+.compare-side video::-webkit-media-controls{display:none!important}
+.compare-side video::-webkit-media-controls-panel{display:none!important}
+.compare-side video::-webkit-media-controls-play-button{display:none!important}
+.compare-side video::-webkit-media-controls-start-playback-button{display:none!important}
 .compare-scores{display:flex;flex-wrap:wrap;gap:6px}
 .compare-scores .cscore{font-size:.7rem;padding:3px 8px;background:rgba(200,169,110,.08);border:1px solid rgba(200,169,110,.15);border-radius:3px;color:rgba(229,229,229,.85)}
 .compare-scores .cscore span{color:#c8a96e;font-weight:600;margin-left:4px}
@@ -238,12 +249,15 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .compare-changes strong{color:#c8a96e;display:block;margin-bottom:6px;font-size:.8rem;letter-spacing:.04em;text-transform:uppercase}
 
 @media (max-width:760px){
-  .compare-grid{grid-template-columns:1fr}
-  .compare-content{padding:18px 14px}
+  .compare-grid{grid-template-columns:1fr;gap:12px}
+  .compare-content{padding:14px 12px}
   .compare-title{font-size:1rem}
+  .compare-side{padding:10px;gap:8px}
   .compare-side-pro{font-size:.88rem}
   .compare-side-pct{font-size:1.2rem}
+  .compare-side video{max-height:40vh}
   .compare-controls button{padding:9px 14px;font-size:.78rem}
+  .compare-modal{padding:10px}
 }
 
 /* 카카오 공유 버튼 */
@@ -550,7 +564,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
     <div id="mobile-menu-user" style="display:none">
       <div class="menu-email" id="mobile-menu-email"></div>
       <div class="menu-divider"></div>
-      <button onclick="logout();closeMobileMenu()">로그아웃</button>
+      <button onclick="event.stopPropagation();handleMobileLogout()">로그아웃</button>
       <div class="menu-divider"></div>
       <button onclick="copyBizEmail();closeMobileMenu()">비즈니스 문의</button>
     </div>
@@ -706,7 +720,9 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <button type="button" onclick="pauseBothVideos()">⏸ 일시정지</button>
       <button type="button" onclick="resetBothVideos()">⏮ 처음부터</button>
       <button type="button" onclick="setPlaybackRate(0.5)" id="speed-btn">🐢 0.5x</button>
+      <button type="button" onclick="toggleMuteVideos()" id="mute-btn">🔇 음소거</button>
     </div>
+    <div style="text-align:center;font-size:.72rem;color:rgba(229,229,229,0.5);margin-top:10px;letter-spacing:.02em">💡 영상을 클릭하면 개별 재생/일시정지됩니다</div>
   </div>
 </div>
 
@@ -1344,9 +1360,43 @@ async function doResetPassword() {
 }
 
 async function logout() {
-  await sb.auth.signOut();
+  try {
+    await sb.auth.signOut();
+  } catch(e) {
+    console.error('[Logout] error:', e);
+  }
+  // 모든 로컬 상태 초기화
   currentUser = null;
-  initAuth();
+  swingHistory = [];
+  localStorage.removeItem('swingHistory');
+  // 모바일 메뉴 닫기
+  const m = document.getElementById('mobile-menu');
+  if (m) m.classList.remove('open');
+  // 페이지 새로고침으로 깔끔하게 초기화
+  setTimeout(() => { window.location.href = '/app.html'; }, 100);
+}
+
+// 모바일 전용 로그아웃 (메뉴 즉시 닫고 페이지 강제 새로고침)
+function handleMobileLogout() {
+  console.log('[Mobile Logout] 시작');
+  // 메뉴 즉시 닫기
+  const m = document.getElementById('mobile-menu');
+  if (m) m.classList.remove('open');
+  // 즉시 강제 새로고침 (Supabase 토큰까지 함께 초기화)
+  try {
+    sb.auth.signOut(); // 비동기지만 응답 안 기다림
+  } catch(e) {}
+  // 로컬 상태 즉시 초기화
+  localStorage.removeItem('swingHistory');
+  localStorage.removeItem('sb-auth-token');
+  // Supabase 키 패턴으로 시작하는 모든 localStorage 항목 삭제
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('sb-') || key.includes('supabase')) {
+      localStorage.removeItem(key);
+    }
+  });
+  // 즉시 새로고침 (작은 지연도 없이)
+  window.location.replace('/app.html?logout=' + Date.now());
 }
 
 // ── 모달 ──
@@ -2294,7 +2344,11 @@ function openCompareModal() {
           </div>
           <div class="compare-side-pct">${h.topMatch?.matchPct||'—'}%<small>매칭률</small></div>
         </div>
-        <video src="${safeUrl}" controls preload="metadata" playsinline></video>
+        <div class="compare-video-wrap" onclick="toggleSingleVideo(this)">
+          <video src="${safeUrl}" preload="metadata" playsinline muted webkit-playsinline disablepictureinpicture controlslist="nodownload nofullscreen noremoteplayback"></video>
+          <div class="compare-video-overlay"></div>
+          <div class="compare-video-time">0:00</div>
+        </div>
         <div class="compare-scores">${scores}</div>
       </div>
     `;
@@ -2334,6 +2388,16 @@ function openCompareModal() {
   
   document.getElementById('compare-modal').classList.add('active');
   
+  // 영상 이벤트 리스너 등록 + 첫 프레임 표시 (iOS Safari 대응)
+  setTimeout(() => {
+    setupCompareVideos();
+    // iOS Safari: 영상 첫 프레임 강제 로드 (큰 ▶ 버튼 대신 첫 프레임 표시)
+    document.querySelectorAll('#compare-grid video').forEach(v => {
+      v.muted = true;
+      v.currentTime = 0.01; // 0.01초로 이동하면 첫 프레임이 표시됨
+    });
+  }, 100);
+  
   // 비교 모드 종료 (모달 닫으면 다시 일반 모드)
   setTimeout(() => toggleCompareMode(false), 100);
 }
@@ -2347,9 +2411,77 @@ function getCompareVideos() {
   return document.querySelectorAll('#compare-grid video');
 }
 
-function playBothVideos() {
+// 개별 영상 wrap 클릭 시 재생/일시정지
+function toggleSingleVideo(wrap) {
+  if (!wrap) return;
+  const video = wrap.querySelector('video');
+  const overlay = wrap.querySelector('.compare-video-overlay');
+  if (!video) return;
+  if (video.paused) {
+    video.play().then(() => {
+      if (overlay) overlay.classList.add('hide');
+    }).catch(err => {
+      console.warn('[Compare] play failed:', err);
+    });
+  } else {
+    video.pause();
+    if (overlay) overlay.classList.remove('hide');
+  }
+}
+
+// 시간 업데이트 헬퍼
+function fmtVideoTime(sec) {
+  if (!isFinite(sec)) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+// 모달 열릴 때 영상별 이벤트 리스너 등록
+function setupCompareVideos() {
+  document.querySelectorAll('.compare-video-wrap').forEach(wrap => {
+    const video = wrap.querySelector('video');
+    const overlay = wrap.querySelector('.compare-video-overlay');
+    const timeEl = wrap.querySelector('.compare-video-time');
+    if (!video) return;
+    
+    // 시간 업데이트
+    video.addEventListener('timeupdate', () => {
+      if (timeEl) timeEl.textContent = fmtVideoTime(video.currentTime) + ' / ' + fmtVideoTime(video.duration);
+    });
+    video.addEventListener('loadedmetadata', () => {
+      if (timeEl) timeEl.textContent = '0:00 / ' + fmtVideoTime(video.duration);
+    });
+    // 끝나면 오버레이 다시 표시
+    video.addEventListener('ended', () => {
+      if (overlay) overlay.classList.remove('hide');
+    });
+    // 일시정지되면 오버레이 표시
+    video.addEventListener('pause', () => {
+      if (overlay) overlay.classList.remove('hide');
+    });
+    // 재생되면 오버레이 숨김
+    video.addEventListener('play', () => {
+      if (overlay) overlay.classList.add('hide');
+    });
+  });
+}
+
+async function playBothVideos() {
   const videos = getCompareVideos();
-  videos.forEach(v => { v.currentTime = 0; v.play().catch(()=>{}); });
+  // 모두 muted 상태로 시작 (자동재생 정책 우회)
+  videos.forEach(v => {
+    v.muted = true;
+    v.currentTime = 0;
+  });
+  // 두 영상 모두 비동기로 재생
+  const playPromises = Array.from(videos).map(v => 
+    v.play().catch(err => {
+      console.warn('[Compare] play failed for video:', err);
+      return null;
+    })
+  );
+  await Promise.all(playPromises);
 }
 
 function pauseBothVideos() {
@@ -2357,7 +2489,10 @@ function pauseBothVideos() {
 }
 
 function resetBothVideos() {
-  getCompareVideos().forEach(v => { v.pause(); v.currentTime = 0; });
+  getCompareVideos().forEach(v => { 
+    v.pause(); 
+    v.currentTime = 0; 
+  });
 }
 
 let currentRate = 1;
@@ -2368,6 +2503,20 @@ function setPlaybackRate(rate) {
   else if (currentRate === 0.5) { currentRate = 0.25; btn.textContent = '🐌 0.25x'; }
   else { currentRate = 1; btn.textContent = '🐰 1x'; }
   getCompareVideos().forEach(v => v.playbackRate = currentRate);
+}
+
+function toggleMuteVideos() {
+  const videos = getCompareVideos();
+  const btn = document.getElementById('mute-btn');
+  // 첫 번째 영상의 상태를 기준으로 판단
+  const isMuted = videos[0] ? videos[0].muted : true;
+  videos.forEach(v => v.muted = !isMuted);
+  // 버튼 텍스트 갱신
+  if (isMuted) {
+    btn.textContent = '🔊 소리 ON';
+  } else {
+    btn.textContent = '🔇 음소거';
+  }
 }
 
 // 모달 배경 클릭 시 닫기
