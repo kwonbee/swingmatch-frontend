@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MySwingMatch Pro 구독 결제 | 골프 스윙 AI 분석</title>
+<meta name="description" content="MySwingMatch Pro 멤버십 - 월 4,900원 정기결제. 무제한 골프 스윙 AI 분석, 영상 저장, 즐겨찾기 등 프리미엄 기능을 이용해보세요.">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8edf3 100%);
+  min-height: 100vh;
+  color: #1a1a1a;
+  line-height: 1.6;
+}
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+  padding: 20px 0;
+}
+.logo {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1a73e8;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+.subtitle {
+  font-size: 14px;
+  color: #5f6368;
+}
+
+/* Card */
+.card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 28px 24px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+.card-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background: #1a73e8;
+  border-radius: 2px;
+}
+
+/* Product Box */
+.product-box {
+  background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+  color: white;
+  border-radius: 16px;
+  padding: 32px 24px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+.product-name {
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.product-tagline {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 24px;
+}
+.price-display {
+  font-size: 36px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.price-display .currency {
+  font-size: 20px;
+  vertical-align: top;
+  margin-right: 2px;
+}
+.price-display .period {
+  font-size: 16px;
+  opacity: 0.85;
+  font-weight: 500;
+}
+.vat-info {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* Feature List */
+.feature-list {
+  list-style: none;
+  margin-top: 8px;
+}
+.feature-item {
+  padding: 10px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-bottom: 1px solid #f1f3f4;
+  font-size: 14px;
+  color: #3c4043;
+}
+.feature-item:last-child { border-bottom: none; }
+.feature-icon {
+  color: #34a853;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.feature-text strong {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+/* Info Rows */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f3f4;
+  font-size: 14px;
+}
+.info-row:last-child { border-bottom: none; }
+.info-label { color: #5f6368; }
+.info-value { font-weight: 600; color: #1a1a1a; }
+
+/* Payment Methods */
+.payment-method {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border: 2px solid #e8eaed;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.payment-method:hover {
+  border-color: #1a73e8;
+  background: #f8f9ff;
+}
+.payment-method.selected {
+  border-color: #1a73e8;
+  background: #f0f5ff;
+}
+.payment-method input[type="radio"] {
+  margin-right: 12px;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+.payment-icon {
+  font-size: 20px;
+  margin-right: 10px;
+}
+.payment-label {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+/* Agreement */
+.agreement-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px 0;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: #3c4043;
+}
+.agreement-row input[type="checkbox"] {
+  margin-right: 10px;
+  margin-top: 3px;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.agreement-row a {
+  color: #1a73e8;
+  text-decoration: underline;
+  margin-left: 4px;
+}
+.required-tag {
+  color: #d93025;
+  font-weight: 600;
+  font-size: 12px;
+  margin-right: 4px;
+}
+.agree-all {
+  border-bottom: 1px solid #e8eaed;
+  padding-bottom: 12px;
+  margin-bottom: 6px;
+  font-weight: 700;
+  color: #1a1a1a;
+  font-size: 14px;
+}
+
+/* Refund Policy */
+.refund-box {
+  background: #fff8e1;
+  border-left: 4px solid #fbbc04;
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #5f6368;
+  line-height: 1.7;
+}
+.refund-box strong {
+  color: #1a1a1a;
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* Submit Button */
+.submit-btn {
+  width: 100%;
+  background: #1a73e8;
+  color: white;
+  border: none;
+  padding: 18px;
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: background 0.15s ease;
+  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.25);
+}
+.submit-btn:hover {
+  background: #1557b0;
+}
+.submit-btn:disabled {
+  background: #dadce0;
+  color: #80868b;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Company Info */
+.company-info {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-top: 16px;
+  font-size: 12.5px;
+  color: #5f6368;
+  line-height: 1.8;
+}
+.company-info strong {
+  color: #1a1a1a;
+  display: inline-block;
+  min-width: 70px;
+}
+
+/* Modal */
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 999;
+  align-items: center;
+  justify-content: center;
+}
+.modal-backdrop.active {
+  display: flex;
+}
+.modal {
+  background: white;
+  border-radius: 16px;
+  padding: 28px 24px;
+  max-width: 360px;
+  width: 90%;
+  text-align: center;
+}
+.modal-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.modal-text {
+  font-size: 14px;
+  color: #5f6368;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+.modal-btn {
+  background: #1a73e8;
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+}
+
+/* Back Link */
+.back-link {
+  display: inline-block;
+  color: #1a73e8;
+  text-decoration: none;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+.back-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .container { padding: 16px 14px 40px; }
+  .card { padding: 22px 18px; }
+  .product-box { padding: 28px 20px; }
+  .price-display { font-size: 30px; }
+  .product-name { font-size: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <a href="/app.html" class="back-link">← 돌아가기</a>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">⛳ MySwingMatch</div>
+    <div class="subtitle">골프 스윙 AI 분석 서비스</div>
+  </div>
+
+  <!-- Product Showcase -->
+  <div class="product-box">
+    <div class="product-name">MySwingMatch Pro 구독</div>
+    <div class="product-tagline">프로처럼 스윙하세요</div>
+    <div class="price-display">
+      <span class="currency">₩</span>4,900<span class="period"> / 월</span>
+    </div>
+    <div class="vat-info">VAT 포함 · 매월 자동결제</div>
+  </div>
+
+  <!-- Service Features -->
+  <div class="card">
+    <div class="card-title">제공 서비스</div>
+    <ul class="feature-list">
+      <li class="feature-item">
+        <span class="feature-icon">✓</span>
+        <span class="feature-text"><strong>무제한 스윙 분석</strong> — 일일 횟수 제한 없음</span>
+      </li>
+      <li class="feature-item">
+        <span class="feature-icon">✓</span>
+        <span class="feature-text"><strong>영상 저장 (최대 30개)</strong> — 클라우드 보관, 언제 어디서나 확인</span>
+      </li>
+      <li class="feature-item">
+        <span class="feature-icon">✓</span>
+        <span class="feature-text"><strong>즐겨찾기 (최대 10개)</strong> — 중요한 분석 결과를 빠르게</span>
+      </li>
+      <li class="feature-item">
+        <span class="feature-icon">✓</span>
+        <span class="feature-text"><strong>영구 히스토리 보관</strong> — 모든 분석 기록 유지</span>
+      </li>
+      <li class="feature-item">
+        <span class="feature-icon">✓</span>
+        <span class="feature-text"><strong>전체 기간 성장 그래프</strong> — 실력 변화 추적</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Subscription Details -->
+  <div class="card">
+    <div class="card-title">결제 정보</div>
+    <div class="info-row">
+      <span class="info-label">상품명</span>
+      <span class="info-value">MySwingMatch Pro 구독</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">결제 금액</span>
+      <span class="info-value">4,900원 (VAT 포함)</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">결제 주기</span>
+      <span class="info-value">매월 자동결제 (30일)</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">서비스 시작</span>
+      <span class="info-value">결제 즉시</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">해지</span>
+      <span class="info-value">언제든 가능</span>
+    </div>
+  </div>
+
+  <!-- Payment Methods -->
+  <div class="card">
+    <div class="card-title">결제수단 선택</div>
+    <label class="payment-method selected" id="pm-card">
+      <input type="radio" name="payment" value="card" checked>
+      <span class="payment-icon">💳</span>
+      <span class="payment-label">신용/체크카드</span>
+    </label>
+    <label class="payment-method" id="pm-kakao">
+      <input type="radio" name="payment" value="kakaopay">
+      <span class="payment-icon">💛</span>
+      <span class="payment-label">카카오페이</span>
+    </label>
+  </div>
+
+  <!-- Refund Policy -->
+  <div class="card">
+    <div class="card-title">환불 정책</div>
+    <div class="refund-box">
+      <strong>📌 정기결제 해지 및 환불 안내</strong>
+      • 마이페이지에서 언제든 해지 가능<br>
+      • 다음 결제일 이전 해지 시, 다음 달부터 자동결제 중단<br>
+      • 결제 후 7일 이내 + 서비스 미이용 시 전액 환불<br>
+      • 서비스 이용 시작 후에는 부분 환불 불가 (이용약관 제7조 참조)<br>
+      • 환불 문의: myswingmatch@gmail.com
+    </div>
+  </div>
+
+  <!-- Agreements -->
+  <div class="card">
+    <div class="card-title">약관 동의</div>
+    <label class="agreement-row agree-all">
+      <input type="checkbox" id="agree-all">
+      <span>전체 동의</span>
+    </label>
+    <label class="agreement-row">
+      <input type="checkbox" class="agreement" id="agree1">
+      <span><span class="required-tag">[필수]</span> 만 14세 이상입니다</span>
+    </label>
+    <label class="agreement-row">
+      <input type="checkbox" class="agreement" id="agree2">
+      <span><span class="required-tag">[필수]</span> <a href="/terms.html" target="_blank">이용약관</a>에 동의합니다</span>
+    </label>
+    <label class="agreement-row">
+      <input type="checkbox" class="agreement" id="agree3">
+      <span><span class="required-tag">[필수]</span> <a href="/privacy.html" target="_blank">개인정보처리방침</a>에 동의합니다</span>
+    </label>
+    <label class="agreement-row">
+      <input type="checkbox" class="agreement" id="agree4">
+      <span><span class="required-tag">[필수]</span> 정기결제(매월 자동결제) 및 환불 정책에 동의합니다</span>
+    </label>
+  </div>
+
+  <!-- Submit Button -->
+  <button class="submit-btn" id="submit-btn" disabled onclick="handleSubmit()">
+    4,900원 결제하기
+  </button>
+
+  <!-- Company Info -->
+  <div class="company-info">
+    <div><strong>상호</strong> POSTERSHOPCOMPANY</div>
+    <div><strong>대표자</strong> 권오병</div>
+    <div><strong>사업자번호</strong> 473-26-00945</div>
+    <div><strong>주소</strong> 경기 안양시 동안구 안양천동로 162</div>
+    <div><strong>이메일</strong> myswingmatch@gmail.com</div>
+    <div><strong>연락처</strong> 010-2513-9241</div>
+    <div><strong>업태/종목</strong> 정보통신업 / 포털 및 기타 인터넷 정보 매개 서비스업</div>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <div class="modal-icon">⚙️</div>
+    <div class="modal-title">결제 시스템 준비 중</div>
+    <div class="modal-text">
+      현재 결제 시스템(PG사) 심사가 진행 중입니다.<br>
+      정식 베타 오픈 시 (2026년 6월 8일) 결제가 가능합니다.<br><br>
+      문의: myswingmatch@gmail.com
+    </div>
+    <button class="modal-btn" onclick="closeModal()">확인</button>
+  </div>
+</div>
+
+<script>
+// Payment method selection
+document.querySelectorAll('input[name="payment"]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    document.querySelectorAll('.payment-method').forEach(pm => pm.classList.remove('selected'));
+    this.closest('.payment-method').classList.add('selected');
+  });
+});
+
+// Agreement handling
+const agreeAll = document.getElementById('agree-all');
+const agreements = document.querySelectorAll('.agreement');
+const submitBtn = document.getElementById('submit-btn');
+
+agreeAll.addEventListener('change', function() {
+  agreements.forEach(a => a.checked = this.checked);
+  updateSubmitButton();
+});
+
+agreements.forEach(a => {
+  a.addEventListener('change', function() {
+    const allChecked = Array.from(agreements).every(x => x.checked);
+    agreeAll.checked = allChecked;
+    updateSubmitButton();
+  });
+});
+
+function updateSubmitButton() {
+  const allRequired = Array.from(agreements).every(a => a.checked);
+  submitBtn.disabled = !allRequired;
+}
+
+// Submit handler
+function handleSubmit() {
+  document.getElementById('modal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('active');
+}
+</script>
+
+</body>
+</html>
