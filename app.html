@@ -1718,24 +1718,36 @@ async function startAnalysis() {
         // ★★★ 우선순위 2: DB에 영상 정보 저장
         let dbId = null;
         try {
-          const { data: updatedRows, error: updateErr } = await sb.from('analysis_logs')
-            .update({ 
-              video_path: videoInfo.path, 
-              video_url: videoInfo.url 
-            })
+          // Step 1: video_path 없는 가장 최근 로그 ID 찾기 (SELECT는 order 가능)
+          const { data: recentRows, error: selectErr } = await sb.from('analysis_logs')
+            .select('id')
             .eq('user_id', currentUser.id)
             .is('video_path', null)
             .order('created_at', { ascending: false })
-            .limit(1)
-            .select('id');
+            .limit(1);
           
-          if (updateErr) {
-            console.warn('[Video] DB 업데이트 실패:', updateErr);
-          } else if (updatedRows && updatedRows[0]) {
-            dbId = updatedRows[0].id;
-            console.log('[Video] DB에 영상 정보 저장 완료 (dbId:', dbId, ')');
+          if (selectErr) {
+            console.warn('[Video] 최근 로그 조회 실패:', selectErr);
+          } else if (!recentRows || recentRows.length === 0) {
+            console.warn('[Video] 업데이트할 로그를 찾지 못함');
           } else {
-            console.warn('[Video] DB 업데이트 완료되었으나 row 정보 없음');
+            const targetId = recentRows[0].id;
+            console.log('[Video] 업데이트 대상 로그 ID:', targetId);
+            
+            // Step 2: 그 ID로 UPDATE (UPDATE에는 order 없음)
+            const { error: updateErr } = await sb.from('analysis_logs')
+              .update({ 
+                video_path: videoInfo.path, 
+                video_url: videoInfo.url 
+              })
+              .eq('id', targetId);
+            
+            if (updateErr) {
+              console.warn('[Video] DB 업데이트 실패:', updateErr);
+            } else {
+              dbId = targetId;
+              console.log('[Video] ✅ DB에 영상 정보 저장 완료 (dbId:', dbId, ')');
+            }
           }
         } catch (e) {
           console.warn('[Video] DB 업데이트 예외:', e);
