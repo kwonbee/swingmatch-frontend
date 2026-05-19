@@ -704,6 +704,8 @@ let swingHistory = JSON.parse(localStorage.getItem('swingHistory') || '[]');
 async function syncHistoryFromDB() {
   if (!currentUser || !currentUser.id) return;
   
+  console.log('[History] DB 동기화 시작...');
+  
   try {
     const { data, error } = await sb.from('analysis_logs')
       .select('*')
@@ -715,6 +717,10 @@ async function syncHistoryFromDB() {
       console.warn('[History] DB 조회 실패:', error);
       return;
     }
+    
+    console.log(`[History] DB에서 ${data.length}개 row 조회됨`);
+    const videoRows = data.filter(r => r.video_path);
+    console.log(`[History] 그 중 video_path 있는 row: ${videoRows.length}개`);
     
     // DB 데이터를 swingHistory 포맷으로 변환
     const labels = { driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터' };
@@ -728,6 +734,9 @@ async function syncHistoryFromDB() {
       let videoUrl = null;
       if (row.video_path) {
         videoUrl = await refreshVideoUrl(row.video_path);
+        if (!videoUrl) {
+          console.warn(`[History] signed URL 생성 실패: ${row.video_path}`);
+        }
       }
       
       return {
@@ -749,7 +758,8 @@ async function syncHistoryFromDB() {
     swingHistory = items.filter(h => h.topMatch); // topMatch 없는 데이터는 제외
     
     const withVideo = swingHistory.filter(h => h.videoUrl).length;
-    console.log(`[History] DB에서 ${swingHistory.length}개 로드 (영상 ${withVideo}개)`);
+    const favorites = swingHistory.filter(h => h.isFavorite).length;
+    console.log(`[History] ✅ ${swingHistory.length}개 로드 완료 (영상 ${withVideo}개, 즐겨찾기 ${favorites}개)`);
     
     // localStorage에도 캐시 (오프라인 대응)
     localStorage.setItem('swingHistory', JSON.stringify(swingHistory));
@@ -1685,13 +1695,29 @@ async function startAnalysis() {
     // ★ Pro 회원: 영상을 백그라운드로 업로드 (결과는 이미 보임)
     if (isProUser()) {
       uploadVideoToStorage(file).then(async videoInfo => {
-        if (!videoInfo) {
+        if (!videoInfo || !videoInfo.url) {
           console.log('[Video] 업로드 실패 또는 스킵');
           return;
         }
         
+        console.log('[Video] ✅ 업로드 성공:', videoInfo.path);
+        
+        // ★★★ 우선순위 1: 결과 화면에 "영상 보기" 버튼 추가 (DB 작업 전에!)
         try {
-          // analysis_logs에 video 정보 저장 + 최신 ID 가져오기
+          const videoBadge = document.getElementById('r-video-badge');
+          if (videoBadge) {
+            const safeUrl = videoInfo.url.replace(/'/g, "\\'");
+            videoBadge.innerHTML = `<button type="button" class="video-link" onclick="openVideoModal('${safeUrl}')">🎥 분석된 영상 보기</button>`;
+            videoBadge.style.display = 'block';
+            console.log('[Video] 결과 화면에 영상 보기 버튼 추가됨');
+          }
+        } catch (e) {
+          console.warn('[Video] 결과 화면 버튼 추가 실패:', e);
+        }
+        
+        // ★★★ 우선순위 2: DB에 영상 정보 저장
+        let dbId = null;
+        try {
           const { data: updatedRows, error: updateErr } = await sb.from('analysis_logs')
             .update({ 
               video_path: videoInfo.path, 
@@ -1705,37 +1731,38 @@ async function startAnalysis() {
           
           if (updateErr) {
             console.warn('[Video] DB 업데이트 실패:', updateErr);
+          } else if (updatedRows && updatedRows[0]) {
+            dbId = updatedRows[0].id;
+            console.log('[Video] DB에 영상 정보 저장 완료 (dbId:', dbId, ')');
           } else {
-            console.log('[Video] DB에 영상 정보 저장 완료');
-            
-            // 히스토리에도 영상 정보 + DB ID 추가 (가장 최근 항목)
-            if (swingHistory[0]) {
-              swingHistory[0].videoPath = videoInfo.path;
-              swingHistory[0].videoUrl = videoInfo.url;
-              swingHistory[0].dbId = updatedRows && updatedRows[0] ? updatedRows[0].id : null;
-              swingHistory[0].isFavorite = false;
-              localStorage.setItem('swingHistory', JSON.stringify(swingHistory));
-              
-              // 히스토리 패널이 보이고 있으면 즉시 재렌더링 (영상 버튼 나타나도록)
-              const histPanel = document.getElementById('panel-history');
-              if (histPanel && histPanel.classList.contains('active')) {
-                renderHistory();
-              }
-            }
-          }
-          
-          // 결과 화면에 "영상 보기" 버튼 추가 (이미 결과 보이는 상태에서)
-          const videoBadge = document.getElementById('r-video-badge');
-          if (videoBadge && videoInfo.url) {
-            const safeUrl = videoInfo.url.replace(/'/g, "\\'");
-            videoBadge.innerHTML = `<button type="button" class="video-link" onclick="openVideoModal('${safeUrl}')">🎥 분석된 영상 보기</button>`;
-            videoBadge.style.display = 'block';
+            console.warn('[Video] DB 업데이트 완료되었으나 row 정보 없음');
           }
         } catch (e) {
-          console.warn('[Video] DB 업데이트 실패:', e);
+          console.warn('[Video] DB 업데이트 예외:', e);
         }
         
-        // 30개 초과 시 가장 오래된 영상 자동 삭제 (백그라운드)
+        // ★★★ 우선순위 3: swingHistory 메모리 업데이트
+        try {
+          if (swingHistory[0]) {
+            swingHistory[0].videoPath = videoInfo.path;
+            swingHistory[0].videoUrl = videoInfo.url;
+            swingHistory[0].dbId = dbId;
+            swingHistory[0].isFavorite = false;
+            localStorage.setItem('swingHistory', JSON.stringify(swingHistory));
+            console.log('[Video] swingHistory 메모리 업데이트 완료');
+            
+            // 히스토리 패널이 보이고 있으면 즉시 재렌더링
+            const histPanel = document.getElementById('panel-history');
+            if (histPanel && histPanel.classList.contains('active')) {
+              renderHistory();
+              console.log('[Video] 히스토리 화면 재렌더링됨');
+            }
+          }
+        } catch (e) {
+          console.warn('[Video] swingHistory 업데이트 실패:', e);
+        }
+        
+        // ★★★ 우선순위 4: 오래된 영상 정리 (백그라운드)
         cleanupOldVideos().catch(e => console.warn('[Video] cleanup 실패:', e));
       }).catch(err => {
         console.warn('[Video] 업로드 실패 (분석 결과는 정상):', err);
