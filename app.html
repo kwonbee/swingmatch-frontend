@@ -51,11 +51,13 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .nav-biz{font-family:'Pretendard',sans-serif;font-size:.75rem;letter-spacing:.05em;padding:7px 16px;border-radius:2px;cursor:pointer;transition:all .2s;background:transparent;color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.3)}
 .nav-biz:hover{color:#fff;border-color:rgba(255,255,255,0.7)}
 
-.btn-auth{font-family:'Pretendard',sans-serif;font-size:.75rem;letter-spacing:.05em;padding:7px 16px;border-radius:2px;cursor:pointer;transition:all .2s}
+.btn-auth{font-family:'Pretendard',sans-serif;font-size:.75rem;letter-spacing:.05em;padding:7px 16px;border-radius:2px;cursor:pointer;transition:all .2s;box-sizing:border-box}
 .btn-login{background:transparent;border:1px solid var(--border);color:var(--muted)}
 .btn-login:hover{border-color:var(--gold);color:var(--gold)}
-.btn-signup{background:var(--gold);border:1px solid var(--gold);color:#0a0e0b}
+.btn-signup{background:var(--gold);border:1px solid var(--gold);color:#0a0e0b;min-width:88px;text-align:center}
 .btn-signup:hover{background:var(--gold-light)}
+.btn-pro{background:var(--gold);border:1px solid var(--gold);color:#0a0e0b;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-width:88px;text-align:center}
+.btn-pro:hover{background:var(--gold-light)}
 .btn-logout{background:var(--gold);border:1px solid var(--gold);color:#0a0e0b}
 .btn-logout:hover{background:var(--gold-light)}
 
@@ -437,12 +439,14 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
     </g>
 </svg></a>
   <div class="nav-right">
-    <button class="nav-biz" onclick="copyBizEmail()">비즈니스 문의</button>
+    <button class="btn-auth btn-login" onclick="copyBizEmail()">비즈니스 문의</button>
     <div class="auth-area" id="auth-guest">
       <button class="btn-auth btn-login" onclick="openModal('login')">로그인</button>
+      <a href="/subscribe.html" class="btn-auth btn-pro">Pro 구독</a>
       <button class="btn-auth btn-signup" onclick="openModal('signup')">회원가입</button>
     </div>
     <div class="auth-area" id="auth-user" style="display:none">
+      <a href="/subscribe.html" class="btn-auth btn-pro">Pro 구독</a>
       <span class="auth-email" id="auth-email-txt"></span>
       <button class="btn-auth btn-logout" onclick="logout()">로그아웃</button>
     </div>
@@ -1617,7 +1621,7 @@ async function updateCountDisplay() {
   
   // Pro 회원
   if (isProUser()) {
-    el.textContent = '✨ Pro 회원 - 무제한 분석';
+    el.innerHTML = '✨ Pro 회원 - 무제한 분석';
     el.style.color = '#c8a96e';
     return;
   }
@@ -1634,12 +1638,14 @@ async function updateCountDisplay() {
   }
   
   const remaining = Math.max(0, limit - count);
+  const upgradeBtn = ' · <a href="/subscribe.html" style="color:#c8a96e;text-decoration:underline;">Pro 구독</a>';
+  
   if (remaining === 0) {
-    el.textContent = '오늘 무료 분석 횟수를 모두 사용했습니다';
+    el.innerHTML = '오늘 무료 분석 횟수를 모두 사용했습니다' + upgradeBtn;
     el.style.color = '#e27a7a';
   } else {
     const label = currentUser ? '회원' : '비회원';
-    el.textContent = '오늘 남은 분석 횟수: ' + remaining + '/' + limit + '회 (' + label + ')';
+    el.innerHTML = '오늘 남은 분석 횟수: ' + remaining + '/' + limit + '회 (' + label + ')' + upgradeBtn;
     el.style.color = remaining <= 1 ? '#e27a7a' : 'rgba(255,255,255,0.35)';
   }
 }
