@@ -165,6 +165,11 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .video-link:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(200,169,110,.3)}
 .hist-video-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(200,169,110,.15);color:#c8a96e;border:1px solid rgba(200,169,110,.3);border-radius:4px;font-size:.7rem;margin-left:6px;transition:background .15s;cursor:pointer;font-family:inherit}
 .hist-video-btn:hover{background:rgba(200,169,110,.25)}
+.hist-fav-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:50%;font-size:.95rem;margin-left:6px;cursor:pointer;transition:all .2s;line-height:1;padding:0}
+.hist-fav-btn:hover{transform:scale(1.15);border-color:rgba(255,90,120,.4)}
+.hist-fav-btn.active{background:rgba(255,90,120,.12);border-color:rgba(255,90,120,.5)}
+.hist-fav-btn.active:hover{background:rgba(255,90,120,.18)}
+.hist-item.is-favorite{border-left:3px solid #ff5a78;background:linear-gradient(90deg,rgba(255,90,120,.05),rgba(40,40,40,0))}
 
 /* 카카오 공유 버튼 */
 .share-btn{width:100%;margin-top:8px;padding:13px;background:#FEE500;color:#000;border:none;border-radius:2px;font-family:'Pretendard',sans-serif;font-size:.82rem;font-weight:500;letter-spacing:.04em;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
@@ -502,7 +507,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <div class="gi"><span class="gi-ico">☀️</span><div class="gi-text"><strong>촬영 환경</strong><span>밝은 환경, 전신이 보이게</span></div></div>
       <div class="gi"><span class="gi-ico">🎯</span><div class="gi-text"><strong>포함 동작</strong><span>어드레스~피니시 전체</span></div></div>
     </div>
-    <div class="guide-tip">💡 <strong>Tip.</strong> 연습장에서 핸드폰을 삼각대나 카트에 올려두고 측면에서 촬영하면 가장 정확한 분석이 가능합니다.<br><span style="color:rgba(200,169,110,0.8);font-size:.7rem">✨ Pro 회원은 분석한 영상을 30개까지 자동 저장하여 언제든 다시 볼 수 있어요</span></div>
+    <div class="guide-tip">💡 <strong>Tip.</strong> 연습장에서 핸드폰을 삼각대나 카트에 올려두고 측면에서 촬영하면 가장 정확한 분석이 가능합니다.<br><span style="color:rgba(200,169,110,0.8);font-size:.7rem">✨ Pro 회원은 분석한 영상을 자동 저장 (최근 30개) + 💝 영구 보관할 영상은 하트로 즐겨찾기 (10개)</span></div>
   </div>
   <!-- Callaway 광고 -->
   <div class="ad-inline" id="ad-callaway" style="display:none">
@@ -679,7 +684,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       브라우저가 영상을 지원하지 않습니다.
     </video>
     <div style="text-align:center;margin-top:12px;font-size:.75rem;color:rgba(245,239,224,0.6)">
-      💡 영상은 Pro 회원에게 최대 1년간 보관됩니다 (30개 한도)
+      💡 영상은 Pro 회원에게 보관됩니다 (최근 30개 + 💝 즐겨찾기 10개)
     </div>
   </div>
 </div>
@@ -694,6 +699,56 @@ const BACKEND = 'https://swingmatch-backend-production.up.railway.app';
 let extractedFrames = [];
 let file = null, club = 'driver';
 let swingHistory = JSON.parse(localStorage.getItem('swingHistory') || '[]');
+
+// 로그인 시 DB에서 히스토리 동기화 (PC/모바일 공유)
+async function syncHistoryFromDB() {
+  if (!currentUser || !currentUser.id) return;
+  
+  try {
+    const { data, error } = await sb.from('analysis_logs')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    
+    if (error || !data) {
+      console.warn('[History] DB 조회 실패:', error);
+      return;
+    }
+    
+    // DB 데이터를 swingHistory 포맷으로 변환
+    const labels = { driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터' };
+    swingHistory = data.map(row => {
+      const result = row.result_json || {};
+      const created = new Date(row.created_at);
+      return {
+        id: row.id || created.getTime(),
+        dbId: row.id, // DB 행 ID (즐겨찾기 토글, 삭제용)
+        date: created.toLocaleDateString('ko-KR', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}),
+        club: row.club,
+        clubLabel: labels[row.club] || row.club,
+        topMatch: result.topMatch,
+        frameAnalysis: result.frameAnalysis,
+        similar: result.similar,
+        videoPath: row.video_path,
+        videoUrl: row.video_url,
+        isFavorite: row.is_favorite || false,
+        createdAt: row.created_at
+      };
+    }).filter(h => h.topMatch); // topMatch 없는 데이터는 제외
+    
+    console.log(`[History] DB에서 ${swingHistory.length}개 영상 불러옴`);
+    
+    // localStorage에도 캐시 (오프라인 대응)
+    localStorage.setItem('swingHistory', JSON.stringify(swingHistory));
+    
+    // 히스토리 화면이 열려있으면 재렌더링
+    if (typeof renderHistory === 'function') renderHistory();
+    if (typeof renderGraph === 'function') renderGraph();
+  } catch (e) {
+    console.warn('[History] 동기화 실패:', e);
+  }
+}
 let currentUser = null;
 let charts = {};
 let currentHistClub = 'all';
@@ -707,6 +762,7 @@ async function checkSession() {
     initAuth();
     await refreshProStatus(); // 이미 로그인된 상태라면 Pro 상태도 가져옴
     updateCountDisplay();
+    syncHistoryFromDB(); // 영상 히스토리 동기화 (PC/모바일 공유)
   } else {
     updateCountDisplay();
   }
@@ -782,11 +838,15 @@ sb.auth.onAuthStateChange(async (event, session) => {
     closeModal('signup');
     await refreshProStatus(); // Pro 상태 가져오기
     updateCountDisplay(); // 로그인 시 카운트 새로고침
+    syncHistoryFromDB(); // 영상 히스토리 동기화 (PC/모바일 공유)
   } else if (event === 'SIGNED_OUT') {
     currentUser = null;
     cachedProStatus = false;
+    swingHistory = []; // 로그아웃 시 히스토리 초기화
+    localStorage.removeItem('swingHistory');
     initAuth();
     updateCountDisplay(); // 로그아웃 시 카운트 새로고침
+    if (typeof renderHistory === 'function') renderHistory();
   }
 });
 
@@ -1419,31 +1479,51 @@ async function cleanupOldVideos() {
   if (!isProUser() || !currentUser || !currentUser.id) return;
   
   try {
-    // 본인 폴더의 모든 영상 조회
-    const { data: files, error } = await sb.storage
-      .from('swing-videos')
-      .list(currentUser.id, {
-        limit: 100,
-        sortBy: { column: 'created_at', order: 'asc' } // 오래된 순
-      });
+    // DB에서 본인의 영상 목록 조회 (즐겨찾기 여부 포함)
+    const { data: logs, error: logErr } = await sb.from('analysis_logs')
+      .select('id, video_path, is_favorite, created_at')
+      .eq('user_id', currentUser.id)
+      .not('video_path', 'is', null)  // 영상이 있는 것만
+      .order('created_at', { ascending: false });
     
-    if (error || !files || files.length <= 30) return;
+    if (logErr || !logs) {
+      console.warn('[Video] DB 조회 실패:', logErr);
+      return;
+    }
     
-    // 30개 초과한 만큼 가장 오래된 것부터 삭제
-    const toDelete = files.slice(0, files.length - 30);
-    const pathsToDelete = toDelete.map(f => `${currentUser.id}/${f.name}`);
+    // 즐겨찾기 / 일반 분리
+    const favorites = logs.filter(l => l.is_favorite);
+    const normals = logs.filter(l => !l.is_favorite);
     
-    console.log(`[Video] 30개 초과 - ${toDelete.length}개 영상 자동 삭제`);
+    console.log(`[Video] 영상 현황: 일반 ${normals.length}개 / 즐겨찾기 ${favorites.length}개`);
     
+    // 일반 영상이 30개 이하면 정리 불필요
+    if (normals.length <= 30) return;
+    
+    // 30개 초과한 일반 영상 - 가장 오래된 것부터 삭제 (즐겨찾기는 절대 삭제 X)
+    const toDelete = normals.slice(30); // 31번째부터 끝까지
+    const pathsToDelete = toDelete.map(l => l.video_path).filter(Boolean);
+    const idsToUpdate = toDelete.map(l => l.id);
+    
+    if (pathsToDelete.length === 0) return;
+    
+    console.log(`[Video] 30개 초과 - ${pathsToDelete.length}개 일반 영상 자동 삭제 (즐겨찾기 ${favorites.length}개는 보존)`);
+    
+    // Storage에서 영상 파일 삭제
     const { error: delError } = await sb.storage
       .from('swing-videos')
       .remove(pathsToDelete);
     
     if (delError) {
-      console.warn('[Video] 영상 삭제 실패:', delError);
-    } else {
-      console.log('[Video] ✅ 오래된 영상 삭제 완료');
+      console.warn('[Video] Storage 삭제 실패:', delError);
     }
+    
+    // DB에서 video_path, video_url 비우기 (분석 기록은 남겨둠)
+    await sb.from('analysis_logs')
+      .update({ video_path: null, video_url: null })
+      .in('id', idsToUpdate);
+    
+    console.log('[Video] ✅ 오래된 영상 정리 완료');
   } catch (e) {
     console.error('[Video] cleanup 오류:', e);
   }
@@ -1593,22 +1673,31 @@ async function startAnalysis() {
         }
         
         try {
-          // analysis_logs에 video 정보 저장
-          await sb.from('analysis_logs')
+          // analysis_logs에 video 정보 저장 + 최신 ID 가져오기
+          const { data: updatedRows, error: updateErr } = await sb.from('analysis_logs')
             .update({ 
               video_path: videoInfo.path, 
               video_url: videoInfo.url 
             })
             .eq('user_id', currentUser.id)
+            .is('video_path', null)
             .order('created_at', { ascending: false })
-            .limit(1);
-          console.log('[Video] DB에 영상 정보 저장 완료');
+            .limit(1)
+            .select('id');
           
-          // 히스토리에도 영상 정보 추가 (가장 최근 항목)
-          if (swingHistory[0]) {
-            swingHistory[0].videoPath = videoInfo.path;
-            swingHistory[0].videoUrl = videoInfo.url;
-            localStorage.setItem('swingHistory', JSON.stringify(swingHistory));
+          if (updateErr) {
+            console.warn('[Video] DB 업데이트 실패:', updateErr);
+          } else {
+            console.log('[Video] DB에 영상 정보 저장 완료');
+            
+            // 히스토리에도 영상 정보 + DB ID 추가 (가장 최근 항목)
+            if (swingHistory[0]) {
+              swingHistory[0].videoPath = videoInfo.path;
+              swingHistory[0].videoUrl = videoInfo.url;
+              swingHistory[0].dbId = updatedRows && updatedRows[0] ? updatedRows[0].id : null;
+              swingHistory[0].isFavorite = false;
+              localStorage.setItem('swingHistory', JSON.stringify(swingHistory));
+            }
           }
           
           // 결과 화면에 "영상 보기" 버튼 추가 (이미 결과 보이는 상태에서)
@@ -1655,11 +1744,72 @@ function saveToHistory(data, videoInfo) {
     frameAnalysis: data.frameAnalysis, 
     similar: data.similar,
     videoPath: videoInfo ? videoInfo.path : null,
-    videoUrl: videoInfo ? videoInfo.url : null
+    videoUrl: videoInfo ? videoInfo.url : null,
+    isFavorite: false
   };
   swingHistory.unshift(entry);
   if (swingHistory.length > 50) swingHistory = swingHistory.slice(0, 50);
   localStorage.setItem('swingHistory', JSON.stringify(swingHistory));
+}
+
+// ────────────────────────────────────
+// 즐겨찾기 토글 (Pro 회원 전용)
+// ────────────────────────────────────
+const FAVORITE_LIMIT = 10;
+
+async function toggleFavorite(dbId, btnEl) {
+  if (!currentUser || !currentUser.id) {
+    alert('로그인이 필요한 기능입니다.');
+    return;
+  }
+  
+  if (!isProUser()) {
+    alert('✨ Pro 회원 전용 기능입니다.\n\nPro 구독으로 영상을 안전하게 보관하세요!');
+    return;
+  }
+  
+  // 현재 항목 찾기
+  const item = swingHistory.find(h => h.dbId === dbId);
+  if (!item) return;
+  
+  const newFavoriteState = !item.isFavorite;
+  
+  // 즐겨찾기 추가 시도 시 한도 확인
+  if (newFavoriteState) {
+    const currentFavCount = swingHistory.filter(h => h.isFavorite).length;
+    if (currentFavCount >= FAVORITE_LIMIT) {
+      alert(`💝 즐겨찾기는 최대 ${FAVORITE_LIMIT}개까지 저장할 수 있어요.\n\n기존 즐겨찾기를 해제한 후 다시 시도해주세요.`);
+      return;
+    }
+  }
+  
+  // UI 즉시 반응 (낙관적 업데이트)
+  if (btnEl) {
+    btnEl.classList.toggle('active', newFavoriteState);
+    btnEl.innerHTML = newFavoriteState ? '❤️' : '🤍';
+  }
+  
+  // DB 업데이트
+  const { error } = await sb.from('analysis_logs')
+    .update({ is_favorite: newFavoriteState })
+    .eq('id', dbId);
+  
+  if (error) {
+    console.error('[Favorite] 업데이트 실패:', error);
+    alert('저장 실패. 다시 시도해주세요.');
+    // UI 롤백
+    if (btnEl) {
+      btnEl.classList.toggle('active', !newFavoriteState);
+      btnEl.innerHTML = !newFavoriteState ? '❤️' : '🤍';
+    }
+    return;
+  }
+  
+  // 메모리 데이터 업데이트
+  item.isFavorite = newFavoriteState;
+  localStorage.setItem('swingHistory', JSON.stringify(swingHistory));
+  
+  console.log(`[Favorite] ${newFavoriteState ? '추가' : '해제'}: ${dbId}`);
 }
 
 function renderResult(d, videoInfo) {
@@ -1758,13 +1908,23 @@ function renderHistory() {
   const filtered = currentHistClub === 'all' ? swingHistory : swingHistory.filter(h => h.club === currentHistClub);
   if (filtered.length === 0) { list.style.display = 'none'; fempty.style.display = ''; return; }
   fempty.style.display = 'none'; list.style.display = 'flex'; list.innerHTML = '';
+  
+  // 즐겨찾기 카운트 표시
+  const favCount = swingHistory.filter(h => h.isFavorite).length;
+  
   filtered.forEach(h => {
     const scores = (h.frameAnalysis||[]).map(f => `<span class="hscore">${f.phase} <span>${f.score}</span></span>`).join('');
     const safeUrl = h.videoUrl ? h.videoUrl.replace(/'/g, "\\'") : '';
     const videoBtn = h.videoUrl 
       ? `<button type="button" class="hist-video-btn" onclick="openVideoModal('${safeUrl}')">🎥 영상</button>` 
       : '';
-    list.innerHTML += `<div class="hist-item"><div class="hist-top"><div class="hist-emoji">${h.topMatch?.emoji||'🏌️'}</div><div class="hist-pro"><div class="hpname">${h.topMatch?.name||'—'}</div><div class="hpen">${h.topMatch?.nameEn||''}</div></div><div class="hmeta"><div class="hpct">${h.topMatch?.matchPct||'—'}%</div><span class="hdate">${h.date}</span></div></div><div class="hbottom"><span class="hbadge">${h.clubLabel||''}</span>${scores}${videoBtn}</div></div>`;
+    
+    // 하트 버튼 (영상이 있고 dbId 있는 경우만 표시)
+    const favBtn = (h.videoUrl && h.dbId) 
+      ? `<button type="button" class="hist-fav-btn ${h.isFavorite ? 'active' : ''}" onclick="toggleFavorite('${h.dbId}', this)" title="${h.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 (영상 자동 삭제 방지)'}">${h.isFavorite ? '❤️' : '🤍'}</button>`
+      : '';
+    
+    list.innerHTML += `<div class="hist-item ${h.isFavorite ? 'is-favorite' : ''}"><div class="hist-top"><div class="hist-emoji">${h.topMatch?.emoji||'🏌️'}</div><div class="hist-pro"><div class="hpname">${h.topMatch?.name||'—'}</div><div class="hpen">${h.topMatch?.nameEn||''}</div></div><div class="hmeta"><div class="hpct">${h.topMatch?.matchPct||'—'}%</div><span class="hdate">${h.date}</span></div></div><div class="hbottom"><span class="hbadge">${h.clubLabel||''}</span>${scores}${favBtn}${videoBtn}</div></div>`;
   });
 }
 
