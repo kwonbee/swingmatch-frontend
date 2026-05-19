@@ -50,16 +50,16 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .nav-right{display:flex;align-items:center;gap:10px}
 
 /* Hamburger Menu */
-.hamburger-btn{display:none;background:transparent;border:1px solid var(--border);width:36px;height:32px;flex-direction:column;justify-content:center;align-items:center;gap:4px;border-radius:2px;cursor:pointer;padding:0;transition:all .2s}
+.hamburger-btn{display:none;background:transparent;border:1px solid var(--border);width:36px;height:32px;flex-direction:column;justify-content:center;align-items:center;gap:4px;border-radius:2px;cursor:pointer;padding:0;transition:all .2s;position:relative;z-index:1001}
 .hamburger-btn:hover{border-color:var(--gold)}
 .hamburger-btn span{width:16px;height:1.5px;background:rgba(255,255,255,0.8);transition:all .2s}
 .hamburger-btn:hover span{background:var(--gold)}
-.hamburger-menu{display:none;position:absolute;top:62px;right:16px;background:rgba(15,19,16,0.97);backdrop-filter:blur(14px);border:1px solid rgba(200,169,110,0.3);border-radius:4px;padding:6px;min-width:160px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.4)}
+.hamburger-menu{display:none;position:fixed;top:64px;right:16px;background:#0f1310;border:1px solid rgba(200,169,110,0.4);border-radius:6px;padding:8px;min-width:180px;z-index:1000;box-shadow:0 12px 32px rgba(0,0,0,0.6)}
 .hamburger-menu.open{display:block}
-.hamburger-menu a,.hamburger-menu button{display:block;width:100%;padding:10px 14px;color:rgba(255,255,255,0.85);text-decoration:none;font-size:.78rem;font-family:'Pretendard',sans-serif;letter-spacing:.05em;border-radius:2px;background:transparent;border:none;text-align:left;cursor:pointer;transition:all .15s}
-.hamburger-menu a:hover,.hamburger-menu button:hover{background:rgba(200,169,110,0.12);color:var(--gold)}
-.hamburger-menu .menu-divider{height:1px;background:rgba(255,255,255,0.08);margin:4px 0}
-.hamburger-menu .menu-email{padding:8px 14px;font-size:.7rem;color:rgba(255,255,255,0.4);font-style:italic}
+.hamburger-menu a,.hamburger-menu button{display:block;width:100%;padding:12px 16px;color:rgba(255,255,255,0.9);text-decoration:none;font-size:.82rem;font-family:'Pretendard',sans-serif;letter-spacing:.05em;border-radius:3px;background:transparent;border:none;text-align:left;cursor:pointer;transition:all .15s}
+.hamburger-menu a:hover,.hamburger-menu button:hover{background:rgba(200,169,110,0.15);color:var(--gold)}
+.hamburger-menu .menu-divider{height:1px;background:rgba(255,255,255,0.1);margin:6px 0}
+.hamburger-menu .menu-email{padding:10px 16px;font-size:.72rem;color:rgba(255,255,255,0.45);font-style:italic;word-break:break-all}
 .nav-biz{font-family:'Pretendard',sans-serif;font-size:.75rem;letter-spacing:.05em;padding:7px 16px;border-radius:2px;cursor:pointer;transition:all .2s;background:transparent;color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.3)}
 .nav-biz:hover{color:#fff;border-color:rgba(255,255,255,0.7)}
 
