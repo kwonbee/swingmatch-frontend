@@ -54,7 +54,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .hamburger-btn:hover{border-color:var(--gold)}
 .hamburger-btn span{width:16px;height:1.5px;background:rgba(255,255,255,0.8);transition:all .2s}
 .hamburger-btn:hover span{background:var(--gold)}
-.hamburger-menu{display:none;position:fixed;top:72px;right:16px;background:#0f1310;border:1px solid rgba(200,169,110,0.4);border-radius:6px;padding:8px;min-width:180px;z-index:1000;box-shadow:0 12px 32px rgba(0,0,0,0.6)}
+.hamburger-menu{display:none;position:fixed;top:72px;right:16px;background:#0f1310;border:1px solid rgba(200,169,110,0.5);border-radius:6px;padding:6px;min-width:180px;z-index:99999;box-shadow:0 12px 32px rgba(0,0,0,0.7),0 0 0 1px rgba(200,169,110,0.2)}
 .hamburger-menu.open{display:block}
 .hamburger-menu a,.hamburger-menu button{display:block;width:100%;padding:12px 16px;color:rgba(255,255,255,0.9);text-decoration:none;font-size:.82rem;font-family:'Pretendard',sans-serif;letter-spacing:.05em;border-radius:3px;background:transparent;border:none;text-align:left;cursor:pointer;transition:all .15s}
 .hamburger-menu a:hover,.hamburger-menu button:hover{background:rgba(200,169,110,0.15);color:var(--gold)}
@@ -365,8 +365,8 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
   .nav-tab{padding:11px 13px;font-size:.75rem}
   /* 햄버거 메뉴 활성화 */
   .hamburger-btn{display:flex}
-  /* 모바일에서 햄버거 메뉴 위치 조정 (헤더 아래로) */
-  .hamburger-menu{top:60px}
+  /* 모바일에서 햄버거 메뉴 위치 조정 (헤더 한참 아래로) */
+  .hamburger-menu{top:74px!important;right:12px}
   /* 비즈니스 문의 + 로그인 + 회원가입 + 로그아웃 숨기기 (Pro 구독만 유지) */
   .nav-right > button.nav-biz,
   .nav-right > .btn-auth.btn-login:not(.btn-pro),
