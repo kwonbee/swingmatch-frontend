@@ -1,0 +1,15 @@
+{
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "swingmatch-frontend.vercel.app"
+        }
+      ],
+      "destination": "https://myswingmatch.com/$1",
+      "permanent": true
+    }
+  ]
+}
