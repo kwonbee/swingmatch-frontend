@@ -187,6 +187,65 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .hist-fav-btn.active:hover{background:rgba(255,90,120,.18)}
 .hist-item.is-favorite{border-left:3px solid #ff5a78;background:linear-gradient(90deg,rgba(255,90,120,.05),rgba(40,40,40,0))}
 
+/* 영상 비교 모드 */
+.compare-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:rgba(200,169,110,.06);border:1px solid rgba(200,169,110,.2);border-radius:6px;margin-bottom:12px;font-size:.85rem;flex-wrap:wrap}
+.compare-toolbar .ct-info{color:#c8a96e;font-weight:500}
+.compare-toolbar .ct-actions{display:flex;gap:8px}
+.compare-toolbar button{padding:7px 14px;border-radius:4px;font-size:.78rem;cursor:pointer;font-family:inherit;border:1px solid;transition:all .2s}
+.btn-compare-start{background:transparent;border-color:rgba(200,169,110,.4);color:#c8a96e}
+.btn-compare-start:hover{background:rgba(200,169,110,.1)}
+.btn-compare-start.active{background:#c8a96e;color:#0a0e0b;border-color:#c8a96e}
+.btn-compare-do{background:#c8a96e;color:#0a0e0b;border-color:#c8a96e;font-weight:600}
+.btn-compare-do:hover{background:#d4b97f}
+.btn-compare-do:disabled{background:#333;color:#666;border-color:#333;cursor:not-allowed}
+.btn-compare-cancel{background:transparent;border-color:rgba(255,255,255,.2);color:rgba(255,255,255,.6)}
+.btn-compare-cancel:hover{border-color:rgba(255,255,255,.4);color:rgba(255,255,255,.85)}
+
+.hist-checkbox{display:none;margin-right:10px;width:22px;height:22px;flex-shrink:0;cursor:pointer;accent-color:#c8a96e}
+.compare-mode .hist-checkbox{display:inline-block}
+.compare-mode .hist-item{cursor:pointer;transition:all .2s}
+.compare-mode .hist-item.no-video{opacity:.4;cursor:not-allowed}
+.compare-mode .hist-item.selected{border-color:#c8a96e;background:linear-gradient(90deg,rgba(200,169,110,.1),rgba(40,40,40,0))!important;box-shadow:0 0 0 1px rgba(200,169,110,.3) inset}
+
+/* 비교 모달 */
+.compare-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.compare-modal.active{display:flex}
+.compare-content{width:100%;max-width:1200px;background:#0d0d0d;border:1px solid rgba(200,169,110,.2);border-radius:8px;padding:24px;color:#e5e5e5;position:relative}
+.compare-close{position:absolute;top:12px;right:14px;background:transparent;border:none;color:rgba(255,255,255,.6);font-size:1.6rem;cursor:pointer;width:36px;height:36px;display:flex;align-items:center;justify-content:center;line-height:1;font-family:inherit}
+.compare-close:hover{color:#c8a96e}
+.compare-title{font-size:1.1rem;font-weight:600;color:#fff;margin-bottom:6px;padding-right:40px}
+.compare-subtitle{font-size:.82rem;color:#c8a96e;margin-bottom:20px;letter-spacing:.02em}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.compare-side{background:#161616;border:1px solid rgba(200,169,110,.15);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.compare-side-header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;border-bottom:1px solid rgba(200,169,110,.15);padding-bottom:10px}
+.compare-side-label{font-size:.7rem;color:rgba(200,169,110,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+.compare-side-pro{font-size:.95rem;font-weight:600;color:#fff;line-height:1.3}
+.compare-side-date{font-size:.72rem;color:rgba(229,229,229,.5);margin-top:2px}
+.compare-side-pct{font-size:1.4rem;font-weight:700;color:#c8a96e;line-height:1;text-align:right}
+.compare-side-pct small{font-size:.65rem;color:rgba(229,229,229,.5);font-weight:400;display:block;margin-top:2px}
+.compare-side video{width:100%;border-radius:4px;background:#000;aspect-ratio:16/9}
+.compare-scores{display:flex;flex-wrap:wrap;gap:6px}
+.compare-scores .cscore{font-size:.7rem;padding:3px 8px;background:rgba(200,169,110,.08);border:1px solid rgba(200,169,110,.15);border-radius:3px;color:rgba(229,229,229,.85)}
+.compare-scores .cscore span{color:#c8a96e;font-weight:600;margin-left:4px}
+
+.compare-controls{display:flex;gap:10px;justify-content:center;padding-top:16px;border-top:1px solid rgba(200,169,110,.1);flex-wrap:wrap}
+.compare-controls button{padding:10px 20px;background:transparent;border:1px solid rgba(200,169,110,.3);color:#c8a96e;border-radius:4px;font-size:.82rem;cursor:pointer;font-family:inherit;transition:all .2s;font-weight:500}
+.compare-controls button:hover{background:rgba(200,169,110,.1);border-color:#c8a96e}
+.compare-controls .cc-primary{background:#c8a96e;color:#0a0e0b;border-color:#c8a96e;font-weight:600}
+.compare-controls .cc-primary:hover{background:#d4b97f}
+
+.compare-changes{margin-top:18px;padding:14px 16px;background:rgba(200,169,110,.05);border-left:3px solid #c8a96e;border-radius:0 6px 6px 0;font-size:.85rem;line-height:1.8}
+.compare-changes strong{color:#c8a96e;display:block;margin-bottom:6px;font-size:.8rem;letter-spacing:.04em;text-transform:uppercase}
+
+@media (max-width:760px){
+  .compare-grid{grid-template-columns:1fr}
+  .compare-content{padding:18px 14px}
+  .compare-title{font-size:1rem}
+  .compare-side-pro{font-size:.88rem}
+  .compare-side-pct{font-size:1.2rem}
+  .compare-controls button{padding:9px 14px;font-size:.78rem}
+}
+
 /* 카카오 공유 버튼 */
 .share-btn{width:100%;margin-top:8px;padding:13px;background:#FEE500;color:#000;border:none;border-radius:2px;font-family:'Pretendard',sans-serif;font-size:.82rem;font-weight:500;letter-spacing:.04em;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
 .share-btn:hover{background:#F5DC00}
@@ -214,7 +273,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 
 /* 히스토리 */
 .hist-list{display:flex;flex-direction:column;gap:10px;width:100%}
-.hist-item{background:var(--card);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(16px);padding:18px 20px}
+.hist-item{background:var(--card);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(16px);padding:18px 20px;display:flex;align-items:flex-start;gap:10px}
 .hist-top{display:flex;align-items:center;gap:12px;margin-bottom:10px}
 .hist-emoji{font-size:1.5rem}.hist-pro{flex:1}
 .hpname{font-size:.88rem;color:var(--text);margin-bottom:1px}
@@ -616,9 +675,38 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <button class="ftab" data-club="putter" onclick="filterHistory('putter',this)">퍼터<span class="filter-count" id="hc-putter">0</span></button>
       <button class="ftab ftab-fav" data-club="favorite" onclick="filterHistory('favorite',this)" title="즐겨찾기">❤️<span class="filter-count" id="hc-favorite">0</span></button>
     </div>
+    <!-- 영상 비교 툴바 -->
+    <div class="compare-toolbar" id="compare-toolbar" style="display:none">
+      <span class="ct-info" id="compare-info">📊 영상 2개를 선택하면 비교할 수 있습니다 (0/2)</span>
+      <div class="ct-actions">
+        <button type="button" class="btn-compare-do" id="btn-compare-do" disabled onclick="openCompareModal()">비교 보기</button>
+        <button type="button" class="btn-compare-cancel" onclick="toggleCompareMode(false)">취소</button>
+      </div>
+    </div>
+    <!-- 비교 시작 버튼 -->
+    <div id="compare-start-wrap" style="margin-bottom:12px;text-align:right">
+      <button type="button" class="btn-compare-start" id="btn-compare-start" onclick="toggleCompareMode(true)">🎬 영상 비교하기</button>
+    </div>
     <div class="empty-state" id="hist-empty"><span class="eico">📂</span>아직 분석한 스윙이 없습니다.<br>스윙 분석 탭에서 영상을 업로드해보세요.</div>
     <div class="empty-state" id="hist-filter-empty" style="display:none"><span class="eico">🔍</span>해당 클럽의 분석 기록이 없습니다.</div>
     <div class="hist-list" id="hist-list" style="display:none"></div>
+  </div>
+</div>
+
+<!-- 영상 비교 모달 -->
+<div class="compare-modal" id="compare-modal">
+  <div class="compare-content">
+    <button type="button" class="compare-close" onclick="closeCompareModal()">×</button>
+    <div class="compare-title">📊 스윙 비교 분석</div>
+    <div class="compare-subtitle" id="compare-club-label">— vs —</div>
+    <div class="compare-grid" id="compare-grid"></div>
+    <div class="compare-changes" id="compare-changes"></div>
+    <div class="compare-controls">
+      <button type="button" class="cc-primary" onclick="playBothVideos()">▶ 동시 재생</button>
+      <button type="button" onclick="pauseBothVideos()">⏸ 일시정지</button>
+      <button type="button" onclick="resetBothVideos()">⏮ 처음부터</button>
+      <button type="button" onclick="setPlaybackRate(0.5)" id="speed-btn">🐢 0.5x</button>
+    </div>
   </div>
 </div>
 
@@ -2080,21 +2168,217 @@ function renderHistory() {
   // 즐겨찾기 카운트 표시
   const favCount = swingHistory.filter(h => h.isFavorite).length;
   
-  filtered.forEach(h => {
+  filtered.forEach((h, idx) => {
     const scores = (h.frameAnalysis||[]).map(f => `<span class="hscore">${f.phase} <span>${f.score}</span></span>`).join('');
     const safeUrl = h.videoUrl ? h.videoUrl.replace(/'/g, "\\'") : '';
     const videoBtn = h.videoUrl 
-      ? `<button type="button" class="hist-video-btn" onclick="openVideoModal('${safeUrl}')">🎥 영상</button>` 
+      ? `<button type="button" class="hist-video-btn" onclick="event.stopPropagation();openVideoModal('${safeUrl}')">🎥 영상</button>` 
       : '';
     
     // 하트 버튼 (영상이 있고 dbId 있는 경우만 표시)
     const favBtn = (h.videoUrl && h.dbId) 
-      ? `<button type="button" class="hist-fav-btn ${h.isFavorite ? 'active' : ''}" onclick="toggleFavorite('${h.dbId}', this)" title="${h.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 (영상 자동 삭제 방지)'}">${h.isFavorite ? '❤️' : '🤍'}</button>`
+      ? `<button type="button" class="hist-fav-btn ${h.isFavorite ? 'active' : ''}" onclick="event.stopPropagation();toggleFavorite('${h.dbId}', this)" title="${h.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 (영상 자동 삭제 방지)'}">${h.isFavorite ? '❤️' : '🤍'}</button>`
       : '';
     
-    list.innerHTML += `<div class="hist-item ${h.isFavorite ? 'is-favorite' : ''}"><div class="hist-top"><div class="hist-emoji">${h.topMatch?.emoji||'🏌️'}</div><div class="hist-pro"><div class="hpname">${h.topMatch?.name||'—'}</div><div class="hpen">${h.topMatch?.nameEn||''}</div></div><div class="hmeta"><div class="hpct">${h.topMatch?.matchPct||'—'}%</div><span class="hdate">${h.date}</span></div></div><div class="hbottom"><span class="hbadge">${h.clubLabel||''}</span>${scores}${favBtn}${videoBtn}</div></div>`;
+    // 비교 모드 체크박스 (영상이 있는 항목만 선택 가능)
+    const hasVideo = !!h.videoUrl;
+    const checkbox = `<input type="checkbox" class="hist-checkbox" data-idx="${idx}" ${hasVideo ? '' : 'disabled'} onclick="event.stopPropagation();toggleCompareSelection(this, ${idx})">`;
+    const noVideoClass = hasVideo ? '' : 'no-video';
+    
+    list.innerHTML += `<div class="hist-item ${h.isFavorite ? 'is-favorite' : ''} ${noVideoClass}" data-idx="${idx}" onclick="onHistItemClick(this, ${idx})">${checkbox}<div class="hist-content" style="flex:1;min-width:0"><div class="hist-top"><div class="hist-emoji">${h.topMatch?.emoji||'🏌️'}</div><div class="hist-pro"><div class="hpname">${h.topMatch?.name||'—'}</div><div class="hpen">${h.topMatch?.nameEn||''}</div></div><div class="hmeta"><div class="hpct">${h.topMatch?.matchPct||'—'}%</div><span class="hdate">${h.date}</span></div></div><div class="hbottom"><span class="hbadge">${h.clubLabel||''}</span>${scores}${favBtn}${videoBtn}</div></div></div>`;
   });
+  
+  // 현재 필터된 데이터를 비교에서 참조할 수 있게 저장
+  window._filteredHistory = filtered;
 }
+
+// ── 영상 비교 기능 (Level 1: 나란히 영상 비교) ──
+let compareMode = false;
+let compareSelected = []; // 선택된 영상의 idx 배열 (최대 2개)
+
+function toggleCompareMode(on) {
+  compareMode = on;
+  compareSelected = [];
+  const list = document.getElementById('hist-list');
+  const toolbar = document.getElementById('compare-toolbar');
+  const startWrap = document.getElementById('compare-start-wrap');
+  
+  if (on) {
+    // 영상이 있는 데이터가 2개 이상인지 확인
+    const withVideo = swingHistory.filter(h => h.videoUrl).length;
+    if (withVideo < 2) {
+      alert('🎬 영상 비교 분석\n\n비교할 영상이 부족합니다.\n영상이 저장된 분석이 최소 2개 필요합니다.\n\n현재: ' + withVideo + '개\n\n💡 Pro 회원으로 영상 분석을 더 진행하면 비교가 가능해집니다.');
+      return;
+    }
+    list.classList.add('compare-mode');
+    toolbar.style.display = 'flex';
+    startWrap.style.display = 'none';
+    updateCompareInfo();
+  } else {
+    list.classList.remove('compare-mode');
+    toolbar.style.display = 'none';
+    startWrap.style.display = 'block';
+    // 모든 체크박스 해제
+    document.querySelectorAll('.hist-checkbox').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.hist-item.selected').forEach(el => el.classList.remove('selected'));
+  }
+}
+
+function onHistItemClick(itemEl, idx) {
+  // 비교 모드일 때만 카드 클릭으로 체크박스 토글
+  if (!compareMode) return;
+  if (itemEl.classList.contains('no-video')) return;
+  const cb = itemEl.querySelector('.hist-checkbox');
+  if (cb) {
+    cb.checked = !cb.checked;
+    toggleCompareSelection(cb, idx);
+  }
+}
+
+function toggleCompareSelection(cb, idx) {
+  if (cb.checked) {
+    // 이미 2개 선택된 상태면 못 선택
+    if (compareSelected.length >= 2) {
+      cb.checked = false;
+      alert('비교는 정확히 2개만 선택할 수 있어요.\n다른 영상을 해제한 후 선택해주세요.');
+      return;
+    }
+    compareSelected.push(idx);
+  } else {
+    compareSelected = compareSelected.filter(i => i !== idx);
+  }
+  
+  // 시각 표시
+  const item = cb.closest('.hist-item');
+  if (cb.checked) item.classList.add('selected');
+  else item.classList.remove('selected');
+  
+  updateCompareInfo();
+}
+
+function updateCompareInfo() {
+  const info = document.getElementById('compare-info');
+  const btn = document.getElementById('btn-compare-do');
+  const count = compareSelected.length;
+  info.textContent = `📊 영상 2개를 선택하면 비교할 수 있습니다 (${count}/2)`;
+  btn.disabled = count !== 2;
+}
+
+function openCompareModal() {
+  if (compareSelected.length !== 2) return;
+  const filtered = window._filteredHistory || swingHistory;
+  
+  // 날짜순 정렬 (이전 → 현재)
+  const items = compareSelected.map(idx => filtered[idx]).filter(Boolean);
+  items.sort((a, b) => new Date(a.date) - new Date(b.date));
+  
+  const [prev, curr] = items;
+  const grid = document.getElementById('compare-grid');
+  const clubLabel = document.getElementById('compare-club-label');
+  
+  clubLabel.textContent = `${prev.clubLabel||''} 분석 비교 — ${prev.date} → ${curr.date}`;
+  
+  grid.innerHTML = [prev, curr].map((h, i) => {
+    const label = i === 0 ? '이전' : '현재';
+    const scores = (h.frameAnalysis||[]).map(f => 
+      `<span class="cscore">${f.phase} <span>${f.score}</span></span>`
+    ).join('');
+    const safeUrl = h.videoUrl ? h.videoUrl.replace(/"/g, '&quot;') : '';
+    return `
+      <div class="compare-side">
+        <div class="compare-side-header">
+          <div>
+            <div class="compare-side-label">${label}</div>
+            <div class="compare-side-pro">${h.topMatch?.emoji||'🏌️'} ${h.topMatch?.name||'—'}</div>
+            <div class="compare-side-date">${h.date}</div>
+          </div>
+          <div class="compare-side-pct">${h.topMatch?.matchPct||'—'}%<small>매칭률</small></div>
+        </div>
+        <video src="${safeUrl}" controls preload="metadata" playsinline></video>
+        <div class="compare-scores">${scores}</div>
+      </div>
+    `;
+  }).join('');
+  
+  // 변화 분석
+  const prevPct = parseInt(prev.topMatch?.matchPct) || 0;
+  const currPct = parseInt(curr.topMatch?.matchPct) || 0;
+  const diff = currPct - prevPct;
+  const arrow = diff > 0 ? '⬆' : (diff < 0 ? '⬇' : '➡');
+  const color = diff > 0 ? '#7dd87d' : (diff < 0 ? '#ff7d7d' : '#c8a96e');
+  const sign = diff > 0 ? '+' : '';
+  
+  // 프레임 점수 변화
+  let frameChanges = '';
+  if (prev.frameAnalysis && curr.frameAnalysis) {
+    const phases = ['어드레스','백스윙','임팩트','피니시','다운스윙','탑'];
+    const changes = [];
+    prev.frameAnalysis.forEach(pf => {
+      const cf = curr.frameAnalysis.find(c => c.phase === pf.phase);
+      if (cf) {
+        const d = (cf.score || 0) - (pf.score || 0);
+        if (d !== 0) {
+          const dSign = d > 0 ? '+' : '';
+          const dColor = d > 0 ? '#7dd87d' : '#ff7d7d';
+          changes.push(`<span style="color:${dColor}">${pf.phase} ${dSign}${d}</span>`);
+        }
+      }
+    });
+    if (changes.length) frameChanges = '<br>프레임 변화: ' + changes.join(' · ');
+  }
+  
+  document.getElementById('compare-changes').innerHTML = 
+    `<strong>📈 변화 분석</strong>` +
+    `매칭률: ${prevPct}% → ${currPct}% <span style="color:${color};font-weight:600">${arrow} ${sign}${diff}%p</span>` +
+    frameChanges;
+  
+  document.getElementById('compare-modal').classList.add('active');
+  
+  // 비교 모드 종료 (모달 닫으면 다시 일반 모드)
+  setTimeout(() => toggleCompareMode(false), 100);
+}
+
+function closeCompareModal() {
+  pauseBothVideos();
+  document.getElementById('compare-modal').classList.remove('active');
+}
+
+function getCompareVideos() {
+  return document.querySelectorAll('#compare-grid video');
+}
+
+function playBothVideos() {
+  const videos = getCompareVideos();
+  videos.forEach(v => { v.currentTime = 0; v.play().catch(()=>{}); });
+}
+
+function pauseBothVideos() {
+  getCompareVideos().forEach(v => v.pause());
+}
+
+function resetBothVideos() {
+  getCompareVideos().forEach(v => { v.pause(); v.currentTime = 0; });
+}
+
+let currentRate = 1;
+function setPlaybackRate(rate) {
+  const btn = document.getElementById('speed-btn');
+  // 0.5x → 1x → 0.25x → 0.5x 순환
+  if (currentRate === 1) { currentRate = 0.5; btn.textContent = '🐢 0.5x'; }
+  else if (currentRate === 0.5) { currentRate = 0.25; btn.textContent = '🐌 0.25x'; }
+  else { currentRate = 1; btn.textContent = '🐰 1x'; }
+  getCompareVideos().forEach(v => v.playbackRate = currentRate);
+}
+
+// 모달 배경 클릭 시 닫기
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('compare-modal');
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeCompareModal();
+    });
+  }
+});
 
 // ── 그래프 ──
 function filterGraph(club, btn) {
