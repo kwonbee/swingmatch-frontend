@@ -720,7 +720,6 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <button type="button" onclick="pauseBothVideos()">⏸ 일시정지</button>
       <button type="button" onclick="resetBothVideos()">⏮ 처음부터</button>
       <button type="button" onclick="setPlaybackRate(0.5)" id="speed-btn">🐢 0.5x</button>
-      <button type="button" onclick="toggleMuteVideos()" id="mute-btn">🔇 음소거</button>
     </div>
     <div style="text-align:center;font-size:.72rem;color:rgba(229,229,229,0.5);margin-top:10px;letter-spacing:.02em">💡 영상을 클릭하면 개별 재생/일시정지됩니다</div>
   </div>
@@ -2503,20 +2502,6 @@ function setPlaybackRate(rate) {
   else if (currentRate === 0.5) { currentRate = 0.25; btn.textContent = '🐌 0.25x'; }
   else { currentRate = 1; btn.textContent = '🐰 1x'; }
   getCompareVideos().forEach(v => v.playbackRate = currentRate);
-}
-
-function toggleMuteVideos() {
-  const videos = getCompareVideos();
-  const btn = document.getElementById('mute-btn');
-  // 첫 번째 영상의 상태를 기준으로 판단
-  const isMuted = videos[0] ? videos[0].muted : true;
-  videos.forEach(v => v.muted = !isMuted);
-  // 버튼 텍스트 갱신
-  if (isMuted) {
-    btn.textContent = '🔊 소리 ON';
-  } else {
-    btn.textContent = '🔇 음소거';
-  }
 }
 
 // 모달 배경 클릭 시 닫기
