@@ -290,16 +290,16 @@ tr:hover td { background:rgba(255,255,255,0.02); }
           <option value="free">무료</option>
           <option value="pro">Pro</option>
         </select>
-        <input type="text" id="user-search" placeholder="이메일 검색" onkeyup="loadUsers()" />
+        <input type="text" id="user-search" placeholder="이메일/이름 검색" onkeyup="loadUsers()" />
       </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>이메일</th><th>플랜</th><th>총 분석 횟수</th><th>마지막 분석</th><th>가입일</th>
+              <th>이름</th><th>이메일</th><th>플랜</th><th>총 분석 횟수</th><th>마지막 분석</th><th>가입일</th>
             </tr>
           </thead>
-          <tbody id="user-table"><tr><td colspan="5" class="loading">로딩 중...</td></tr></tbody>
+          <tbody id="user-table"><tr><td colspan="6" class="loading">로딩 중...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -588,18 +588,18 @@ async function loadUsers() {
 
   let q = sb.from('user_profiles').select('*').order('created_at', { ascending:false }).limit(100);
   if (plan) q = q.eq('plan', plan);
-  if (search) q = q.ilike('email', '%' + search + '%');
+  if (search) q = q.or(`email.ilike.%${search}%,display_name.ilike.%${search}%`);
 
   const { data: users } = await q;
   const tbody = document.getElementById('user-table');
   
   if (!users || !users.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="loading">데이터 없음</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">데이터 없음</td></tr>';
     return;
   }
   
   // 각 유저의 실제 분석 횟수와 최근 분석일을 analysis_logs에서 직접 조회
-  tbody.innerHTML = '<tr><td colspan="5" class="loading">분석 횟수 집계 중...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="6" class="loading">분석 횟수 집계 중...</td></tr>';
   
   const userIds = users.map(u => u.id).filter(Boolean);
   
@@ -622,8 +622,11 @@ async function loadUsers() {
   
   tbody.innerHTML = users.map(u => {
     const stats = userStats[u.id] || { count: 0, lastDate: null };
+    // 이름 표시: display_name → 이메일 @ 앞부분 → '—'
+    const name = u.display_name || (u.email ? u.email.split('@')[0] : '—');
     return `<tr>
-      <td>${u.email || '—'}</td>
+      <td style="font-weight:500">${name}</td>
+      <td style="color:var(--muted)">${u.email || '—'}</td>
       <td><span class="badge ${u.plan || 'free'}">${u.plan === 'pro' ? 'PRO' : 'FREE'}</span></td>
       <td>${stats.count}</td>
       <td>${fmtDate(stats.lastDate)}</td>
@@ -643,16 +646,46 @@ async function loadAnalytics() {
 
   const { data } = await q;
   const tbody = document.getElementById('analytics-table');
-  tbody.innerHTML = (data && data.length)
-    ? data.map(r => `<tr>
-        <td>${fmt(r.created_at)}</td>
-        <td style="color:var(--muted)">${r.is_guest ? '비회원' : (r.user_id?.slice(0,8) + '...')}</td>
-        <td>${clubLabel(r.club)}</td>
-        <td>${r.pro_name || '—'}</td>
-        <td style="color:var(--gold)">${r.match_pct ? r.match_pct + '%' : '—'}</td>
-        <td style="color:var(--muted)">${r.pro_tour || '—'}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="6" class="loading">데이터 없음</td></tr>';
+  
+  if (!data || !data.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">데이터 없음</td></tr>';
+    return;
+  }
+
+  // 로그에 등장한 user_id 수집 → user_profiles에서 이메일/이름 한번에 조회
+  const userIds = [...new Set(data.filter(r => r.user_id).map(r => r.user_id))];
+  const userInfo = {};
+  if (userIds.length > 0) {
+    const { data: profiles } = await sb
+      .from('user_profiles')
+      .select('id, email, display_name')
+      .in('id', userIds);
+    (profiles || []).forEach(p => {
+      const name = p.display_name || (p.email ? p.email.split('@')[0] : '');
+      userInfo[p.id] = { email: p.email, name: name };
+    });
+  }
+
+  tbody.innerHTML = data.map(r => {
+    let userDisplay;
+    if (r.is_guest) {
+      userDisplay = '<span style="color:var(--muted)">비회원</span>';
+    } else if (r.user_id && userInfo[r.user_id]) {
+      const u = userInfo[r.user_id];
+      userDisplay = `<div style="font-weight:500">${u.name}</div>
+        <div style="font-size:.8em;color:var(--muted)">${u.email}</div>`;
+    } else {
+      userDisplay = `<span style="color:var(--muted)">${r.user_id?.slice(0,8) + '...' || '—'}</span>`;
+    }
+    return `<tr>
+      <td>${fmt(r.created_at)}</td>
+      <td>${userDisplay}</td>
+      <td>${clubLabel(r.club)}</td>
+      <td>${r.pro_name || '—'}</td>
+      <td style="color:var(--gold)">${r.match_pct ? r.match_pct + '%' : '—'}</td>
+      <td style="color:var(--muted)">${r.pro_tour || '—'}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ── 구독 관리 ──
