@@ -184,15 +184,14 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .empty-state .eico{font-size:2.4rem;opacity:.35;display:block;margin-bottom:12px}
 
 /* 클럽 필터 탭 */
-.filter-tabs{display:flex;gap:5px;flex-wrap:nowrap;margin-bottom:18px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-.filter-tabs::-webkit-scrollbar{display:none}
-.ftab{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Pretendard',sans-serif;font-size:.72rem;letter-spacing:.05em;padding:6px 12px;border-radius:2px;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.filter-tabs{display:flex;gap:4px;flex-wrap:nowrap;margin-bottom:18px;width:100%;justify-content:space-between}
+.ftab{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Pretendard',sans-serif;font-size:.7rem;letter-spacing:.03em;padding:6px 6px;border-radius:2px;cursor:pointer;transition:all .2s;white-space:nowrap;flex:1;min-width:0;text-align:center}
 .ftab:hover{border-color:var(--gold);color:var(--gold)}
 .ftab.active{border-color:var(--gold);background:rgba(200,169,110,.12);color:var(--gold-light)}
-.filter-count{font-size:.65rem;color:var(--muted);background:rgba(255,255,255,.06);padding:1px 5px;border-radius:10px;margin-left:4px}
+.filter-count{font-size:.62rem;color:var(--muted);background:rgba(255,255,255,.06);padding:1px 4px;border-radius:8px;margin-left:3px}
 .ftab.active .filter-count{color:var(--gold)}
 /* 즐겨찾기 버튼: 분홍 강조 */
-.ftab-fav{border-color:rgba(255,107,158,0.3);padding:6px 10px}
+.ftab-fav{border-color:rgba(255,107,158,0.3);flex:0 0 auto;padding:6px 10px}
 .ftab-fav:hover{border-color:#ff6b9e}
 .ftab-fav.active{border-color:#ff6b9e;background:rgba(255,107,158,0.12)}
 .ftab-fav.active .filter-count{color:#ff6b9e;background:rgba(255,107,158,0.15)}
