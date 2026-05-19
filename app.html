@@ -48,6 +48,18 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .auth-email{font-size:.75rem;color:var(--muted);letter-spacing:.03em}
 
 .nav-right{display:flex;align-items:center;gap:10px}
+
+/* Hamburger Menu */
+.hamburger-btn{display:none;background:transparent;border:1px solid var(--border);width:36px;height:32px;flex-direction:column;justify-content:center;align-items:center;gap:4px;border-radius:2px;cursor:pointer;padding:0;transition:all .2s}
+.hamburger-btn:hover{border-color:var(--gold)}
+.hamburger-btn span{width:16px;height:1.5px;background:rgba(255,255,255,0.8);transition:all .2s}
+.hamburger-btn:hover span{background:var(--gold)}
+.hamburger-menu{display:none;position:absolute;top:62px;right:16px;background:rgba(15,19,16,0.97);backdrop-filter:blur(14px);border:1px solid rgba(200,169,110,0.3);border-radius:4px;padding:6px;min-width:160px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.4)}
+.hamburger-menu.open{display:block}
+.hamburger-menu a,.hamburger-menu button{display:block;width:100%;padding:10px 14px;color:rgba(255,255,255,0.85);text-decoration:none;font-size:.78rem;font-family:'Pretendard',sans-serif;letter-spacing:.05em;border-radius:2px;background:transparent;border:none;text-align:left;cursor:pointer;transition:all .15s}
+.hamburger-menu a:hover,.hamburger-menu button:hover{background:rgba(200,169,110,0.12);color:var(--gold)}
+.hamburger-menu .menu-divider{height:1px;background:rgba(255,255,255,0.08);margin:4px 0}
+.hamburger-menu .menu-email{padding:8px 14px;font-size:.7rem;color:rgba(255,255,255,0.4);font-style:italic}
 .nav-biz{font-family:'Pretendard',sans-serif;font-size:.75rem;letter-spacing:.05em;padding:7px 16px;border-radius:2px;cursor:pointer;transition:all .2s;background:transparent;color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.3)}
 .nav-biz:hover{color:#fff;border-color:rgba(255,255,255,0.7)}
 
@@ -344,12 +356,23 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 }
 
 @media(max-width:768px){
-  .nav-top{padding:13px 16px}
+  .nav-top{padding:13px 16px;position:relative}
   .cb{padding:5px 4px 4px;font-size:.62rem}
   .cb img{width:22px!important;height:22px!important}
   .nav-tabs{padding:0 4px}
   .nav-tab{padding:11px 13px;font-size:.75rem}
   .auth-email{display:none}
+  /* 햄버거 메뉴 활성화 */
+  .hamburger-btn{display:flex}
+  /* 비즈니스 문의 + 로그인 + 회원가입 + 로그아웃 숨기기 (Pro 구독만 유지) */
+  .nav-right > button.nav-biz,
+  .nav-right > .btn-auth.btn-login:not(.btn-pro),
+  .auth-area .btn-auth.btn-login,
+  .auth-area .btn-signup,
+  .auth-area .btn-logout,
+  .auth-area .auth-email{display:none!important}
+  /* Pro 구독은 유지 */
+  .btn-pro{display:inline-flex!important}
   .main{padding:24px 14px 80px}
   .upload-card,.guide-card{padding:12px 14px}
   .guide-grid{grid-template-columns:1fr 1fr}
@@ -449,6 +472,26 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <a href="/subscribe.html" class="btn-auth btn-pro">Pro 구독</a>
       <span class="auth-email" id="auth-email-txt"></span>
       <button class="btn-auth btn-logout" onclick="logout()">로그아웃</button>
+    </div>
+    <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="메뉴 열기">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <div class="hamburger-menu" id="mobile-menu">
+    <!-- 비로그인 상태 -->
+    <div id="mobile-menu-guest">
+      <button onclick="openModal('login');closeMobileMenu()">로그인</button>
+      <button onclick="openModal('signup');closeMobileMenu()">회원가입</button>
+      <div class="menu-divider"></div>
+      <button onclick="copyBizEmail();closeMobileMenu()">비즈니스 문의</button>
+    </div>
+    <!-- 로그인 상태 -->
+    <div id="mobile-menu-user" style="display:none">
+      <div class="menu-email" id="mobile-menu-email"></div>
+      <div class="menu-divider"></div>
+      <button onclick="logout();closeMobileMenu()">로그아웃</button>
+      <div class="menu-divider"></div>
+      <button onclick="copyBizEmail();closeMobileMenu()">비즈니스 문의</button>
     </div>
   </div>
 </div>
@@ -887,11 +930,34 @@ function initAuth() {
     document.getElementById('auth-guest').style.display = 'none';
     document.getElementById('auth-user').style.display = 'flex';
     document.getElementById('auth-email-txt').textContent = currentUser.email;
+    // 모바일 메뉴 동기화
+    document.getElementById('mobile-menu-guest').style.display = 'none';
+    document.getElementById('mobile-menu-user').style.display = 'block';
+    document.getElementById('mobile-menu-email').textContent = currentUser.email;
   } else {
     document.getElementById('auth-guest').style.display = 'flex';
     document.getElementById('auth-user').style.display = 'none';
+    // 모바일 메뉴 동기화
+    document.getElementById('mobile-menu-guest').style.display = 'block';
+    document.getElementById('mobile-menu-user').style.display = 'none';
   }
 }
+
+// ── 모바일 햄버거 메뉴 토글 ──
+function toggleMobileMenu() {
+  document.getElementById('mobile-menu').classList.toggle('open');
+}
+function closeMobileMenu() {
+  document.getElementById('mobile-menu').classList.remove('open');
+}
+// 메뉴 외부 클릭 시 닫기
+document.addEventListener('click', function(e) {
+  const menu = document.getElementById('mobile-menu');
+  const btn = document.querySelector('.hamburger-btn');
+  if (menu && menu.classList.contains('open') && !menu.contains(e.target) && !btn.contains(e.target)) {
+    menu.classList.remove('open');
+  }
+});
 
 // ── 구글 로그인 ──
 async function loginWithGoogle() {
