@@ -190,6 +190,11 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .ftab.active{border-color:var(--gold);background:rgba(200,169,110,.12);color:var(--gold-light)}
 .filter-count{font-size:.65rem;color:var(--muted);background:rgba(255,255,255,.06);padding:1px 5px;border-radius:10px;margin-left:4px}
 .ftab.active .filter-count{color:var(--gold)}
+/* 즐겨찾기 버튼: 분홍 강조 */
+.ftab-fav{border-color:rgba(255,107,158,0.3);color:rgba(255,107,158,0.85)}
+.ftab-fav:hover{border-color:#ff6b9e;color:#ff6b9e}
+.ftab-fav.active{border-color:#ff6b9e;background:rgba(255,107,158,0.12);color:#ff6b9e}
+.ftab-fav.active .filter-count{color:#ff6b9e;background:rgba(255,107,158,0.15)}
 
 /* 히스토리 */
 .hist-list{display:flex;flex-direction:column;gap:10px;width:100%}
@@ -560,6 +565,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <button class="ftab" data-club="iron" onclick="filterHistory('iron',this)">아이언<span class="filter-count" id="hc-iron">0</span></button>
       <button class="ftab" data-club="wedge" onclick="filterHistory('wedge',this)">웨지<span class="filter-count" id="hc-wedge">0</span></button>
       <button class="ftab" data-club="putter" onclick="filterHistory('putter',this)">퍼터<span class="filter-count" id="hc-putter">0</span></button>
+      <button class="ftab ftab-fav" data-club="favorite" onclick="filterHistory('favorite',this)">❤️ 즐겨찾기<span class="filter-count" id="hc-favorite">0</span></button>
     </div>
     <div class="empty-state" id="hist-empty"><span class="eico">📂</span>아직 분석한 스윙이 없습니다.<br>스윙 분석 탭에서 영상을 업로드해보세요.</div>
     <div class="empty-state" id="hist-filter-empty" style="display:none"><span class="eico">🔍</span>해당 클럽의 분석 기록이 없습니다.</div>
@@ -1963,13 +1969,34 @@ function renderHistory() {
     const el = document.getElementById('hc-' + c);
     if (el) el.textContent = swingHistory.filter(h => h.club === c).length;
   });
+  // 즐겨찾기 카운트
+  const favEl = document.getElementById('hc-favorite');
+  if (favEl) favEl.textContent = swingHistory.filter(h => h.isFavorite).length;
+  
   const list = document.getElementById('hist-list');
   const empty = document.getElementById('hist-empty');
   const fempty = document.getElementById('hist-filter-empty');
   if (swingHistory.length === 0) { empty.style.display = ''; list.style.display = 'none'; fempty.style.display = 'none'; return; }
   empty.style.display = 'none';
-  const filtered = currentHistClub === 'all' ? swingHistory : swingHistory.filter(h => h.club === currentHistClub);
-  if (filtered.length === 0) { list.style.display = 'none'; fempty.style.display = ''; return; }
+  
+  // 필터링: 'favorite'이면 즐겨찾기만, 클럽이면 해당 클럽만, 'all'이면 전체
+  let filtered;
+  if (currentHistClub === 'favorite') {
+    filtered = swingHistory.filter(h => h.isFavorite);
+  } else if (currentHistClub === 'all') {
+    filtered = swingHistory;
+  } else {
+    filtered = swingHistory.filter(h => h.club === currentHistClub);
+  }
+  
+  if (filtered.length === 0) { 
+    list.style.display = 'none'; 
+    fempty.style.display = ''; 
+    fempty.innerHTML = currentHistClub === 'favorite' 
+      ? '<span class="eico">❤️</span>아직 즐겨찾기한 영상이 없습니다.<br>하트(🤍) 아이콘을 눌러 영구 보관해보세요.' 
+      : '<span class="eico">🔍</span>해당 클럽의 분석 기록이 없습니다.';
+    return; 
+  }
   fempty.style.display = 'none'; list.style.display = 'flex'; list.innerHTML = '';
   
   // 즐겨찾기 카운트 표시
