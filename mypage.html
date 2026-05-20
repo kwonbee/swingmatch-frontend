@@ -43,6 +43,7 @@
     display:flex;
     justify-content:space-between;
     align-items:center;
+    gap:12px;
     margin-bottom:32px;
     padding-bottom:20px;
     border-bottom:1px solid var(--border)
@@ -54,10 +55,17 @@
     color:var(--gold-dim);
     text-decoration:none;
     font-size:.9rem;
-    transition:color .2s
+    transition:color .2s;
+    flex-shrink:0;
+    min-width:0
   }
   .back-link:hover{color:var(--gold)}
-  .topbar-actions{display:flex;gap:12px;align-items:center}
+  .topbar-actions{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    flex-shrink:0
+  }
   .topbar-actions a{
     color:var(--text-dim);
     text-decoration:none;
@@ -86,7 +94,8 @@
   /* 상단 좌측 로고 */
   .topbar-logo{
     display:block;
-    height:auto;
+    height:48px;
+    width:auto;
     transition:opacity .2s
   }
   .back-link:hover .topbar-logo{opacity:.85}
@@ -99,8 +108,8 @@
   }
   .diary-logo-svg{
     width:auto;
-    max-width:380px;
-    height:80px;
+    max-width:240px;
+    height:48px;
     filter:drop-shadow(0 0 24px rgba(200,169,110,0.25)) drop-shadow(0 2px 6px rgba(0,0,0,0.4))
   }
   .diary-title{
@@ -847,8 +856,8 @@
   @media (max-width:640px){
     .container{padding:24px 16px 60px}
     .diary-title{font-size:1.8rem}
-    .diary-logo-svg{height:60px;max-width:280px}
-    .topbar-logo{width:90px;height:auto}
+    .diary-logo-svg{height:42px;max-width:200px}
+    .topbar-logo{height:40px;width:auto}
     .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}
     .stat-card{padding:14px}
     .stat-value{font-size:1.4rem}
@@ -904,7 +913,7 @@
   <!-- 상단바 -->
   <div class="topbar">
     <a href="/" class="back-link" title="MySwingMatch 메인으로">
-      <svg class="topbar-logo" width="120" height="52" viewBox="0 0 16557 7162" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;" aria-label="MySwingMatch">
+      <svg class="topbar-logo" viewBox="0 0 16557 7162" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;" aria-label="MySwingMatch">
         <g transform="matrix(1,0,0,1,-6485.69,-3800.96)">
           <g transform="matrix(1,0,0,1,0,1315.04)">
             <g transform="matrix(1.07325,0,0,1.07325,814.659,1900.62)">
