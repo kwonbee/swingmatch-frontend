@@ -72,6 +72,8 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .btn-signup:hover{background:var(--gold-light)}
 .btn-pro{background:var(--gold);border:1px solid var(--gold);color:#0a0e0b;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-width:88px;text-align:center}
 .btn-pro:hover{background:var(--gold-light)}
+.btn-mydiary{background:transparent;border:1px solid var(--gold);color:var(--gold);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;text-align:center}
+.btn-mydiary:hover{background:rgba(200,169,110,0.1)}
 .btn-logout{background:var(--gold);border:1px solid var(--gold);color:#0a0e0b}
 .btn-logout:hover{background:var(--gold-light)}
 
@@ -440,12 +442,13 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
   .hamburger-btn{display:flex}
   /* 모바일에서 햄버거 메뉴 위치 조정 (헤더+탭 한참 아래로) */
   .hamburger-menu{top:120px!important;right:12px!important}
-  /* 비즈니스 문의 + 로그인 + 회원가입 + 로그아웃 숨기기 (Pro 구독만 유지) */
+  /* 비즈니스 문의 + 로그인 + 회원가입 + 로그아웃 + My Diary 숨기기 (Pro 구독만 유지) */
   .nav-right > button.nav-biz,
   .nav-right > .btn-auth.btn-login:not(.btn-pro),
   .auth-area .btn-auth.btn-login,
   .auth-area .btn-signup,
-  .auth-area .btn-logout{display:none!important}
+  .auth-area .btn-logout,
+  .auth-area .btn-mydiary{display:none!important}
   /* Pro 구독은 유지 */
   .btn-pro{display:inline-flex!important}
   .main{padding:24px 14px 80px}
@@ -544,6 +547,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <button class="btn-auth btn-signup" onclick="openModal('signup')">회원가입</button>
     </div>
     <div class="auth-area" id="auth-user" style="display:none">
+      <a href="/mypage.html" class="btn-auth btn-mydiary">📖 My Diary</a>
       <a href="/subscribe.html" class="btn-auth btn-pro">Pro 구독</a>
       <span class="auth-email" id="auth-email-txt"></span>
       <button class="btn-auth btn-logout" onclick="logout()">로그아웃</button>
@@ -563,6 +567,9 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
     <!-- 로그인 상태 -->
     <div id="mobile-menu-user" style="display:none">
       <div class="menu-email" id="mobile-menu-email"></div>
+      <div class="menu-divider"></div>
+      <a href="/mypage.html" onclick="closeMobileMenu()">📖 My Diary</a>
+      <a href="/subscribe.html" onclick="closeMobileMenu()">Pro 구독</a>
       <div class="menu-divider"></div>
       <button onclick="event.stopPropagation();handleMobileLogout()">로그아웃</button>
       <div class="menu-divider"></div>

@@ -129,6 +129,16 @@
     background:var(--bg-card-2);
     opacity:.55
   }
+  .stat-card.clickable{
+    cursor:pointer
+  }
+  .stat-card.clickable:hover{
+    border-color:var(--gold-dim);
+    transform:translateY(-1px)
+  }
+  .stat-card.clickable .stat-sub{
+    color:var(--gold-dim)
+  }
   .stat-icon{
     font-size:1.1rem;
     margin-bottom:8px;
@@ -240,6 +250,119 @@
     justify-content:center;
     font-size:.8rem;
     font-weight:600
+  }
+  .video-thumb .fav-icon{
+    position:absolute;
+    top:8px;
+    left:8px;
+    font-size:1.1rem;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))
+  }
+  .video-thumb.has-favorite{
+    background:linear-gradient(135deg,rgba(255,90,120,0.12),rgba(40,40,40,0.95))
+  }
+  /* 전체 영상 모달 - 미니 카드 */
+  .modal-wide{
+    max-width:680px !important;
+    width:100%
+  }
+  .modal-header-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:8px;
+    gap:12px
+  }
+  .modal-close-x{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    width:32px;
+    height:32px;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:.9rem;
+    flex-shrink:0;
+    transition:all .2s;
+    font-family:inherit
+  }
+  .modal-close-x:hover{
+    border-color:var(--gold-dim);
+    color:var(--text)
+  }
+  .all-videos-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+    gap:10px;
+    max-height:55vh;
+    overflow-y:auto;
+    padding:4px 2px 8px
+  }
+  .video-card-mini{
+    background:var(--bg-card-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+    cursor:pointer;
+    transition:border-color .2s
+  }
+  .video-card-mini:hover{
+    border-color:var(--gold-dim)
+  }
+  .video-thumb-mini{
+    width:100%;
+    aspect-ratio:1/1;
+    background:linear-gradient(135deg,#1a1a1a,#252525);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--gold-dim);
+    font-size:1.5rem;
+    position:relative
+  }
+  .video-thumb-mini.has-favorite{
+    background:linear-gradient(135deg,rgba(255,90,120,0.12),rgba(40,40,40,0.95))
+  }
+  .video-thumb-mini .fav-icon-mini{
+    position:absolute;
+    top:5px;
+    left:5px;
+    font-size:.85rem;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5))
+  }
+  .video-thumb-mini .memo-icon-mini{
+    position:absolute;
+    top:5px;
+    right:5px;
+    width:18px;
+    height:18px;
+    background:var(--gold);
+    color:#0d0d0d;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:.65rem;
+    font-weight:600
+  }
+  .video-info-mini{padding:8px 10px}
+  .video-pro-mini{
+    font-size:.75rem;
+    color:var(--gold);
+    font-weight:500;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap
+  }
+  .video-date-mini{
+    font-size:.65rem;
+    color:var(--text-dim);
+    margin-top:2px
+  }
+  /* 모바일에서 미니 그리드 */
+  @media (max-width:640px){
+    .all-videos-grid{grid-template-columns:repeat(3,1fr);gap:8px}
+    .modal-wide{padding:20px !important}
   }
   .video-info{padding:12px 14px}
   .video-pro{
@@ -597,10 +720,10 @@
     <a href="/subscribe.html" class="btn btn-primary">월 4,900원으로 시작하기</a>
   </div>
 
-  <!-- 내 영상 갤러리 -->
+  <!-- 내 영상 갤러리 (즐겨찾기만) -->
   <div class="section">
     <div class="section-header">
-      <h2 class="section-title"><span class="gold-bar"></span>내 영상 갤러리</h2>
+      <h2 class="section-title"><span class="gold-bar"></span>❤️ 즐겨찾기 영상</h2>
       <span class="section-meta" id="videoMeta"></span>
     </div>
     <div id="videoSection">
@@ -629,6 +752,26 @@
     </div>
   </div>
 
+</div>
+
+<!-- 전체 영상 모달 (영상 저장 카드 클릭 시) -->
+<div class="modal-overlay" id="allVideosModal">
+  <div class="modal modal-wide">
+    <div class="modal-header-row">
+      <div>
+        <h3>🎬 자동 저장된 전체 영상</h3>
+        <p class="modal-sub"><span id="allVideosCount">0</span>개 보관 중 · 최대 30개까지 자동 저장</p>
+      </div>
+      <button class="modal-close-x" id="allVideosClose">✕</button>
+    </div>
+    <p style="font-size:.78rem;color:var(--text-faint);margin-bottom:14px;line-height:1.6;padding:10px 14px;background:var(--bg-card-2);border-radius:8px;border-left:3px solid var(--gold-dim)">
+      💡 ❤️는 <strong style="color:var(--gold-light)">즐겨찾기</strong> (영구 보관) · ✎는 <strong style="color:var(--gold-light)">메모 작성됨</strong><br>
+      카드를 탭하면 메모를 보거나 작성할 수 있어요.
+    </p>
+    <div id="allVideosGrid" class="all-videos-grid">
+      <!-- JS로 채움 -->
+    </div>
+  </div>
 </div>
 
 <!-- 영상 메모 모달 (Pro 전용) -->
@@ -857,15 +1000,17 @@ function renderStats(){
     {
       icon: '🎬',
       label: '영상 저장',
-      value: isPro ? (allLogs.filter(l => { const r=l.result_json||{}; return r.has_video||r.video_url||r.video_path; }).length) : '—',
+      value: isPro ? allLogs.filter(l => l.video_path).length : '—',
       unit: isPro ? '/ 30' : '',
-      sub: isPro ? '내가 모은 스윙 기록' : 'Pro 전용',
-      locked: !isPro
+      sub: isPro ? '탭하면 전체 보기 →' : 'Pro 전용',
+      locked: !isPro,
+      clickable: isPro,
+      action: 'allVideos'
     }
   ];
 
   grid.innerHTML = cards.map(c => `
-    <div class="stat-card${c.locked ? ' locked' : ''}">
+    <div class="stat-card${c.locked ? ' locked' : ''}${c.clickable ? ' clickable' : ''}"${c.action ? ` data-action="${c.action}"` : ''}>
       ${c.locked ? '<span class="lock-icon">🔒</span>' : ''}
       <div class="stat-icon">${c.icon}</div>
       <div class="stat-label">${c.label}</div>
@@ -875,6 +1020,11 @@ function renderStats(){
       ${c.sub ? `<div class="stat-sub">${c.sub}</div>` : ''}
     </div>
   `).join('');
+
+  // 영상 저장 카드 클릭 → 전체 영상 모달
+  grid.querySelectorAll('.stat-card[data-action="allVideos"]').forEach(card => {
+    card.addEventListener('click', openAllVideosModal);
+  });
 }
 
 // ─── Pro CTA ───
@@ -882,8 +1032,8 @@ function renderProCta(){
   document.getElementById('proCta').style.display = isPro ? 'none' : 'block';
 }
 
-// ─── 영상 갤러리 ───
-let videoFilter = 'all'; // 'all' | 'memo'
+// ─── 영상 갤러리 (즐겨찾기 영상만 표시) ───
+let videoFilter = 'all'; // 'all' | 'memo'  ← 전체 영상 모달용
 
 function renderVideoGallery(){
   const section = document.getElementById('videoSection');
@@ -896,86 +1046,116 @@ function renderVideoGallery(){
       <div class="locked-section">
         <div class="lock-large">🎬</div>
         <h3>Pro 회원의 스윙 다이어리</h3>
-        <p>분석한 스윙 영상을 <strong style="color:var(--gold-light)">30개까지 보관</strong>하고,<br>
-        영상마다 <strong style="color:var(--gold-light)">나만의 코칭 메모 ✎</strong>를 남길 수 있어요.<br><br>
+        <p>분석한 스윙은 <strong style="color:var(--gold-light)">자동으로 30개까지 보관</strong>되고,<br>
+        그 중 아끼는 스윙은 <strong style="color:var(--gold-light)">즐겨찾기 ❤️ 10개</strong>로 영구 보관 + 메모를 남길 수 있어요.<br><br>
         한 달 뒤, 1년 뒤<br>다시 보면 내 성장이 한눈에 보입니다.</p>
         <a href="/subscribe.html" class="unlock-btn">월 4,900원으로 시작하기</a>
       </div>`;
     return;
   }
 
-  // Pro 회원 — 영상 있는 로그 필터링
-  const allVideoLogs = allLogs.filter(l => {
-    const r = l.result_json || {};
-    return r.has_video || r.video_url || r.video_path;
-  });
+  // Pro 회원 — 즐겨찾기(is_favorite) 영상만 갤러리에 표시
+  const favoriteVideoLogs = allLogs.filter(l => l.video_path && l.is_favorite);
 
-  // 영상이 하나도 없을 때
-  if (allVideoLogs.length === 0) {
-    meta.textContent = '0 / 30';
+  // 즐겨찾기 한도 안내 + 전체 영상 보기 링크
+  meta.innerHTML = `<span>❤️ ${favoriteVideoLogs.length} / 10</span>`;
+
+  // 즐겨찾기가 하나도 없을 때
+  if (favoriteVideoLogs.length === 0) {
     section.innerHTML = `
       <div class="empty">
-        <div class="empty-icon">🎬</div>
-        아직 저장된 영상이 없어요.<br>
-        <a href="/app.html" style="color:var(--gold)">분석하러 가기</a> → 분석 후 "저장" 버튼을 눌러보세요.
-      </div>`;
+        <div class="empty-icon">❤️</div>
+        <strong style="color:var(--text);font-size:.95rem">아직 즐겨찾기한 영상이 없어요</strong><br><br>
+        분석 화면 → 히스토리에서<br>
+        ❤️ 하트를 누르면 이 갤러리에 영구 보관됩니다.<br><br>
+        <a href="/app.html" style="color:var(--gold)">분석하러 가기 →</a>
+      </div>
+      <p style="margin-top:18px;font-size:.75rem;color:var(--text-faint);text-align:center;line-height:1.7">
+        💡 자동 저장된 전체 영상(최대 30개)은<br>
+        위쪽 <strong style="color:var(--gold-dim)">"영상 저장" 카드</strong>를 탭하면 모두 보실 수 있어요.
+      </p>`;
     return;
   }
 
-  // 메모 필터 적용
-  const memoCount = allVideoLogs.filter(l => ((l.result_json||{}).memo || '').trim()).length;
-  const displayLogs = videoFilter === 'memo'
-    ? allVideoLogs.filter(l => ((l.result_json||{}).memo || '').trim())
-    : allVideoLogs;
-
-  meta.innerHTML = `<span>${allVideoLogs.length} / 30</span>`;
-
   section.innerHTML = `
-    <div class="video-controls">
-      <button class="filter-btn ${videoFilter === 'all' ? 'active' : ''}" data-filter="all">
-        전체 ${allVideoLogs.length}
-      </button>
-      <button class="filter-btn ${videoFilter === 'memo' ? 'active' : ''}" data-filter="memo">
-        ✎ 메모 있음 ${memoCount}
-      </button>
+    <div class="video-grid">
+      ${favoriteVideoLogs.map(l => {
+        const memo = (l.result_json && l.result_json.memo) || '';
+        const hasMemo = memo.trim().length > 0;
+        const memoPreview = hasMemo ? escapeHtml(memo.replace(/\n/g, ' ').slice(0, 60)) : '';
+        return `
+          <div class="video-card" data-id="${l.id}">
+            <div class="video-thumb has-favorite${hasMemo ? ' has-memo' : ''}">🏌️<span class="fav-icon">❤️</span></div>
+            <div class="video-info">
+              <div class="video-pro">${escapeHtml(l.pro_name || '분석 결과')}</div>
+              <div class="video-date">${formatDate(l.created_at)} · ${l.match_pct || '-'}%</div>
+              ${hasMemo
+                ? `<div class="video-memo-preview">"${memoPreview}${memo.length > 60 ? '…' : ''}"</div>`
+                : `<div class="video-memo-hint">메모 남기기 ✎</div>`}
+            </div>
+          </div>`;
+      }).join('')}
     </div>
-    ${displayLogs.length === 0 ? `
-      <div class="empty">
-        <div class="empty-icon">✎</div>
-        메모를 작성한 영상이 아직 없어요.<br>
-        영상 카드를 탭하면 메모를 남길 수 있습니다.
-      </div>
-    ` : `
-      <div class="video-grid">
-        ${displayLogs.map(l => {
-          const memo = (l.result_json && l.result_json.memo) || '';
-          const hasMemo = memo.trim().length > 0;
-          const memoPreview = hasMemo ? escapeHtml(memo.replace(/\n/g, ' ').slice(0, 60)) : '';
-          return `
-            <div class="video-card" data-id="${l.id}">
-              <div class="video-thumb${hasMemo ? ' has-memo' : ''}">🏌️</div>
-              <div class="video-info">
-                <div class="video-pro">${escapeHtml(l.pro_name || '분석 결과')}</div>
-                <div class="video-date">${formatDate(l.created_at)} · ${l.match_pct || '-'}%</div>
-                ${hasMemo ? `<div class="video-memo-preview">"${memoPreview}${memo.length > 60 ? '…' : ''}"</div>` : `<div class="video-memo-hint">메모 남기기 ✎</div>`}
-              </div>
-            </div>`;
-        }).join('')}
-      </div>
-    `}`;
+    <p style="margin-top:18px;font-size:.75rem;color:var(--text-faint);text-align:center;line-height:1.7">
+      💡 자동 저장된 전체 영상(최대 30개)은<br>
+      위쪽 <strong style="color:var(--gold-dim)">"영상 저장" 카드</strong>를 탭하면 모두 보실 수 있어요.
+    </p>`;
 
   // 영상 카드 클릭 이벤트
   section.querySelectorAll('.video-card').forEach(card => {
     card.addEventListener('click', () => openMemoModal(card.dataset.id));
   });
+}
 
-  // 필터 버튼 이벤트
-  section.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      videoFilter = btn.dataset.filter;
-      renderVideoGallery();
+// ─── 전체 영상 모달 (영상 저장 카드 클릭 시 열림) ───
+function openAllVideosModal(){
+  if (!isPro) {
+    window.location.href = '/subscribe.html';
+    return;
+  }
+
+  const allVideoLogs = allLogs.filter(l => l.video_path);
+
+  if (allVideoLogs.length === 0) {
+    alert('아직 저장된 영상이 없어요.\n\nPro 회원은 스윙 분석 시 영상이 자동으로 저장됩니다.\n분석하러 가서 첫 영상을 만들어보세요!');
+    return;
+  }
+
+  const modal = document.getElementById('allVideosModal');
+  const grid = document.getElementById('allVideosGrid');
+  document.getElementById('allVideosCount').textContent = allVideoLogs.length;
+
+  grid.innerHTML = allVideoLogs.map(l => {
+    const memo = (l.result_json && l.result_json.memo) || '';
+    const hasMemo = memo.trim().length > 0;
+    const isFav = l.is_favorite;
+    return `
+      <div class="video-card-mini" data-id="${l.id}">
+        <div class="video-thumb-mini${isFav ? ' has-favorite' : ''}${hasMemo ? ' has-memo' : ''}">
+          🏌️
+          ${isFav ? '<span class="fav-icon-mini">❤️</span>' : ''}
+          ${hasMemo ? '<span class="memo-icon-mini">✎</span>' : ''}
+        </div>
+        <div class="video-info-mini">
+          <div class="video-pro-mini">${escapeHtml(l.pro_name || '분석')}</div>
+          <div class="video-date-mini">${formatDate(l.created_at)} · ${l.match_pct || '-'}%</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // 미니 카드 클릭 → 메모 모달 (Pro 회원이라 가능)
+  grid.querySelectorAll('.video-card-mini').forEach(card => {
+    card.addEventListener('click', () => {
+      closeAllVideosModal();
+      setTimeout(() => openMemoModal(card.dataset.id), 100);
     });
   });
+
+  modal.classList.add('show');
+}
+
+function closeAllVideosModal(){
+  document.getElementById('allVideosModal').classList.remove('show');
 }
 
 // XSS 방지용 간단 HTML 이스케이프
@@ -1144,9 +1324,16 @@ function bindEvents(){
     }
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.getElementById('memoModal').classList.contains('show')) {
-      closeMemoModal();
+    if (e.key === 'Escape') {
+      if (document.getElementById('memoModal').classList.contains('show')) closeMemoModal();
+      if (document.getElementById('allVideosModal').classList.contains('show')) closeAllVideosModal();
     }
+  });
+
+  // 전체 영상 모달 닫기
+  document.getElementById('allVideosClose').addEventListener('click', closeAllVideosModal);
+  document.getElementById('allVideosModal').addEventListener('click', (e) => {
+    if (e.target.id === 'allVideosModal') closeAllVideosModal();
   });
 }
 
