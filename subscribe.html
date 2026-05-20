@@ -678,7 +678,18 @@ const PORTONE_STORE_ID    = 'store-8175252d-f743-4823-805c-780fba21509e';
 const PORTONE_CHANNEL_KEY = 'channel-key-8bdb4c12-5437-4cd0-a5ce-919c5f14d71c';
 
 async function proceedToPayment() {
-  // 로그인 사용자 정보 (위에서 이미 체크됨)
+  // 0) 포트원 SDK 로드 확인
+  if (typeof window.PortOne === 'undefined') {
+    alert(
+      '[SDK 로드 실패]\n결제 SDK가 로드되지 않았습니다.\n' +
+      '페이지를 새로고침 후 다시 시도해주세요.\n\n' +
+      '문제가 계속되면 myswingmatch@gmail.com으로 문의해주세요.'
+    );
+    console.error('window.PortOne is undefined');
+    return;
+  }
+
+  // 1) 로그인 사용자 정보 (위에서 이미 체크됨)
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) {
     alert('로그인이 만료되었습니다. 다시 로그인해주세요.');
@@ -686,38 +697,50 @@ async function proceedToPayment() {
     return;
   }
 
-  // 선택된 결제수단 → 포트원 payMethod 매핑
+  // 2) 선택된 결제수단 → 포트원 payMethod 매핑
   const selectedPayment = document.querySelector('input[name="payment"]:checked').value;
   const payMethod = selectedPayment === 'kakaopay' ? 'EASY_PAY' : 'CARD';
 
-  // 주문 ID — 매 결제마다 고유해야 함
-  const paymentId = 'payment-' + crypto.randomUUID();
+  // 3) 주문 ID — 매 결제마다 고유해야 함
+  //    crypto.randomUUID()는 HTTPS 환경에서만 동작. HTTP 환경 fallback 추가
+  const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : 'fallback-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+  const paymentId = 'payment-' + uuid;
+
+  // 4) 결제 요청 페이로드 (디버깅용 콘솔 출력)
+  const paymentRequest = {
+    storeId: PORTONE_STORE_ID,
+    channelKey: PORTONE_CHANNEL_KEY,
+    paymentId: paymentId,
+    orderName: 'MySwingMatch Pro 멤버십 (월 4,900원)',
+    totalAmount: 4900,
+    currency: 'CURRENCY_KRW',
+    payMethod: payMethod,
+    customer: {
+      customerId: user.id,
+      email: user.email || undefined,
+    },
+    redirectUrl: window.location.origin + '/subscribe.html',
+  };
+  console.log('[결제 요청 페이로드]', paymentRequest);
 
   try {
-    const response = await PortOne.requestPayment({
-      storeId: PORTONE_STORE_ID,
-      channelKey: PORTONE_CHANNEL_KEY,
-      paymentId: paymentId,
-      orderName: 'MySwingMatch Pro 멤버십 (월 4,900원)',
-      totalAmount: 4900,
-      currency: 'CURRENCY_KRW',
-      payMethod: payMethod,
-      customer: {
-        customerId: user.id,
-        email: user.email || undefined,
-      },
-      // 모바일 리다이렉트 환경에서 결제 완료 후 돌아올 URL
-      redirectUrl: window.location.origin + '/subscribe.html',
-    });
+    const response = await PortOne.requestPayment(paymentRequest);
+    console.log('[결제 응답]', response);
 
     // 결제 실패 또는 취소
-    if (response.code !== undefined) {
+    if (response && response.code !== undefined) {
       // 사용자가 결제창을 닫은 경우 등
-      if (response.code === 'CLIENT_ERROR' || response.message?.includes('사용자')) {
+      if (response.code === 'CLIENT_ERROR' || (response.message && response.message.includes('사용자'))) {
         // 조용히 종료 (별도 알림 없이)
         return;
       }
-      alert('결제에 실패했습니다.\n\n' + (response.message || '알 수 없는 오류'));
+      alert(
+        '결제에 실패했습니다.\n\n' +
+        '에러 코드: ' + response.code + '\n' +
+        '메시지: ' + (response.message || '알 수 없는 오류')
+      );
       return;
     }
 
@@ -734,8 +757,13 @@ async function proceedToPayment() {
       '정식 오픈일(2026년 6월 8일)부터 정상 결제가 진행됩니다.'
     );
   } catch (e) {
-    console.error('결제 요청 중 오류:', e);
-    alert('결제 요청 중 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.');
+    console.error('[결제 예외]', e);
+    // 디버깅을 위해 실제 에러 메시지를 alert에 노출
+    alert(
+      '결제 요청 중 오류가 발생했습니다.\n\n' +
+      '에러: ' + (e && e.message ? e.message : String(e)) + '\n\n' +
+      '브라우저 콘솔(F12)에서 자세한 내용을 확인할 수 있습니다.'
+    );
   }
 }
 
