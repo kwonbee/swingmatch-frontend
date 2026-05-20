@@ -943,8 +943,23 @@ async function checkSession() {
     await refreshProStatus(); // 이미 로그인된 상태라면 Pro 상태도 가져옴
     updateCountDisplay();
     syncHistoryFromDB(); // 영상 히스토리 동기화 (PC/모바일 공유)
+
+    // ?next=subscribe 면 이미 로그인되어 있으므로 즉시 구독 페이지로
+    const nextParam = new URLSearchParams(location.search).get('next');
+    if (nextParam === 'subscribe') {
+      window.location.href = '/subscribe.html';
+      return;
+    }
   } else {
     updateCountDisplay();
+
+    // ?next=subscribe 인데 비로그인 상태 → 회원가입 모달 자동 오픈
+    const nextParam = new URLSearchParams(location.search).get('next');
+    if (nextParam === 'subscribe') {
+      setTimeout(() => {
+        if (typeof openModal === 'function') openModal('signup');
+      }, 300);
+    }
   }
 }
 checkSession();
@@ -1066,9 +1081,16 @@ document.addEventListener('click', function(e) {
 
 // ── 구글 로그인 ──
 async function loginWithGoogle() {
+  // next 파라미터를 redirectTo에 전파 (subscribe에서 온 경우 가입 후 자동 복귀)
+  const nextParam = new URLSearchParams(location.search).get('next');
+  const redirectBase = 'https://myswingmatch.com';
+  const redirectTo = nextParam === 'subscribe'
+    ? redirectBase + '/subscribe.html'
+    : redirectBase + '/app.html';
+
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: 'https://myswingmatch.com/app.html' }
+    options: { redirectTo }
   });
   if (error) alert('구글 로그인 오류: ' + error.message);
 }
@@ -1109,6 +1131,11 @@ async function doLogin() {
   currentUser = data.user;
   closeModal('login');
   initAuth();
+  // ?next=subscribe 면 구독 페이지로 자동 이동
+  const nextParam = new URLSearchParams(location.search).get('next');
+  if (nextParam === 'subscribe') {
+    window.location.href = '/subscribe.html';
+  }
 }
 
 // ── 회원가입 ──
@@ -1161,13 +1188,22 @@ async function doSignup() {
   if (data.user && !data.session) {
     errEl.style.color = '#4ade80';
     errEl.style.background = 'rgba(74,222,128,0.1)';
+    const nextParam = new URLSearchParams(location.search).get('next');
+    const nextNote = nextParam === 'subscribe'
+      ? '<br><span style="font-size:0.75rem;opacity:0.7">인증 후 로그인하시면 자동으로 구독 페이지로 이동합니다.</span>'
+      : '';
     errEl.innerHTML = '✅ <strong>가입 신청 완료!</strong><br>' +
-      '<span style="font-size:0.8rem;opacity:0.85">' + email + '로 인증 메일을 보냈어요.<br>메일함을 확인하고 인증 후 로그인해주세요. (스팸함도 확인!)</span>';
+      '<span style="font-size:0.8rem;opacity:0.85">' + email + '로 인증 메일을 보냈어요.<br>메일함을 확인하고 인증 후 로그인해주세요. (스팸함도 확인!)</span>' + nextNote;
     return;
   }
   currentUser = data.user;
   closeModal('signup');
   initAuth();
+  // ?next=subscribe 면 구독 페이지로 자동 이동
+  const nextParam = new URLSearchParams(location.search).get('next');
+  if (nextParam === 'subscribe') {
+    window.location.href = '/subscribe.html';
+  }
 }
 
 // ── 로그아웃 ──
