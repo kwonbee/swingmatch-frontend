@@ -702,11 +702,12 @@ async function proceedToPayment() {
   const payMethod = selectedPayment === 'kakaopay' ? 'EASY_PAY' : 'CARD';
 
   // 3) 주문 ID — 매 결제마다 고유해야 함
-  //    crypto.randomUUID()는 HTTPS 환경에서만 동작. HTTP 환경 fallback 추가
+  //    KG이니시스는 oid 길이를 1~40자로 제한.
+  //    UUID 32자(하이픈 제거) + 'p-' 접두사 2자 = 34자 (안전)
   const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID)
-    ? crypto.randomUUID()
-    : 'fallback-' + Date.now() + '-' + Math.random().toString(36).slice(2);
-  const paymentId = 'payment-' + uuid;
+    ? crypto.randomUUID().replace(/-/g, '')
+    : Date.now().toString(36) + Math.random().toString(36).slice(2, 14);
+  const paymentId = 'p-' + uuid;
 
   // 4) 결제 요청 페이로드 (디버깅용 콘솔 출력)
   //    KG이니시스 V2는 customer.phoneNumber, customer.fullName이 필수.
