@@ -835,6 +835,8 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
 
       <input type="email" id="authEmail" class="auth-input" placeholder="이메일 주소" autocomplete="email">
       <input type="password" id="authPassword" class="auth-input" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">
+      <input type="password" id="authPasswordConfirm" class="auth-input" placeholder="비밀번호 확인" autocomplete="new-password" style="display:none;">
+      <div id="passwordMatch" style="display:none; font-size:0.78rem; margin:-4px 0 10px 4px;"></div>
 
       <button class="auth-btn auth-btn-email" id="emailSubmitBtn" onclick="submitEmail()" style="background:var(--gold); color:#0d0d0d; border-color:var(--gold);">
         가입하고 계속
@@ -880,6 +882,8 @@ function closeAuthModal() {
   document.getElementById('authError').textContent = '';
   document.getElementById('authEmail').value = '';
   document.getElementById('authPassword').value = '';
+  document.getElementById('authPasswordConfirm').value = '';
+  document.getElementById('passwordMatch').style.display = 'none';
 }
 
 function showMain() {
@@ -944,10 +948,19 @@ function toggleEmailMode() {
 }
 
 function updateEmailFormUI() {
+  const confirmInput = document.getElementById('authPasswordConfirm');
+  const matchInfo = document.getElementById('passwordMatch');
+
   if (emailMode === 'signup') {
     document.getElementById('emailFormTitle').textContent = '이메일로 가입';
     document.getElementById('emailFormSubtitle').textContent = '간편하게 시작하세요';
     document.getElementById('emailSubmitBtn').textContent = '가입하고 계속';
+    document.getElementById('authPassword').placeholder = '비밀번호 (6자 이상)';
+    document.getElementById('authPassword').setAttribute('autocomplete', 'new-password');
+    confirmInput.style.display = 'block';
+    // 비밀번호 확인란 초기화
+    confirmInput.value = '';
+    matchInfo.style.display = 'none';
     document.getElementById('emailFormFooter').innerHTML =
       '<a href="#" onclick="event.preventDefault(); showResetForm()" style="display:block; margin-bottom:10px;">비밀번호를 잊으셨나요?</a>' +
       '이미 계정이 있나요? <a href="#" onclick="event.preventDefault(); toggleEmailMode()">로그인하기</a>';
@@ -955,6 +968,11 @@ function updateEmailFormUI() {
     document.getElementById('emailFormTitle').textContent = '로그인';
     document.getElementById('emailFormSubtitle').textContent = '계속 진행하려면 로그인하세요';
     document.getElementById('emailSubmitBtn').textContent = '로그인하고 계속';
+    document.getElementById('authPassword').placeholder = '비밀번호';
+    document.getElementById('authPassword').setAttribute('autocomplete', 'current-password');
+    confirmInput.style.display = 'none';
+    confirmInput.value = '';
+    matchInfo.style.display = 'none';
     document.getElementById('emailFormFooter').innerHTML =
       '<a href="#" onclick="event.preventDefault(); showResetForm()" style="display:block; margin-bottom:10px;">비밀번호를 잊으셨나요?</a>' +
       '계정이 없나요? <a href="#" onclick="event.preventDefault(); toggleEmailMode()">회원 가입하기</a>';
@@ -994,6 +1012,19 @@ async function submitEmail() {
     return;
   }
 
+  // 가입 모드일 때만 비밀번호 확인 체크
+  if (emailMode === 'signup') {
+    const passwordConfirm = document.getElementById('authPasswordConfirm').value;
+    if (!passwordConfirm) {
+      errorEl.textContent = '비밀번호 확인을 입력해주세요';
+      return;
+    }
+    if (password !== passwordConfirm) {
+      errorEl.textContent = '비밀번호가 일치하지 않습니다';
+      return;
+    }
+  }
+
   try {
     let result;
     if (emailMode === 'signup') {
@@ -1010,6 +1041,36 @@ async function submitEmail() {
     errorEl.textContent = e.message || '오류가 발생했습니다';
   }
 }
+
+// 비밀번호 실시간 일치 검증 (가입 모드에서만)
+function checkPasswordMatch() {
+  if (emailMode !== 'signup') return;
+  const password = document.getElementById('authPassword').value;
+  const confirm = document.getElementById('authPasswordConfirm').value;
+  const info = document.getElementById('passwordMatch');
+
+  if (!confirm) {
+    info.style.display = 'none';
+    return;
+  }
+
+  info.style.display = 'block';
+  if (password === confirm) {
+    info.textContent = '✓ 비밀번호가 일치합니다';
+    info.style.color = '#10b981';
+  } else {
+    info.textContent = '✗ 비밀번호가 일치하지 않습니다';
+    info.style.color = '#ef4444';
+  }
+}
+
+// 입력란 이벤트 리스너 (모달 열리고 input이 DOM에 있을 때 한 번만 바인딩)
+document.addEventListener('DOMContentLoaded', () => {
+  const pw = document.getElementById('authPassword');
+  const pwConfirm = document.getElementById('authPasswordConfirm');
+  if (pw) pw.addEventListener('input', checkPasswordMatch);
+  if (pwConfirm) pwConfirm.addEventListener('input', checkPasswordMatch);
+});
 
 // 페이지 로드 시 OAuth 리다이렉트 후 처리
 window.addEventListener('load', async () => {
