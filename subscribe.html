@@ -672,7 +672,15 @@ submitBtn.addEventListener('click', async () => {
 
 function proceedToPayment() {
   const selectedPayment = document.querySelector('input[name="payment"]:checked').value;
-  alert('🛠️ 결제 시스템 준비 중\n\n현재 결제 시스템 심사가 진행 중입니다.\n2026년 6월 8일부터 정식 서비스가 시작될 예정입니다.\n\n선택하신 결제수단: ' + (selectedPayment === 'card' ? '신용/체크카드' : '카카오페이'));
+  const methodLabel = selectedPayment === 'card' ? '신용/체크카드' : '카카오페이';
+  alert(
+    'MySwingMatch Pro 구독 안내\n\n' +
+    '정식 오픈일: 2026년 6월 8일 (월)\n' +
+    '오픈 시점부터 정상 결제가 진행됩니다.\n\n' +
+    '선택하신 결제수단: ' + methodLabel + '\n' +
+    '월 구독료: 4,900원 (VAT 포함)\n\n' +
+    '문의: myswingmatch@gmail.com'
+  );
 }
 
 // ─── 페이지 로드 시 Pro 구독자인지 체크 ───
