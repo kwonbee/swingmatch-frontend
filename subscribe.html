@@ -594,6 +594,9 @@
 <!-- ─── Supabase ─── -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 
+<!-- ─── 포트원 V2 결제 SDK ─── -->
+<script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+
 <script>
 // ─── Supabase 클라이언트 ───
 const SUPABASE_URL = 'https://vldcmanngfexfwvvnqbb.supabase.co';
@@ -670,17 +673,70 @@ submitBtn.addEventListener('click', async () => {
   proceedToPayment();
 });
 
-function proceedToPayment() {
+// ─── 포트원 V2 결제 설정 ───
+const PORTONE_STORE_ID    = 'store-8175252d-f743-4823-805c-780fba21509e';
+const PORTONE_CHANNEL_KEY = 'channel-key-8bdb4c12-5437-4cd0-a5ce-919c5f14d71c';
+
+async function proceedToPayment() {
+  // 로그인 사용자 정보 (위에서 이미 체크됨)
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) {
+    alert('로그인이 만료되었습니다. 다시 로그인해주세요.');
+    window.location.href = '/app.html?next=subscribe';
+    return;
+  }
+
+  // 선택된 결제수단 → 포트원 payMethod 매핑
   const selectedPayment = document.querySelector('input[name="payment"]:checked').value;
-  const methodLabel = selectedPayment === 'card' ? '신용/체크카드' : '카카오페이';
-  alert(
-    'MySwingMatch Pro 구독 안내\n\n' +
-    '정식 오픈일: 2026년 6월 8일 (월)\n' +
-    '오픈 시점부터 정상 결제가 진행됩니다.\n\n' +
-    '선택하신 결제수단: ' + methodLabel + '\n' +
-    '월 구독료: 4,900원 (VAT 포함)\n\n' +
-    '문의: myswingmatch@gmail.com'
-  );
+  const payMethod = selectedPayment === 'kakaopay' ? 'EASY_PAY' : 'CARD';
+
+  // 주문 ID — 매 결제마다 고유해야 함
+  const paymentId = 'payment-' + crypto.randomUUID();
+
+  try {
+    const response = await PortOne.requestPayment({
+      storeId: PORTONE_STORE_ID,
+      channelKey: PORTONE_CHANNEL_KEY,
+      paymentId: paymentId,
+      orderName: 'MySwingMatch Pro 멤버십 (월 4,900원)',
+      totalAmount: 4900,
+      currency: 'CURRENCY_KRW',
+      payMethod: payMethod,
+      customer: {
+        customerId: user.id,
+        email: user.email || undefined,
+      },
+      // 모바일 리다이렉트 환경에서 결제 완료 후 돌아올 URL
+      redirectUrl: window.location.origin + '/subscribe.html',
+    });
+
+    // 결제 실패 또는 취소
+    if (response.code !== undefined) {
+      // 사용자가 결제창을 닫은 경우 등
+      if (response.code === 'CLIENT_ERROR' || response.message?.includes('사용자')) {
+        // 조용히 종료 (별도 알림 없이)
+        return;
+      }
+      alert('결제에 실패했습니다.\n\n' + (response.message || '알 수 없는 오류'));
+      return;
+    }
+
+    // 결제 성공 (테스트 모드: 실제 돈은 빠지지 않음)
+    // ⚠️ 운영 환경에서는 이 시점에 백엔드로 paymentId를 전송하여
+    //    포트원 API로 결제 검증 + DB 기록 + Pro 권한 부여를 처리해야 함.
+    //    현재는 카카오페이 가맹점 심사용 결제창 노출 검증 단계.
+    alert(
+      '✅ 결제가 완료되었습니다!\n\n' +
+      '주문번호: ' + paymentId + '\n' +
+      '결제수단: ' + (selectedPayment === 'kakaopay' ? '카카오페이' : '신용/체크카드') + '\n' +
+      '금액: 4,900원\n\n' +
+      '※ 현재 테스트 환경이므로 실제 결제는 이루어지지 않았습니다.\n' +
+      '정식 오픈일(2026년 6월 8일)부터 정상 결제가 진행됩니다.'
+    );
+  } catch (e) {
+    console.error('결제 요청 중 오류:', e);
+    alert('결제 요청 중 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.');
+  }
 }
 
 // ─── 페이지 로드 시 Pro 구독자인지 체크 ───
