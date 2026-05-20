@@ -650,10 +650,14 @@ submitBtn.addEventListener('click', async () => {
     return;
   }
 
-  // 2) 이미 Pro 회원인지 체크 (이중 결제 방지)
+  // 2) 이미 Pro 회원인지 체크 (이중 결제 방지) - user_profiles.plan 기반
   try {
-    const { data: isPro } = await supabaseClient.rpc('is_pro_user');
-    if (isPro) {
+    const { data, error } = await supabaseClient
+      .from('user_profiles')
+      .select('plan')
+      .eq('id', user.id)
+      .single();
+    if (!error && data && data.plan === 'pro') {
       alert('이미 Pro 회원이세요! ✨\n\n모든 프리미엄 기능을 이용 중입니다.');
       checkProStatus();
       return;
@@ -699,32 +703,44 @@ async function checkProStatus() {
     return;
   }
 
-  // 로그인 회원 → 활성 구독 정보 가져오기
+  // 로그인 회원 → user_profiles.plan으로 Pro 여부 체크 (app.html과 동일한 방식)
   try {
-    const { data: subData, error } = await supabaseClient.rpc('my_active_subscription');
+    const { data, error } = await supabaseClient
+      .from('user_profiles')
+      .select('plan')
+      .eq('id', user.id)
+      .single();
+
     if (error) {
-      console.error('Pro 체크 에러:', error);
-      showSubscribeContent(); // 에러 시 결제 화면 표시 (안전 폴백)
+      console.warn('[Pro] plan 조회 실패:', error.message);
+      showSubscribeContent(); // 에러 시 결제 화면 (안전 폴백)
       return;
     }
 
-    if (subData) {
-      // Pro 구독자 → 안내 박스만 표시 (결제 화면은 절대 안 보임)
-      if (subData.current_period_end) {
-        const endDate = new Date(subData.current_period_end);
-        const formatted = endDate.toLocaleDateString('ko-KR', {
-          year: 'numeric', month: 'long', day: 'numeric'
-        });
-        document.getElementById('proExpiryInfo').textContent = '다음 결제일: ' + formatted;
+    if (data && data.plan === 'pro') {
+      // Pro 회원 → 안내 박스만 표시 (결제 화면 절대 안 보임)
+      // 추가로 subscriptions 테이블에서 만료일 가져오기 시도 (있으면 표시, 없어도 OK)
+      try {
+        const { data: subData } = await supabaseClient.rpc('my_active_subscription');
+        if (subData && subData.current_period_end) {
+          const endDate = new Date(subData.current_period_end);
+          const formatted = endDate.toLocaleDateString('ko-KR', {
+            year: 'numeric', month: 'long', day: 'numeric'
+          });
+          document.getElementById('proExpiryInfo').textContent = '다음 결제일: ' + formatted;
+        }
+      } catch (e) {
+        // 만료일 정보 없어도 Pro 박스는 표시
+        console.log('[Pro] 만료일 정보 없음');
       }
       showProBox();
     } else {
-      // 무료 회원 → 결제 화면
+      // 무료 회원 (plan !== 'pro')
       showSubscribeContent();
     }
   } catch (e) {
-    console.error('Pro 체크 실패:', e);
-    showSubscribeContent(); // 에러 시 결제 화면 표시 (안전 폴백)
+    console.error('[Pro] 체크 실패:', e);
+    showSubscribeContent(); // 에러 시 결제 화면 (안전 폴백)
   }
 }
 
