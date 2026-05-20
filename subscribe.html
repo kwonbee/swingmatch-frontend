@@ -806,12 +806,12 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
         Google로 계속하기
       </button>
 
-      <button class="auth-btn auth-btn-email" onclick="showEmailForm()">
+      <button class="auth-btn auth-btn-email" onclick="showEmailForm('login')">
         이메일로 계속하기
       </button>
 
       <div class="auth-footer">
-        이미 계정이 있나요? <a href="#" onclick="event.preventDefault(); showEmailForm('login')">로그인</a>
+        아직 계정이 없나요? <a href="#" onclick="event.preventDefault(); showEmailForm('signup')">회원 가입하기</a>
       </div>
     </div>
 
@@ -843,7 +843,8 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
       <div class="auth-error" id="authError"></div>
 
       <div class="auth-footer" id="emailFormFooter">
-        이미 계정이 있나요? <a href="#" onclick="event.preventDefault(); toggleEmailMode()">로그인</a>
+        <a href="#" onclick="event.preventDefault(); showResetForm()" style="display:block; margin-bottom:10px;">비밀번호를 잊으셨나요?</a>
+        이미 계정이 있나요? <a href="#" onclick="event.preventDefault(); toggleEmailMode()">로그인하기</a>
       </div>
     </div>
 
@@ -947,12 +948,16 @@ function updateEmailFormUI() {
     document.getElementById('emailFormTitle').textContent = '이메일로 가입';
     document.getElementById('emailFormSubtitle').textContent = '간편하게 시작하세요';
     document.getElementById('emailSubmitBtn').textContent = '가입하고 계속';
-    document.getElementById('emailFormFooter').innerHTML = '이미 계정이 있나요? <a href="#" onclick="event.preventDefault(); toggleEmailMode()">로그인</a>';
+    document.getElementById('emailFormFooter').innerHTML =
+      '<a href="#" onclick="event.preventDefault(); showResetForm()" style="display:block; margin-bottom:10px;">비밀번호를 잊으셨나요?</a>' +
+      '이미 계정이 있나요? <a href="#" onclick="event.preventDefault(); toggleEmailMode()">로그인하기</a>';
   } else {
     document.getElementById('emailFormTitle').textContent = '로그인';
     document.getElementById('emailFormSubtitle').textContent = '계속 진행하려면 로그인하세요';
     document.getElementById('emailSubmitBtn').textContent = '로그인하고 계속';
-    document.getElementById('emailFormFooter').innerHTML = '<a href="#" onclick="event.preventDefault(); showResetForm()" style="display:block; margin-bottom:10px;">비밀번호를 잊으셨나요?</a>계정이 없나요? <a href="#" onclick="event.preventDefault(); toggleEmailMode()">가입하기</a>';
+    document.getElementById('emailFormFooter').innerHTML =
+      '<a href="#" onclick="event.preventDefault(); showResetForm()" style="display:block; margin-bottom:10px;">비밀번호를 잊으셨나요?</a>' +
+      '계정이 없나요? <a href="#" onclick="event.preventDefault(); toggleEmailMode()">회원 가입하기</a>';
   }
 }
 
