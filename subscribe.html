@@ -345,6 +345,11 @@
 <div class="container">
   <a href="/app.html" class="back-link">← 돌아가기</a>
 
+  <!-- Pro 체크 로딩 (기본 표시 → 체크 끝나면 숨김) -->
+  <div id="proCheckLoading" style="text-align:center; padding:60px 20px; color:var(--text-dim); font-size:0.85rem;">
+    구독 상태 확인 중...
+  </div>
+
   <!-- 이미 Pro 구독 중일 때 보여줄 박스 (기본 숨김) -->
   <div id="alreadyProBox" style="display:none; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:36px 24px; text-align:center; margin:32px auto; max-width:420px;">
     <div style="font-size:1.6rem; margin-bottom:12px;">✨</div>
@@ -358,8 +363,8 @@
     </div>
   </div>
 
-  <!-- 일반 결제 화면 (Pro 회원이면 JS로 숨김) -->
-  <div id="subscribeContent">
+  <!-- 일반 결제 화면 (기본 숨김 - 체크 후 비Pro면 표시) -->
+  <div id="subscribeContent" style="display:none;">
 
   <div class="header">
     <div class="logo-svg-wrap"><svg width="180" height="78" viewBox="0 0 16557 7162" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
@@ -668,22 +673,43 @@ function proceedToPayment() {
 
 // ─── 페이지 로드 시 Pro 구독자인지 체크 ───
 async function checkProStatus() {
-  const { data: { user } } = await supabaseClient.auth.getUser();
-  if (!user) return; // 비회원은 그대로 결제 화면
+  const loadingEl = document.getElementById('proCheckLoading');
+  const proBoxEl = document.getElementById('alreadyProBox');
+  const contentEl = document.getElementById('subscribeContent');
 
+  // 헬퍼: 로딩 끝, 결제 화면 표시 (비Pro 또는 비회원)
+  function showSubscribeContent() {
+    loadingEl.style.display = 'none';
+    proBoxEl.style.display = 'none';
+    contentEl.style.display = 'block';
+  }
+
+  // 헬퍼: 로딩 끝, Pro 안내 박스 표시
+  function showProBox() {
+    loadingEl.style.display = 'none';
+    contentEl.style.display = 'none';
+    proBoxEl.style.display = 'block';
+  }
+
+  const { data: { user } } = await supabaseClient.auth.getUser();
+
+  if (!user) {
+    // 비회원 → 결제 화면 (약관 동의 후 클릭 시 app.html로 보냄)
+    showSubscribeContent();
+    return;
+  }
+
+  // 로그인 회원 → 활성 구독 정보 가져오기
   try {
     const { data: subData, error } = await supabaseClient.rpc('my_active_subscription');
     if (error) {
       console.error('Pro 체크 에러:', error);
+      showSubscribeContent(); // 에러 시 결제 화면 표시 (안전 폴백)
       return;
     }
 
     if (subData) {
-      // Pro 구독자 → 결제 화면 숨기고 안내 박스 표시
-      document.getElementById('subscribeContent').style.display = 'none';
-      document.getElementById('alreadyProBox').style.display = 'block';
-
-      // 만료일 표시
+      // Pro 구독자 → 안내 박스만 표시 (결제 화면은 절대 안 보임)
       if (subData.current_period_end) {
         const endDate = new Date(subData.current_period_end);
         const formatted = endDate.toLocaleDateString('ko-KR', {
@@ -691,9 +717,14 @@ async function checkProStatus() {
         });
         document.getElementById('proExpiryInfo').textContent = '다음 결제일: ' + formatted;
       }
+      showProBox();
+    } else {
+      // 무료 회원 → 결제 화면
+      showSubscribeContent();
     }
   } catch (e) {
     console.error('Pro 체크 실패:', e);
+    showSubscribeContent(); // 에러 시 결제 화면 표시 (안전 폴백)
   }
 }
 
