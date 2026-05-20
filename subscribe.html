@@ -709,6 +709,9 @@ async function proceedToPayment() {
   const paymentId = 'payment-' + uuid;
 
   // 4) 결제 요청 페이로드 (디버깅용 콘솔 출력)
+  //    KG이니시스 V2는 customer.phoneNumber, customer.fullName이 필수.
+  //    현재 회원가입 시 휴대폰 번호를 받지 않으므로 더미 값으로 채움.
+  //    TODO(귀국 후): 회원가입 시 휴대폰 번호 수집 → 여기서 user.phone 사용
   const paymentRequest = {
     storeId: PORTONE_STORE_ID,
     channelKey: PORTONE_CHANNEL_KEY,
@@ -719,7 +722,9 @@ async function proceedToPayment() {
     payMethod: payMethod,
     customer: {
       customerId: user.id,
-      email: user.email || undefined,
+      fullName: (user.email || 'MySwingMatch 회원').split('@')[0],
+      phoneNumber: '010-0000-0000',
+      email: user.email || 'guest@myswingmatch.com',
     },
     redirectUrl: window.location.origin + '/subscribe.html',
   };
