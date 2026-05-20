@@ -44,7 +44,7 @@ body {
 }
 
 /* ─── NAV ─── */
-nav {
+.site-nav {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
   display: flex; align-items: center; justify-content: space-between;
   padding: 1.4rem 4rem;
@@ -60,14 +60,14 @@ nav {
   color: var(--cream); text-decoration: none;
 }
 .logo span { color: var(--accent-light); }
-nav ul { list-style: none; display: flex; gap: 2.5rem; }
-nav ul a {
+.site-nav ul { list-style: none; display: flex; gap: 2.5rem; }
+.site-nav ul a {
   font-size: 0.72rem; letter-spacing: 0.1em;
   text-transform: uppercase; font-weight: 400;
   color: var(--muted); text-decoration: none;
   transition: color 0.25s;
 }
-nav ul a:hover { color: var(--cream); }
+.site-nav ul a:hover { color: var(--cream); }
 .nav-cta {
   font-size: 0.72rem; letter-spacing: 0.1em;
   text-transform: uppercase; font-weight: 400;
@@ -581,8 +581,8 @@ footer {
 
 /* ─── MOBILE ─── */
 @media (max-width: 860px) {
-  nav { padding: 1.1rem 1.5rem; }
-  nav ul { display: none; }
+  .site-nav { padding: 1.1rem 1.5rem; }
+  .site-nav ul { display: none; }
   .hero, section { padding-left: 1.5rem; padding-right: 1.5rem; }
   .hero { padding-bottom: 4rem; }
   .hero-line { left: 1.5rem; }
@@ -610,7 +610,7 @@ footer {
 @media (max-width: 768px) {
 
   /* NAV */
-  nav {
+  .site-nav {
     padding: 1rem 1.4rem;
   }
   .nav-cta {
@@ -780,8 +780,8 @@ footer {
 <body>
 
 <!-- NAV -->
-<nav>
-  <a href="#" style="display:flex;align-items:center;text-decoration:none"><svg height="40" viewBox="0 0 16557 7162" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+<nav class="site-nav">
+  <a href="#" style="display:flex;align-items:center;text-decoration:none;flex-shrink:0;"><svg width="92" height="40" viewBox="0 0 16557 7162" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;display:block;">
     <g transform="matrix(1,0,0,1,-6485.69,-3800.96)">
         <g transform="matrix(1,0,0,1,0,1315.04)">
             <g transform="matrix(1.07325,0,0,1.07325,814.659,1900.62)">
@@ -850,12 +850,12 @@ footer {
         </g>
     </g>
 </svg></a>
-  <ul>
-    <li><a href="#how">분석 방법</a></li>
-    <li><a href="#features">기능</a></li>
-    <li><a href="#pros">프로 DB</a></li>
+  <ul style="list-style:none;display:flex;gap:2.5rem;margin:0;padding:0;">
+    <li><a href="#how" style="font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:400;color:rgba(240,237,230,0.55);text-decoration:none;">분석 방법</a></li>
+    <li><a href="#features" style="font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:400;color:rgba(240,237,230,0.55);text-decoration:none;">기능</a></li>
+    <li><a href="#pros" style="font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:400;color:rgba(240,237,230,0.55);text-decoration:none;">프로 DB</a></li>
   </ul>
-  <a href="https://swingmatch-frontend.vercel.app/app.html" target="_blank" class="nav-cta">스윙 분석하기</a>
+  <a href="https://swingmatch-frontend.vercel.app/app.html" target="_blank" class="nav-cta" style="font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:400;color:#0c0c0a;background:#e8d4a8;padding:0.55rem 1.4rem;text-decoration:none;flex-shrink:0;">스윙 분석하기</a>
 </nav>
 
 <!-- HERO -->
@@ -1165,7 +1165,7 @@ footer {
 <script>
   // Nav shrink on scroll
   window.addEventListener('scroll', () => {
-    const nav = document.querySelector('nav');
+    const nav = document.querySelector('.site-nav');
     if (window.scrollY > 60) {
       nav.style.padding = '1rem 4rem';
     } else {
