@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Diary | MySwingMatch</title>
+<meta name="description" content="MySwingMatch My Diary - 나의 골프 여정 기록. 분석 통계, 영상 갤러리, 성장 그래프, 구독 관리.">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --gold:#c8a96e;
+    --gold-light:#d4b97f;
+    --gold-dim:rgba(200,169,110,0.6);
+    --gold-faint:rgba(200,169,110,0.08);
+    --bg:#0d0d0d;
+    --bg-card:#161616;
+    --bg-card-2:#1a1a1a;
+    --bg-card-3:#1e1e1e;
+    --text:#e5e5e5;
+    --text-dim:rgba(229,229,229,0.65);
+    --text-faint:rgba(229,229,229,0.4);
+    --border:rgba(200,169,110,0.15);
+    --border-strong:rgba(200,169,110,0.3);
+    --danger:#e87878;
+    --success:#7eb88b;
+  }
+  body{
+    font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.6;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased
+  }
+  .container{
+    max-width:1080px;
+    margin:0 auto;
+    padding:32px 24px 80px
+  }
+  /* 헤더 */
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:32px;
+    padding-bottom:20px;
+    border-bottom:1px solid var(--border)
+  }
+  .back-link{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    color:var(--gold-dim);
+    text-decoration:none;
+    font-size:.9rem;
+    transition:color .2s
+  }
+  .back-link:hover{color:var(--gold)}
+  .topbar-actions{display:flex;gap:12px;align-items:center}
+  .topbar-actions a{
+    color:var(--text-dim);
+    text-decoration:none;
+    font-size:.85rem;
+    transition:color .2s
+  }
+  .topbar-actions a:hover{color:var(--gold)}
+  /* 다이어리 헤더 */
+  .diary-header{
+    text-align:center;
+    margin-bottom:40px
+  }
+  .diary-title{
+    font-family:'Noto Sans KR',serif;
+    font-size:2.4rem;
+    font-weight:300;
+    letter-spacing:.15em;
+    color:var(--gold);
+    margin-bottom:8px
+  }
+  .diary-subtitle{
+    font-size:.9rem;
+    color:var(--text-dim);
+    letter-spacing:.05em
+  }
+  .diary-greeting{
+    margin-top:20px;
+    font-size:1rem;
+    color:var(--text)
+  }
+  .diary-greeting strong{color:var(--gold);font-weight:500}
+  /* 플랜 배지 */
+  .plan-badge{
+    display:inline-block;
+    padding:6px 14px;
+    border-radius:20px;
+    font-size:.75rem;
+    font-weight:600;
+    letter-spacing:.05em;
+    margin-top:12px
+  }
+  .plan-badge.free{
+    background:rgba(229,229,229,0.08);
+    color:var(--text-dim);
+    border:1px solid rgba(229,229,229,0.15)
+  }
+  .plan-badge.pro{
+    background:linear-gradient(135deg,rgba(200,169,110,0.2),rgba(200,169,110,0.05));
+    color:var(--gold-light);
+    border:1px solid var(--border-strong)
+  }
+  /* 통계 카드 그리드 */
+  .stats-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:14px;
+    margin-bottom:40px
+  }
+  .stat-card{
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:20px;
+    position:relative;
+    transition:border-color .2s
+  }
+  .stat-card:hover{border-color:var(--border-strong)}
+  .stat-card.locked{
+    background:var(--bg-card-2);
+    opacity:.55
+  }
+  .stat-icon{
+    font-size:1.1rem;
+    margin-bottom:8px;
+    opacity:.85
+  }
+  .stat-label{
+    font-size:.78rem;
+    color:var(--text-dim);
+    margin-bottom:6px;
+    letter-spacing:.03em
+  }
+  .stat-value{
+    font-size:1.8rem;
+    font-weight:600;
+    color:var(--text);
+    line-height:1.2
+  }
+  .stat-value.gold{color:var(--gold)}
+  .stat-unit{
+    font-size:.85rem;
+    color:var(--text-dim);
+    font-weight:400;
+    margin-left:2px
+  }
+  .stat-sub{
+    font-size:.75rem;
+    color:var(--text-faint);
+    margin-top:4px
+  }
+  .lock-icon{
+    position:absolute;
+    top:14px;
+    right:14px;
+    font-size:.9rem;
+    color:var(--gold-dim)
+  }
+  /* 섹션 */
+  .section{
+    margin-bottom:48px
+  }
+  .section-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:18px;
+    padding-bottom:10px;
+    border-bottom:1px solid var(--border)
+  }
+  .section-title{
+    font-size:1.15rem;
+    font-weight:500;
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    gap:8px
+  }
+  .section-title .gold-bar{
+    display:inline-block;
+    width:3px;
+    height:18px;
+    background:var(--gold);
+    border-radius:2px
+  }
+  .section-meta{
+    font-size:.8rem;
+    color:var(--text-dim)
+  }
+  /* 영상 갤러리 */
+  .video-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:16px
+  }
+  .video-card{
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    overflow:hidden;
+    cursor:pointer;
+    transition:transform .2s,border-color .2s
+  }
+  .video-card:hover{
+    transform:translateY(-2px);
+    border-color:var(--gold-dim)
+  }
+  .video-thumb{
+    width:100%;
+    aspect-ratio:1/1;
+    background:linear-gradient(135deg,#1a1a1a,#252525);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--gold-dim);
+    font-size:2rem;
+    position:relative
+  }
+  .video-thumb.has-memo::after{
+    content:'✎';
+    position:absolute;
+    top:8px;
+    right:8px;
+    width:24px;
+    height:24px;
+    background:var(--gold);
+    color:#0d0d0d;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:.8rem;
+    font-weight:600
+  }
+  .video-info{padding:12px 14px}
+  .video-pro{
+    font-size:.85rem;
+    color:var(--gold);
+    font-weight:500;
+    margin-bottom:2px
+  }
+  .video-date{
+    font-size:.72rem;
+    color:var(--text-dim)
+  }
+  .video-memo-preview{
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px solid var(--border);
+    font-size:.75rem;
+    color:var(--text);
+    line-height:1.5;
+    font-style:italic;
+    overflow:hidden;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical
+  }
+  .video-memo-hint{
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px solid var(--border);
+    font-size:.72rem;
+    color:var(--gold-dim);
+    text-align:center
+  }
+  .video-controls{
+    display:flex;
+    gap:8px;
+    margin-bottom:16px;
+    flex-wrap:wrap
+  }
+  .filter-btn{
+    padding:8px 16px;
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:20px;
+    color:var(--text-dim);
+    font-size:.78rem;
+    cursor:pointer;
+    transition:all .2s;
+    font-family:inherit
+  }
+  .filter-btn:hover{
+    border-color:var(--border-strong);
+    color:var(--text)
+  }
+  .filter-btn.active{
+    background:var(--gold-faint);
+    border-color:var(--gold-dim);
+    color:var(--gold-light)
+  }
+  /* 잠금 카드 (영상/히스토리 무료 회원용) */
+  .locked-section{
+    background:var(--bg-card);
+    border:1px dashed var(--border-strong);
+    border-radius:14px;
+    padding:36px 24px;
+    text-align:center
+  }
+  .locked-section .lock-large{
+    font-size:2rem;
+    color:var(--gold-dim);
+    margin-bottom:12px
+  }
+  .locked-section h3{
+    font-size:1.05rem;
+    color:var(--text);
+    margin-bottom:6px;
+    font-weight:500
+  }
+  .locked-section p{
+    font-size:.85rem;
+    color:var(--text-dim);
+    margin-bottom:18px
+  }
+  .locked-section .unlock-btn{
+    display:inline-block;
+    padding:10px 24px;
+    background:var(--gold);
+    color:#0d0d0d;
+    border-radius:8px;
+    text-decoration:none;
+    font-size:.85rem;
+    font-weight:600;
+    transition:background .2s
+  }
+  .locked-section .unlock-btn:hover{background:var(--gold-light)}
+  /* 히스토리 리스트 */
+  .history-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px
+  }
+  .history-item{
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px 18px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    transition:border-color .2s
+  }
+  .history-item:hover{border-color:var(--border-strong)}
+  .history-left{display:flex;align-items:center;gap:14px}
+  .history-club{
+    width:44px;
+    height:44px;
+    background:var(--gold-faint);
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--gold);
+    font-weight:500;
+    font-size:.75rem
+  }
+  .history-info{display:flex;flex-direction:column;gap:2px}
+  .history-pro{font-size:.95rem;color:var(--text);font-weight:500}
+  .history-meta{font-size:.75rem;color:var(--text-dim)}
+  .history-pct{
+    font-size:1.1rem;
+    font-weight:600;
+    color:var(--gold)
+  }
+  /* 구독 카드 */
+  .sub-card{
+    background:linear-gradient(135deg,var(--bg-card),var(--bg-card-2));
+    border:1px solid var(--border-strong);
+    border-radius:14px;
+    padding:24px
+  }
+  .sub-row{
+    display:flex;
+    justify-content:space-between;
+    padding:10px 0;
+    border-bottom:1px solid var(--border);
+    font-size:.9rem
+  }
+  .sub-row:last-of-type{border-bottom:none}
+  .sub-label{color:var(--text-dim)}
+  .sub-value{color:var(--text);font-weight:500}
+  .sub-value.gold{color:var(--gold)}
+  .sub-actions{
+    display:flex;
+    gap:10px;
+    margin-top:20px;
+    padding-top:20px;
+    border-top:1px solid var(--border)
+  }
+  .btn{
+    padding:11px 20px;
+    border-radius:8px;
+    border:none;
+    cursor:pointer;
+    font-size:.85rem;
+    font-weight:500;
+    transition:all .2s;
+    text-decoration:none;
+    display:inline-block;
+    text-align:center
+  }
+  .btn-primary{
+    background:var(--gold);
+    color:#0d0d0d;
+    font-weight:600
+  }
+  .btn-primary:hover{background:var(--gold-light)}
+  .btn-secondary{
+    background:transparent;
+    color:var(--text-dim);
+    border:1px solid var(--border-strong)
+  }
+  .btn-secondary:hover{color:var(--text);border-color:var(--gold-dim)}
+  .btn-danger{
+    background:transparent;
+    color:var(--danger);
+    border:1px solid rgba(232,120,120,0.3)
+  }
+  .btn-danger:hover{background:rgba(232,120,120,0.08)}
+  /* CTA 박스 (무료 회원용 Pro 전환 유도) */
+  .pro-cta{
+    background:linear-gradient(135deg,rgba(200,169,110,0.15),rgba(200,169,110,0.03));
+    border:1px solid var(--gold-dim);
+    border-radius:14px;
+    padding:28px 24px;
+    text-align:center;
+    margin-bottom:40px
+  }
+  .pro-cta h2{
+    font-size:1.3rem;
+    color:var(--gold);
+    margin-bottom:8px;
+    font-weight:500
+  }
+  .pro-cta p{
+    color:var(--text-dim);
+    font-size:.9rem;
+    margin-bottom:18px;
+    line-height:1.7
+  }
+  .pro-cta .cta-features{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:center;
+    margin-bottom:20px
+  }
+  .pro-cta .cta-feature{
+    background:rgba(200,169,110,0.1);
+    color:var(--gold-light);
+    padding:5px 12px;
+    border-radius:14px;
+    font-size:.75rem
+  }
+  /* 영상 메모 모달 */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.85);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:1000
+  }
+  .modal-overlay.show{display:flex}
+  .modal{
+    background:var(--bg-card);
+    border:1px solid var(--border-strong);
+    border-radius:14px;
+    width:100%;
+    max-width:480px;
+    padding:28px;
+    max-height:90vh;
+    overflow-y:auto
+  }
+  .modal h3{
+    font-size:1.1rem;
+    color:var(--gold);
+    margin-bottom:6px;
+    font-weight:500
+  }
+  .modal-sub{
+    font-size:.8rem;
+    color:var(--text-dim);
+    margin-bottom:18px
+  }
+  .modal textarea{
+    width:100%;
+    min-height:140px;
+    background:var(--bg-card-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:12px;
+    color:var(--text);
+    font-family:inherit;
+    font-size:.9rem;
+    resize:vertical
+  }
+  .modal textarea:focus{
+    outline:none;
+    border-color:var(--gold-dim)
+  }
+  .modal-actions{
+    display:flex;
+    gap:8px;
+    justify-content:flex-end;
+    margin-top:16px
+  }
+  .modal-char-count{
+    font-size:.7rem;
+    color:var(--text-faint);
+    margin-top:6px;
+    overflow:hidden
+  }
+  /* 로딩 */
+  .loading{
+    text-align:center;
+    padding:40px;
+    color:var(--text-dim);
+    font-size:.9rem
+  }
+  /* 빈 상태 */
+  .empty{
+    text-align:center;
+    padding:40px 20px;
+    color:var(--text-dim);
+    font-size:.9rem
+  }
+  .empty-icon{font-size:1.8rem;margin-bottom:10px;color:var(--gold-dim)}
+  /* 반응형 */
+  @media (max-width:640px){
+    .container{padding:24px 16px 60px}
+    .diary-title{font-size:1.8rem}
+    .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+    .stat-card{padding:14px}
+    .stat-value{font-size:1.4rem}
+    .video-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+    .sub-actions{flex-direction:column}
+    .btn{width:100%}
+  }
+</style>
+</head>
+<body>
+
+<!-- 인증 로딩 -->
+<div id="authLoading" class="loading">My Diary 불러오는 중...</div>
+
+<!-- 본문 (인증 후 표시) -->
+<div id="mainContent" class="container" style="display:none;">
+
+  <!-- 상단바 -->
+  <div class="topbar">
+    <a href="/" class="back-link">← MySwingMatch</a>
+    <div class="topbar-actions">
+      <a href="/app.html">분석하기</a>
+      <a href="#" id="logoutLink">로그아웃</a>
+    </div>
+  </div>
+
+  <!-- 다이어리 헤더 -->
+  <div class="diary-header">
+    <div class="diary-title">My Diary</div>
+    <div class="diary-subtitle">나의 골프 여정의 기록</div>
+    <div class="diary-greeting" id="greeting">안녕하세요, <strong id="userNickname">골퍼</strong>님</div>
+    <div id="planBadge" class="plan-badge free">FREE</div>
+  </div>
+
+  <!-- 통계 카드 -->
+  <div class="stats-grid" id="statsGrid">
+    <!-- JS로 채움 -->
+  </div>
+
+  <!-- Pro 전환 CTA (무료 회원에게만 표시) -->
+  <div class="pro-cta" id="proCta" style="display:none;">
+    <h2>✨ My Diary, 완성하기</h2>
+    <p>무료 분석으로 시작한 골프 여정,<br>이제 <strong style="color:var(--gold-light)">영상으로 보관</strong>하고 <strong style="color:var(--gold-light)">메모로 기록</strong>해보세요.<br>한 달 뒤 다시 보면, 분명히 달라진 내가 보입니다.</p>
+    <div class="cta-features">
+      <span class="cta-feature">✓ 무제한 분석</span>
+      <span class="cta-feature">✓ 영상 30개 저장</span>
+      <span class="cta-feature">✓ 영상마다 메모 ✎</span>
+      <span class="cta-feature">✓ 즐겨찾기 10개</span>
+      <span class="cta-feature">✓ 영상 비교 분석</span>
+      <span class="cta-feature">✓ 영구 히스토리</span>
+    </div>
+    <a href="/subscribe.html" class="btn btn-primary">월 4,900원으로 시작하기</a>
+  </div>
+
+  <!-- 내 영상 갤러리 -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title"><span class="gold-bar"></span>내 영상 갤러리</h2>
+      <span class="section-meta" id="videoMeta"></span>
+    </div>
+    <div id="videoSection">
+      <div class="loading">불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- 분석 히스토리 -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title"><span class="gold-bar"></span>분석 히스토리</h2>
+      <span class="section-meta" id="historyMeta"></span>
+    </div>
+    <div id="historySection">
+      <div class="loading">불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- 구독 관리 -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title"><span class="gold-bar"></span>구독 관리</h2>
+    </div>
+    <div id="subscriptionSection">
+      <div class="loading">불러오는 중...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 영상 메모 모달 (Pro 전용) -->
+<div class="modal-overlay" id="memoModal">
+  <div class="modal">
+    <h3>✎ 오늘의 스윙 메모</h3>
+    <p class="modal-sub" id="memoModalSub">이 스윙에 대한 코멘트를 남겨보세요</p>
+    <textarea id="memoText" placeholder="예시 ─────────────────
+· 백스윙 탑에서 손목이 살짝 꺾이는 느낌
+· 다운스윙 때 체중 이동이 부드러웠음
+· 다음 라운드 때 어드레스 더 낮춰보기" maxlength="500"></textarea>
+    <div class="modal-char-count">
+      <span style="color:var(--text-faint)">⌘+Enter 저장 · Esc 닫기</span>
+      <span style="float:right"><span id="memoCharCount">0</span> / 500</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="memoCancel">취소</button>
+      <button class="btn btn-primary" id="memoSave">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Supabase ─── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+
+<script>
+// ─── 설정 ───
+const SUPABASE_URL = 'https://vldcmanngfexfwvvnqbb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsZGNtYW5uZ2ZleGZ3dnZucWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4ODY0MTcsImV4cCI6MjA5NDQ2MjQxN30.3K_jL1HVdOKMEoSSsmacJGNVDkf6iFa2PU7XuEFuUBY';
+const BACKEND_URL = 'https://swingmatch-backend-production.up.railway.app';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ─── 전역 상태 ───
+let currentUser = null;
+let userProfile = null;
+let activeSubscription = null;
+let isPro = false;
+let allLogs = [];
+let editingLogId = null;
+
+// ─── 비로그인 사용자 안내 화면 ───
+function showNotLoggedIn(){
+  document.getElementById('authLoading').innerHTML = `
+    <div style="max-width:420px; margin:80px auto; padding:40px 24px; text-align:center;">
+      <div style="font-family:'Noto Sans KR',serif; font-size:2.2rem; font-weight:300; letter-spacing:.15em; color:var(--gold); margin-bottom:8px;">My Diary</div>
+      <div style="font-size:.9rem; color:var(--text-dim); margin-bottom:32px;">나의 골프 여정의 기록</div>
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:32px 24px;">
+        <div style="font-size:2rem; margin-bottom:14px;">📖</div>
+        <h2 style="font-size:1.05rem; color:var(--text); margin-bottom:8px; font-weight:500;">로그인이 필요해요</h2>
+        <p style="font-size:.85rem; color:var(--text-dim); margin-bottom:24px; line-height:1.7;">
+          My Diary는 회원 전용 기능이에요.<br>
+          로그인하시면 그동안 쌓인 분석 기록과<br>
+          나만의 골프 여정을 확인하실 수 있습니다.
+        </p>
+        <a href="/app.html" style="display:inline-block; padding:12px 32px; background:var(--gold); color:#0d0d0d; border-radius:10px; text-decoration:none; font-weight:600; font-size:.88rem;">로그인 / 회원가입</a>
+        <div style="margin-top:18px;">
+          <a href="/" style="color:var(--text-dim); text-decoration:none; font-size:.8rem;">← 메인으로 돌아가기</a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── 진입점 ───
+(async function init(){
+  // 1) 로그인 체크
+  const { data: { user }, error } = await supabaseClient.auth.getUser();
+  if (!user) {
+    // 비회원 → 로그인 안내 화면 표시 (리다이렉트보다 친절)
+    showNotLoggedIn();
+    return;
+  }
+  currentUser = user;
+
+  // 2) 프로필 + 구독 + 히스토리 병렬 로드
+  await Promise.all([
+    loadUserProfile(),
+    loadSubscription(),
+    loadHistory()
+  ]);
+
+  // 3) UI 렌더링
+  renderHeader();
+  renderStats();
+  renderProCta();
+  renderVideoGallery();
+  renderHistory();
+  renderSubscription();
+
+  // 4) 로딩 해제
+  document.getElementById('authLoading').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+
+  // 5) 이벤트 바인딩
+  bindEvents();
+})().catch(err => {
+  console.error('[My Diary 초기화 오류]', err);
+  document.getElementById('authLoading').innerHTML =
+    '페이지를 불러오는 중 오류가 발생했습니다.<br><a href="/" style="color:var(--gold)">메인으로 돌아가기</a>';
+});
+
+// ─── 데이터 로딩 ───
+async function loadUserProfile(){
+  const { data, error } = await supabaseClient
+    .from('user_profiles')
+    .select('*')
+    .eq('id', currentUser.id)
+    .maybeSingle();
+  if (error) console.error('[profile]', error);
+  userProfile = data || {};
+  isPro = userProfile.plan === 'pro';
+}
+
+async function loadSubscription(){
+  // 우선 RPC 시도, 실패 시 빈 객체
+  try {
+    const { data, error } = await supabaseClient.rpc('my_active_subscription');
+    if (!error && data && data.length > 0) {
+      activeSubscription = data[0];
+    }
+  } catch (e) {
+    console.warn('[subscription RPC 미지원]', e);
+  }
+}
+
+async function loadHistory(){
+  const { data, error } = await supabaseClient
+    .from('analysis_logs')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error) {
+    console.error('[history]', error);
+    allLogs = [];
+    return;
+  }
+  allLogs = data || [];
+}
+
+// ─── 헤더 ───
+function renderHeader(){
+  const nickname = userProfile.nickname
+    || userProfile.email?.split('@')[0]
+    || currentUser.email?.split('@')[0]
+    || '골퍼';
+  document.getElementById('userNickname').textContent = nickname;
+
+  const badge = document.getElementById('planBadge');
+  if (isPro) {
+    badge.className = 'plan-badge pro';
+    badge.textContent = '✦ PRO MEMBER';
+  } else {
+    badge.className = 'plan-badge free';
+    badge.textContent = 'FREE';
+  }
+}
+
+// ─── 통계 ───
+function renderStats(){
+  const grid = document.getElementById('statsGrid');
+
+  // 통계 계산
+  const totalAnalysis = userProfile.total_analysis_count || allLogs.length || 0;
+  const daysSinceJoin = userProfile.created_at
+    ? Math.floor((Date.now() - new Date(userProfile.created_at).getTime()) / (1000*60*60*24))
+    : 0;
+
+  // 가장 많이 닮은 프로 TOP 1
+  const proCount = {};
+  allLogs.forEach(l => {
+    if (l.pro_name) proCount[l.pro_name] = (proCount[l.pro_name] || 0) + 1;
+  });
+  const topPro = Object.entries(proCount).sort((a,b) => b[1]-a[1])[0];
+
+  // 평균 매칭률
+  const matchPcts = allLogs.filter(l => l.match_pct).map(l => l.match_pct);
+  const avgMatch = matchPcts.length > 0
+    ? Math.round(matchPcts.reduce((a,b)=>a+b,0) / matchPcts.length)
+    : 0;
+
+  // 가장 많이 쓴 클럽
+  const clubCount = {};
+  allLogs.forEach(l => {
+    if (l.club) clubCount[l.club] = (clubCount[l.club] || 0) + 1;
+  });
+  const topClub = Object.entries(clubCount).sort((a,b) => b[1]-a[1])[0];
+  const clubLabels = {driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터', wood:'우드'};
+
+  const cards = [
+    {
+      icon: '🌱',
+      label: '함께한 날',
+      value: daysSinceJoin,
+      unit: '일',
+      sub: userProfile.created_at ? new Date(userProfile.created_at).toLocaleDateString('ko-KR') + ' 시작' : ''
+    },
+    {
+      icon: '⛳',
+      label: '총 분석 횟수',
+      value: totalAnalysis,
+      unit: '회',
+      gold: true
+    },
+    {
+      icon: '📊',
+      label: '평균 매칭률',
+      value: avgMatch || '—',
+      unit: avgMatch ? '%' : '',
+      sub: matchPcts.length > 0 ? `${matchPcts.length}회 기준` : '분석 시작 전'
+    },
+    {
+      icon: '🏆',
+      label: '가장 닮은 프로',
+      value: topPro ? topPro[0] : '—',
+      sub: topPro ? `${topPro[1]}회 매칭` : '분석 시작 전',
+      small: true
+    },
+    {
+      icon: '🏌️',
+      label: '주력 클럽',
+      value: topClub ? (clubLabels[topClub[0]] || topClub[0]) : '—',
+      sub: topClub ? `${topClub[1]}회 사용` : '분석 시작 전',
+      small: true
+    },
+    {
+      icon: '🎬',
+      label: '영상 저장',
+      value: isPro ? (allLogs.filter(l => { const r=l.result_json||{}; return r.has_video||r.video_url||r.video_path; }).length) : '—',
+      unit: isPro ? '/ 30' : '',
+      sub: isPro ? '내가 모은 스윙 기록' : 'Pro 전용',
+      locked: !isPro
+    }
+  ];
+
+  grid.innerHTML = cards.map(c => `
+    <div class="stat-card${c.locked ? ' locked' : ''}">
+      ${c.locked ? '<span class="lock-icon">🔒</span>' : ''}
+      <div class="stat-icon">${c.icon}</div>
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-value ${c.gold ? 'gold' : ''}" style="${c.small ? 'font-size:1.05rem;line-height:1.4' : ''}">
+        ${c.value}${c.unit ? `<span class="stat-unit">${c.unit}</span>` : ''}
+      </div>
+      ${c.sub ? `<div class="stat-sub">${c.sub}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+// ─── Pro CTA ───
+function renderProCta(){
+  document.getElementById('proCta').style.display = isPro ? 'none' : 'block';
+}
+
+// ─── 영상 갤러리 ───
+let videoFilter = 'all'; // 'all' | 'memo'
+
+function renderVideoGallery(){
+  const section = document.getElementById('videoSection');
+  const meta = document.getElementById('videoMeta');
+
+  // 무료 회원: 영상 저장 자체가 Pro 전용
+  if (!isPro) {
+    meta.textContent = '';
+    section.innerHTML = `
+      <div class="locked-section">
+        <div class="lock-large">🎬</div>
+        <h3>Pro 회원의 스윙 다이어리</h3>
+        <p>분석한 스윙 영상을 <strong style="color:var(--gold-light)">30개까지 보관</strong>하고,<br>
+        영상마다 <strong style="color:var(--gold-light)">나만의 코칭 메모 ✎</strong>를 남길 수 있어요.<br><br>
+        한 달 뒤, 1년 뒤<br>다시 보면 내 성장이 한눈에 보입니다.</p>
+        <a href="/subscribe.html" class="unlock-btn">월 4,900원으로 시작하기</a>
+      </div>`;
+    return;
+  }
+
+  // Pro 회원 — 영상 있는 로그 필터링
+  const allVideoLogs = allLogs.filter(l => {
+    const r = l.result_json || {};
+    return r.has_video || r.video_url || r.video_path;
+  });
+
+  // 영상이 하나도 없을 때
+  if (allVideoLogs.length === 0) {
+    meta.textContent = '0 / 30';
+    section.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">🎬</div>
+        아직 저장된 영상이 없어요.<br>
+        <a href="/app.html" style="color:var(--gold)">분석하러 가기</a> → 분석 후 "저장" 버튼을 눌러보세요.
+      </div>`;
+    return;
+  }
+
+  // 메모 필터 적용
+  const memoCount = allVideoLogs.filter(l => ((l.result_json||{}).memo || '').trim()).length;
+  const displayLogs = videoFilter === 'memo'
+    ? allVideoLogs.filter(l => ((l.result_json||{}).memo || '').trim())
+    : allVideoLogs;
+
+  meta.innerHTML = `<span>${allVideoLogs.length} / 30</span>`;
+
+  section.innerHTML = `
+    <div class="video-controls">
+      <button class="filter-btn ${videoFilter === 'all' ? 'active' : ''}" data-filter="all">
+        전체 ${allVideoLogs.length}
+      </button>
+      <button class="filter-btn ${videoFilter === 'memo' ? 'active' : ''}" data-filter="memo">
+        ✎ 메모 있음 ${memoCount}
+      </button>
+    </div>
+    ${displayLogs.length === 0 ? `
+      <div class="empty">
+        <div class="empty-icon">✎</div>
+        메모를 작성한 영상이 아직 없어요.<br>
+        영상 카드를 탭하면 메모를 남길 수 있습니다.
+      </div>
+    ` : `
+      <div class="video-grid">
+        ${displayLogs.map(l => {
+          const memo = (l.result_json && l.result_json.memo) || '';
+          const hasMemo = memo.trim().length > 0;
+          const memoPreview = hasMemo ? escapeHtml(memo.replace(/\n/g, ' ').slice(0, 60)) : '';
+          return `
+            <div class="video-card" data-id="${l.id}">
+              <div class="video-thumb${hasMemo ? ' has-memo' : ''}">🏌️</div>
+              <div class="video-info">
+                <div class="video-pro">${escapeHtml(l.pro_name || '분석 결과')}</div>
+                <div class="video-date">${formatDate(l.created_at)} · ${l.match_pct || '-'}%</div>
+                ${hasMemo ? `<div class="video-memo-preview">"${memoPreview}${memo.length > 60 ? '…' : ''}"</div>` : `<div class="video-memo-hint">메모 남기기 ✎</div>`}
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+    `}`;
+
+  // 영상 카드 클릭 이벤트
+  section.querySelectorAll('.video-card').forEach(card => {
+    card.addEventListener('click', () => openMemoModal(card.dataset.id));
+  });
+
+  // 필터 버튼 이벤트
+  section.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      videoFilter = btn.dataset.filter;
+      renderVideoGallery();
+    });
+  });
+}
+
+// XSS 방지용 간단 HTML 이스케이프
+function escapeHtml(str){
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// ─── 히스토리 ───
+function renderHistory(){
+  const section = document.getElementById('historySection');
+  const meta = document.getElementById('historyMeta');
+
+  const limit = isPro ? allLogs.length : Math.min(5, allLogs.length);
+  const items = allLogs.slice(0, limit);
+
+  meta.textContent = isPro
+    ? `전체 ${allLogs.length}개`
+    : `최근 5개 (Pro는 영구 보관)`;
+
+  if (items.length === 0) {
+    section.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">📖</div>
+        다이어리의 첫 페이지를 채워보세요.<br>
+        <a href="/app.html" style="color:var(--gold)">첫 스윙을 분석</a>하면 여기에 기록이 남아요.
+      </div>`;
+    return;
+  }
+
+  const clubLabels = {driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터', wood:'우드'};
+
+  section.innerHTML = `
+    <div class="history-list">
+      ${items.map(l => `
+        <div class="history-item">
+          <div class="history-left">
+            <div class="history-club">${clubLabels[l.club] || (l.club || '?').slice(0,2)}</div>
+            <div class="history-info">
+              <div class="history-pro">${l.pro_name || '분석 결과'}${l.pro_tour ? ` <span style="color:var(--text-dim);font-size:.75rem">· ${l.pro_tour}</span>` : ''}</div>
+              <div class="history-meta">${formatDate(l.created_at)}</div>
+            </div>
+          </div>
+          <div class="history-pct">${l.match_pct || '-'}%</div>
+        </div>
+      `).join('')}
+    </div>
+    ${!isPro && allLogs.length > 5 ? `
+      <div style="text-align:center;margin-top:18px;padding:14px;background:var(--bg-card);border:1px dashed var(--border);border-radius:10px">
+        <p style="font-size:.85rem;color:var(--text-dim);margin-bottom:10px">
+          ${allLogs.length - 5}개의 분석 기록이 더 있습니다.<br>
+          <strong style="color:var(--gold)">Pro 회원</strong>이 되면 전체 기록을 영구 보관할 수 있어요.
+        </p>
+        <a href="/subscribe.html" class="btn btn-primary" style="font-size:.8rem;padding:8px 18px">Pro로 잠금 해제</a>
+      </div>` : ''}`;
+}
+
+// ─── 구독 관리 ───
+function renderSubscription(){
+  const section = document.getElementById('subscriptionSection');
+
+  if (!isPro) {
+    section.innerHTML = `
+      <div class="sub-card">
+        <div class="sub-row">
+          <span class="sub-label">현재 플랜</span>
+          <span class="sub-value">무료 (Free)</span>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">일일 분석 한도</span>
+          <span class="sub-value">3회</span>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">영상 저장</span>
+          <span class="sub-value" style="color:var(--text-faint)">Pro 전용</span>
+        </div>
+        <div class="sub-actions">
+          <a href="/subscribe.html" class="btn btn-primary" style="flex:1">Pro 가입하기 (월 4,900원)</a>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Pro 회원
+  const startDate = activeSubscription?.started_at || userProfile.created_at;
+  const expiresAt = activeSubscription?.expires_at;
+  const orderId = activeSubscription?.order_id || '—';
+  const status = activeSubscription?.status || 'active';
+
+  section.innerHTML = `
+    <div class="sub-card">
+      <div class="sub-row">
+        <span class="sub-label">현재 플랜</span>
+        <span class="sub-value gold">✦ Pro 멤버십</span>
+      </div>
+      <div class="sub-row">
+        <span class="sub-label">상태</span>
+        <span class="sub-value">${status === 'active' ? '정상 결제 중' : status === 'cancelled' ? '해지 예정' : status}</span>
+      </div>
+      <div class="sub-row">
+        <span class="sub-label">월 구독료</span>
+        <span class="sub-value">4,900원</span>
+      </div>
+      <div class="sub-row">
+        <span class="sub-label">가입일</span>
+        <span class="sub-value">${startDate ? formatDate(startDate) : '—'}</span>
+      </div>
+      <div class="sub-row">
+        <span class="sub-label">다음 결제일</span>
+        <span class="sub-value">${expiresAt ? formatDate(expiresAt) : '확인 중'}</span>
+      </div>
+      <div class="sub-row">
+        <span class="sub-label">주문번호</span>
+        <span class="sub-value" style="font-family:monospace;font-size:.78rem">${orderId}</span>
+      </div>
+      <div class="sub-actions">
+        <button class="btn btn-secondary" onclick="alert('영수증은 카드사 앱 또는 카카오페이 앱에서 확인하실 수 있습니다.')">영수증</button>
+        <button class="btn btn-danger" id="cancelSubBtn">구독 해지</button>
+      </div>
+    </div>
+    <p style="font-size:.75rem;color:var(--text-dim);margin-top:14px;line-height:1.6">
+      ※ 구독 해지 시 현재 결제 주기 만료일까지는 Pro 기능을 계속 이용하실 수 있습니다.<br>
+      ※ 영상과 분석 기록은 해지 후에도 30일간 보관됩니다. 재가입 시 그대로 복원됩니다.
+    </p>`;
+}
+
+// ─── 이벤트 바인딩 ───
+function bindEvents(){
+  // 로그아웃
+  document.getElementById('logoutLink').addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (!confirm('로그아웃 하시겠습니까?')) return;
+    await supabaseClient.auth.signOut();
+    // sb-* localStorage 정리
+    Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+    window.location.href = '/';
+  });
+
+  // 구독 해지 (동적으로 렌더되므로 위임)
+  document.addEventListener('click', async (e) => {
+    if (e.target.id === 'cancelSubBtn') {
+      await handleCancelSubscription();
+    }
+  });
+
+  // 메모 모달 이벤트
+  document.getElementById('memoCancel').addEventListener('click', closeMemoModal);
+  document.getElementById('memoModal').addEventListener('click', (e) => {
+    if (e.target.id === 'memoModal') closeMemoModal();
+  });
+  document.getElementById('memoSave').addEventListener('click', saveMemo);
+  document.getElementById('memoText').addEventListener('input', (e) => {
+    document.getElementById('memoCharCount').textContent = e.target.value.length;
+  });
+
+  // 키보드 단축키: Cmd/Ctrl+Enter 저장, Esc 닫기
+  document.getElementById('memoText').addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      saveMemo();
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('memoModal').classList.contains('show')) {
+      closeMemoModal();
+    }
+  });
+}
+
+// ─── 구독 해지 ───
+async function handleCancelSubscription(){
+  const confirmed = confirm(
+    '정말 구독을 해지하시겠습니까?\n\n' +
+    '· 현재 결제 주기 만료일까지는 Pro 기능 이용 가능\n' +
+    '· 만료 후 무료 회원으로 전환됩니다\n' +
+    '· 영상과 분석 기록은 30일간 보관 (재가입 시 복원)\n\n' +
+    '해지를 진행하시려면 [확인]을 눌러주세요.'
+  );
+  if (!confirmed) return;
+
+  const reason = prompt('해지 사유를 한 줄로 적어주시면 서비스 개선에 큰 도움이 됩니다. (선택사항)') || '';
+
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+      alert('로그인이 만료되었습니다. 다시 로그인해주세요.');
+      window.location.href = '/app.html';
+      return;
+    }
+
+    const response = await fetch(BACKEND_URL + '/api/subscription/cancel', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({ reason })
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(err || '해지 요청 실패');
+    }
+
+    alert(
+      '구독 해지가 접수되었습니다.\n\n' +
+      '현재 결제 주기 만료일까지는 Pro 기능을 계속 이용하실 수 있습니다.\n' +
+      '언제든 마이페이지에서 재가입하실 수 있어요.'
+    );
+    location.reload();
+  } catch (err) {
+    console.error('[해지 오류]', err);
+    alert(
+      '해지 요청 중 오류가 발생했습니다.\n\n' +
+      '잠시 후 다시 시도하시거나 myswingmatch@gmail.com 으로 문의해주세요.\n\n' +
+      '에러: ' + (err.message || err)
+    );
+  }
+}
+
+// ─── 영상 메모 모달 (Pro 전용) ───
+function openMemoModal(logId){
+  if (!isPro) {
+    alert('영상 메모는 Pro 회원 전용 기능이에요. Pro로 업그레이드 후 이용해주세요.');
+    window.location.href = '/subscribe.html';
+    return;
+  }
+
+  const log = allLogs.find(l => l.id === logId);
+  if (!log) return;
+
+  editingLogId = logId;
+  const existingMemo = (log.result_json && log.result_json.memo) || '';
+
+  document.getElementById('memoText').value = existingMemo;
+  document.getElementById('memoCharCount').textContent = existingMemo.length;
+  document.getElementById('memoModalSub').textContent =
+    `${log.pro_name || '분석'} · ${formatDate(log.created_at)} · 매칭률 ${log.match_pct || '-'}%`;
+  document.getElementById('memoModal').classList.add('show');
+
+  // 자동 포커스
+  setTimeout(() => document.getElementById('memoText').focus(), 100);
+}
+
+function closeMemoModal(){
+  document.getElementById('memoModal').classList.remove('show');
+  editingLogId = null;
+}
+
+async function saveMemo(){
+  if (!editingLogId) return;
+  const memoText = document.getElementById('memoText').value.trim();
+
+  const log = allLogs.find(l => l.id === editingLogId);
+  if (!log) return;
+
+  // result_json에 memo 필드 머지
+  const updatedResultJson = {
+    ...(log.result_json || {}),
+    memo: memoText,
+    memo_updated_at: new Date().toISOString()
+  };
+
+  try {
+    const { error } = await supabaseClient
+      .from('analysis_logs')
+      .update({ result_json: updatedResultJson })
+      .eq('id', editingLogId)
+      .eq('user_id', currentUser.id); // RLS 안전장치
+
+    if (error) throw error;
+
+    // 로컬 상태 업데이트
+    log.result_json = updatedResultJson;
+    closeMemoModal();
+    renderVideoGallery(); // 메모 표시 갱신
+
+    // 짧은 피드백
+    showToast(memoText ? '메모가 저장되었어요 ✓' : '메모가 삭제되었어요');
+  } catch (err) {
+    console.error('[메모 저장 오류]', err);
+    alert('메모 저장 중 오류가 발생했어요.\n\n' + (err.message || err));
+  }
+}
+
+// ─── 헬퍼 ───
+function formatDate(iso){
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const now = new Date();
+  const diffDays = Math.floor((now - d) / (1000*60*60*24));
+  if (diffDays === 0) return '오늘 ' + d.toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'});
+  if (diffDays === 1) return '어제';
+  if (diffDays < 7) return `${diffDays}일 전`;
+  return d.toLocaleDateString('ko-KR', {year:'numeric',month:'short',day:'numeric'});
+}
+
+function showToast(msg){
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+    background:var(--gold);color:#0d0d0d;padding:12px 24px;border-radius:24px;
+    font-size:.85rem;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,0.4);
+    z-index:1001;animation:fadeIn .2s
+  `;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2200);
+}
+
+// 인증 상태 변화 감지 (다른 탭에서 로그아웃 시)
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT') {
+    window.location.href = '/';
+  }
+});
+</script>
+
+</body>
+</html>
