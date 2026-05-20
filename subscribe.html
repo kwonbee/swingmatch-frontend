@@ -423,6 +423,22 @@
 <div class="container">
   <a href="/app.html" class="back-link">← 돌아가기</a>
 
+  <!-- 이미 Pro 구독 중일 때 보여줄 박스 (기본 숨김) -->
+  <div id="alreadyProBox" style="display:none; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:36px 24px; text-align:center; margin:32px auto; max-width:420px;">
+    <div style="font-size:1.6rem; margin-bottom:12px;">✨</div>
+    <div style="font-size:1rem; font-weight:500; color:var(--gold); margin-bottom:8px;">이미 Pro 회원이세요</div>
+    <div style="color:var(--text-dim); font-size:0.82rem; line-height:1.6;">
+      모든 프리미엄 기능을<br>자유롭게 이용 중입니다.
+    </div>
+    <div id="proExpiryInfo" style="color:var(--text-dim); font-size:0.75rem; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);"></div>
+    <div style="margin-top:22px;">
+      <a href="/app.html" style="display:inline-block; padding:11px 24px; background:var(--gold); color:#0d0d0d; border-radius:10px; text-decoration:none; font-weight:500; font-size:0.85rem;">스윙 분석하러 가기</a>
+    </div>
+  </div>
+
+  <!-- 일반 결제 화면 (Pro 회원이면 JS로 숨김) -->
+  <div id="subscribeContent">
+
   <div class="header">
     <div class="logo-svg-wrap"><svg width="180" height="78" viewBox="0 0 16557 7162" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
     <g transform="matrix(1,0,0,1,-6485.69,-3800.96)">
@@ -635,6 +651,7 @@
     <div class="info-line"><span class="label">연락처</span><span>010-2513-9241</span></div>
     <div class="info-line"><span class="label">결제대행</span><span>포트원 · KG이니시스 · 카카오페이</span></div>
   </div>
+  </div><!-- /#subscribeContent -->
 
   <footer>
     <p>
@@ -695,7 +712,20 @@ submitBtn.addEventListener('click', async () => {
     return;
   }
 
-  // 2) 로그인 상태면 바로 결제 진행
+  // 2) 이미 Pro 회원인지 체크 (안전장치)
+  try {
+    const { data: isPro } = await supabaseClient.rpc('is_pro_user');
+    if (isPro) {
+      alert('이미 Pro 회원이세요! ✨\n\n모든 프리미엄 기능을 이용 중입니다.');
+      // 결제 화면 숨기고 안내 박스로 전환
+      checkProStatus();
+      return;
+    }
+  } catch (e) {
+    console.error('Pro 체크 실패:', e);
+  }
+
+  // 3) 결제 진행
   proceedToPayment();
 });
 
@@ -716,6 +746,49 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 window.supabaseClient = supabaseClient;
+
+// 페이지 로드 시 Pro 구독자인지 체크
+async function checkProStatus() {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) return; // 비회원은 그대로 결제 화면
+
+  try {
+    // 활성 구독 정보 가져오기
+    const { data: subData, error } = await supabaseClient.rpc('my_active_subscription');
+
+    if (error) {
+      console.error('Pro 체크 에러:', error);
+      return;
+    }
+
+    if (subData) {
+      // Pro 구독자 → 결제 화면 숨기고 안내 박스 표시
+      document.getElementById('subscribeContent').style.display = 'none';
+      document.getElementById('alreadyProBox').style.display = 'block';
+
+      // 만료일 정보 표시
+      if (subData.current_period_end) {
+        const endDate = new Date(subData.current_period_end);
+        const formatted = endDate.toLocaleDateString('ko-KR', {
+          year: 'numeric', month: 'long', day: 'numeric'
+        });
+        document.getElementById('proExpiryInfo').textContent = '다음 결제일: ' + formatted;
+      }
+    }
+  } catch (e) {
+    console.error('Pro 체크 실패:', e);
+  }
+}
+
+// 페이지 로드 후 체크 실행
+checkProStatus();
+
+// OAuth 로그인 후 세션 변경 감지 → Pro 재체크
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session) {
+    checkProStatus();
+  }
+});
 </script>
 
 <!-- 로그인 모달 -->
@@ -748,6 +821,18 @@ window.supabaseClient = supabaseClient;
       <div class="auth-title" id="emailFormTitle">이메일로 가입</div>
       <div class="auth-subtitle" id="emailFormSubtitle">간편하게 시작하세요</div>
 
+      <!-- Google 로그인 (이메일 폼에서도 노출) -->
+      <button class="auth-btn auth-btn-google" onclick="loginWithGoogle()" style="margin-bottom:14px;">
+        <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Google로 계속하기
+      </button>
+
+      <div style="display:flex; align-items:center; gap:10px; margin:14px 0; color:var(--text-dim); font-size:0.8rem;">
+        <div style="flex:1; height:1px; background:var(--border);"></div>
+        <span>또는 이메일로</span>
+        <div style="flex:1; height:1px; background:var(--border);"></div>
+      </div>
+
       <input type="email" id="authEmail" class="auth-input" placeholder="이메일 주소" autocomplete="email">
       <input type="password" id="authPassword" class="auth-input" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">
 
@@ -760,6 +845,22 @@ window.supabaseClient = supabaseClient;
       <div class="auth-footer" id="emailFormFooter">
         이미 계정이 있나요? <a href="#" onclick="event.preventDefault(); toggleEmailMode()">로그인</a>
       </div>
+    </div>
+
+    <!-- 비밀번호 재설정 폼 -->
+    <div id="authResetForm" class="auth-form">
+      <button class="auth-back" onclick="showEmailForm('login')">← 뒤로</button>
+      <div class="auth-title">비밀번호 재설정</div>
+      <div class="auth-subtitle">가입하신 이메일로 재설정 링크를 보내드려요</div>
+
+      <input type="email" id="resetEmail" class="auth-input" placeholder="이메일 주소" autocomplete="email">
+
+      <button class="auth-btn auth-btn-email" onclick="submitReset()" style="background:var(--gold); color:#0d0d0d; border-color:var(--gold);">
+        재설정 링크 보내기
+      </button>
+
+      <div class="auth-error" id="resetError"></div>
+      <div id="resetSuccess" style="display:none; font-size:0.85rem; color:#10b981; margin-top:10px; padding:12px; background:rgba(16,185,129,0.1); border-radius:8px; line-height:1.5;"></div>
     </div>
 
   </div>
@@ -783,6 +884,7 @@ function closeAuthModal() {
 function showMain() {
   document.getElementById('authMain').style.display = 'block';
   document.getElementById('authEmailForm').classList.remove('show');
+  document.getElementById('authResetForm').classList.remove('show');
 }
 
 function showEmailForm(mode) {
@@ -791,7 +893,48 @@ function showEmailForm(mode) {
   updateEmailFormUI();
   document.getElementById('authMain').style.display = 'none';
   document.getElementById('authEmailForm').classList.add('show');
+  document.getElementById('authResetForm').classList.remove('show');
   document.getElementById('authError').textContent = '';
+}
+
+// 비밀번호 재설정 화면 표시
+function showResetForm() {
+  document.getElementById('authMain').style.display = 'none';
+  document.getElementById('authEmailForm').classList.remove('show');
+  document.getElementById('authResetForm').classList.add('show');
+  document.getElementById('resetError').textContent = '';
+  document.getElementById('resetSuccess').style.display = 'none';
+
+  // 로그인 화면에서 입력한 이메일이 있다면 복사
+  const loginEmail = document.getElementById('authEmail').value.trim();
+  if (loginEmail) document.getElementById('resetEmail').value = loginEmail;
+}
+
+// 비밀번호 재설정 메일 발송
+async function submitReset() {
+  const email = document.getElementById('resetEmail').value.trim();
+  const errorEl = document.getElementById('resetError');
+  const successEl = document.getElementById('resetSuccess');
+  errorEl.textContent = '';
+  successEl.style.display = 'none';
+
+  if (!email) {
+    errorEl.textContent = '이메일을 입력해주세요';
+    return;
+  }
+
+  try {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/reset-password.html'
+    });
+    if (error) throw error;
+
+    successEl.innerHTML = '✉️ 재설정 링크를 이메일로 보냈어요.<br>받은편지함을 확인해주세요.<br>(스팸함도 확인해보세요)';
+    successEl.style.display = 'block';
+    document.getElementById('resetEmail').value = '';
+  } catch (e) {
+    errorEl.textContent = e.message || '재설정 메일 발송 실패';
+  }
 }
 
 function toggleEmailMode() {
@@ -809,7 +952,7 @@ function updateEmailFormUI() {
     document.getElementById('emailFormTitle').textContent = '로그인';
     document.getElementById('emailFormSubtitle').textContent = '계속 진행하려면 로그인하세요';
     document.getElementById('emailSubmitBtn').textContent = '로그인하고 계속';
-    document.getElementById('emailFormFooter').innerHTML = '계정이 없나요? <a href="#" onclick="event.preventDefault(); toggleEmailMode()">가입하기</a>';
+    document.getElementById('emailFormFooter').innerHTML = '<a href="#" onclick="event.preventDefault(); showResetForm()" style="display:block; margin-bottom:10px;">비밀번호를 잊으셨나요?</a>계정이 없나요? <a href="#" onclick="event.preventDefault(); toggleEmailMode()">가입하기</a>';
   }
 }
 
