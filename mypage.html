@@ -233,7 +233,19 @@
     justify-content:center;
     color:var(--gold-dim);
     font-size:2rem;
-    position:relative
+    position:relative;
+    overflow:hidden
+  }
+  .video-thumb::before{
+    content:'🏌️';
+    position:absolute;
+    z-index:0;
+    font-size:2rem
+  }
+  .video-thumb video{
+    position:relative;
+    z-index:1;
+    background:#0d0d0d
   }
   .video-thumb.has-memo::after{
     content:'✎';
@@ -318,7 +330,19 @@
     justify-content:center;
     color:var(--gold-dim);
     font-size:1.5rem;
-    position:relative
+    position:relative;
+    overflow:hidden
+  }
+  .video-thumb-mini::before{
+    content:'🏌️';
+    position:absolute;
+    z-index:0;
+    font-size:1.5rem
+  }
+  .video-thumb-mini video{
+    position:relative;
+    z-index:1;
+    background:#0d0d0d
   }
   .video-thumb-mini.has-favorite{
     background:linear-gradient(135deg,rgba(255,90,120,0.12),rgba(40,40,40,0.95))
@@ -1084,8 +1108,11 @@ function renderVideoGallery(){
         const hasMemo = memo.trim().length > 0;
         const memoPreview = hasMemo ? escapeHtml(memo.replace(/\n/g, ' ').slice(0, 60)) : '';
         return `
-          <div class="video-card" data-id="${l.id}">
-            <div class="video-thumb has-favorite${hasMemo ? ' has-memo' : ''}">🏌️<span class="fav-icon">❤️</span></div>
+          <div class="video-card" data-id="${l.id}" data-video-path="${escapeHtml(l.video_path)}">
+            <div class="video-thumb has-favorite${hasMemo ? ' has-memo' : ''}">
+              <video muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block"></video>
+              <span class="fav-icon">❤️</span>
+            </div>
             <div class="video-info">
               <div class="video-pro">${escapeHtml(l.pro_name || '분석 결과')}</div>
               <div class="video-date">${formatDate(l.created_at)} · ${l.match_pct || '-'}%</div>
@@ -1101,9 +1128,12 @@ function renderVideoGallery(){
       위쪽 <strong style="color:var(--gold-dim)">"영상 저장" 카드</strong>를 탭하면 모두 보실 수 있어요.
     </p>`;
 
-  // 영상 카드 클릭 이벤트
+  // 영상 카드 클릭 이벤트 + 썸네일 비동기 로드
   section.querySelectorAll('.video-card').forEach(card => {
     card.addEventListener('click', () => openMemoModal(card.dataset.id));
+    const thumbEl = card.querySelector('.video-thumb');
+    const videoPath = card.dataset.videoPath;
+    if (videoPath && thumbEl) loadVideoThumb(thumbEl, videoPath);
   });
 }
 
@@ -1130,9 +1160,9 @@ function openAllVideosModal(){
     const hasMemo = memo.trim().length > 0;
     const isFav = l.is_favorite;
     return `
-      <div class="video-card-mini" data-id="${l.id}">
+      <div class="video-card-mini" data-id="${l.id}" data-video-path="${escapeHtml(l.video_path)}">
         <div class="video-thumb-mini${isFav ? ' has-favorite' : ''}${hasMemo ? ' has-memo' : ''}">
-          🏌️
+          <video muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block"></video>
           ${isFav ? '<span class="fav-icon-mini">❤️</span>' : ''}
           ${hasMemo ? '<span class="memo-icon-mini">✎</span>' : ''}
         </div>
@@ -1143,19 +1173,27 @@ function openAllVideosModal(){
       </div>`;
   }).join('');
 
-  // 미니 카드 클릭 → 메모 모달 (Pro 회원이라 가능)
+  // 미니 카드 클릭 → 메모 모달 + 썸네일 비동기 로드
   grid.querySelectorAll('.video-card-mini').forEach(card => {
     card.addEventListener('click', () => {
       closeAllVideosModal();
       setTimeout(() => openMemoModal(card.dataset.id), 100);
     });
+    const thumbEl = card.querySelector('.video-thumb-mini');
+    const videoPath = card.dataset.videoPath;
+    if (videoPath && thumbEl) loadVideoThumb(thumbEl, videoPath);
   });
 
   modal.classList.add('show');
 }
 
 function closeAllVideosModal(){
-  document.getElementById('allVideosModal').classList.remove('show');
+  const modal = document.getElementById('allVideosModal');
+  // 메모리 절약: 모든 video src 정리
+  modal.querySelectorAll('video').forEach(v => {
+    try { v.pause(); v.removeAttribute('src'); v.load(); } catch(e){}
+  });
+  modal.classList.remove('show');
 }
 
 // XSS 방지용 간단 HTML 이스케이프
@@ -1167,6 +1205,37 @@ function escapeHtml(str){
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// ─── 영상 signed URL 생성 (Supabase Storage) ───
+// app.html과 동일한 방식. 7일짜리 signed URL 캐싱하지 않고 매번 생성 (단순함 우선)
+const videoUrlCache = new Map(); // 페이지 세션 내 메모리 캐시
+
+async function refreshVideoUrl(videoPath){
+  if (!videoPath) return null;
+  if (videoUrlCache.has(videoPath)) return videoUrlCache.get(videoPath);
+  try {
+    const { data, error } = await supabaseClient.storage
+      .from('swing-videos')
+      .createSignedUrl(videoPath, 60 * 60 * 24 * 7); // 7일
+    if (error || !data) return null;
+    videoUrlCache.set(videoPath, data.signedUrl);
+    return data.signedUrl;
+  } catch (e) {
+    console.error('[video URL]', e);
+    return null;
+  }
+}
+
+// 비동기로 video 엘리먼트의 src를 채우고 첫 프레임 표시
+async function loadVideoThumb(thumbEl, videoPath){
+  const url = await refreshVideoUrl(videoPath);
+  if (!url) return;
+  const video = thumbEl.querySelector('video');
+  if (video) {
+    video.src = url;
+    video.load();
+  }
 }
 
 // ─── 히스토리 ───
@@ -1231,7 +1300,7 @@ function renderSubscription(){
         </div>
         <div class="sub-row">
           <span class="sub-label">일일 분석 한도</span>
-          <span class="sub-value">3회</span>
+          <span class="sub-value">5회</span>
         </div>
         <div class="sub-row">
           <span class="sub-label">영상 저장</span>
