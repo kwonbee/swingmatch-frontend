@@ -160,7 +160,12 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .mbadge{margin-left:auto;text-align:right}
 .mpct{font-family:'Noto Serif KR',serif;font-weight:200;font-size:1.9rem;color:var(--gold);line-height:1}
 .mlbl{font-size:.65rem;color:var(--muted);letter-spacing:.06em}
-.rdesc{font-size:.83rem;color:var(--muted);line-height:1.75;margin-bottom:18px}
+.rdesc{font-size:.92rem;color:var(--muted);line-height:1.6;margin-bottom:18px}
+.rstats{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:16px}
+.rstat{display:flex;align-items:center;gap:8px}
+.rstat .rslbl{font-size:.74rem;color:var(--muted);letter-spacing:.04em}
+.rstat .rsval{font-size:.95rem;color:var(--gold);letter-spacing:.08em;line-height:1}
+.rstat .rsval .off{color:var(--border)}
 .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
 .tag{border:1px solid var(--border);color:var(--gold);font-size:.68rem;letter-spacing:.06em;padding:3px 8px;border-radius:1px}
 .rgrid{display:grid;grid-template-columns:1fr;gap:10px}
@@ -664,6 +669,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
           <div class="mbadge"><div class="mpct" id="r-pct">—</div><div class="mlbl">매칭률</div></div>
         </div>
         <p class="rdesc" id="r-desc"></p>
+        <div class="rstats" id="r-stats"></div>
         <div class="tags" id="r-tags"></div>
         <div class="rgrid">
           <div class="rblock"><h4>스윙 강점</h4><ul id="r-str"></ul></div>
@@ -2194,6 +2200,22 @@ function renderResult(d, videoInfo) {
   document.getElementById('r-tour').textContent = t.tour + ' · ' + t.nationality;
   document.getElementById('r-pct').textContent = t.matchPct + '%';
   document.getElementById('r-desc').textContent = t.swingDesc;
+  // 정확도 · 파워 별표 표시 (백엔드가 보내는 ⭐ 문자열에서 개수 추출)
+  const rstats = document.getElementById('r-stats');
+  if (rstats) {
+    const starRow = (val) => {
+      const n = Math.max(0, Math.min(5, (String(val||'').match(/⭐/g)||[]).length || 0));
+      let s = '';
+      for (let i = 0; i < 5; i++) s += (i < n) ? '★' : '<span class="off">★</span>';
+      return s;
+    };
+    let html = '';
+    if (t.accuracy) html += `<div class="rstat"><span class="rslbl">정확도</span><span class="rsval">${starRow(t.accuracy)}</span></div>`;
+    if (t.power) html += `<div class="rstat"><span class="rslbl">파워</span><span class="rsval">${starRow(t.power)}</span></div>`;
+    if (t.tempo) html += `<div class="rstat"><span class="rslbl">템포</span><span class="rsval" style="font-size:.82rem">${t.tempo}</span></div>`;
+    rstats.innerHTML = html;
+    rstats.style.display = html ? 'flex' : 'none';
+  }
   const tg = document.getElementById('r-tags'); tg.innerHTML = '';
   (t.keywords||[]).forEach(k => { const s = document.createElement('span'); s.className = 'tag'; s.textContent = k; tg.appendChild(s); });
   const sl = document.getElementById('r-str'); sl.innerHTML = '';
