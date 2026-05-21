@@ -158,6 +158,10 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .ren{font-size:.7rem;color:var(--muted);letter-spacing:.06em}
 .rtour{font-size:.68rem;color:var(--muted);margin-top:2px}
 .mbadge{margin-left:auto;text-align:right}
+.rkeyfeat{flex:1;display:none;text-align:center;padding:0 12px;min-width:0}
+.rkeyfeat .rkflbl{font-size:.58rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
+.rkeyfeat .rkfval{font-family:'Noto Serif KR',serif;font-weight:300;font-size:1.18rem;color:var(--gold);line-height:1.25}
+@media(max-width:560px){.rkeyfeat{display:none!important}}
 .mpct{font-family:'Noto Serif KR',serif;font-weight:200;font-size:1.9rem;color:var(--gold);line-height:1}
 .mlbl{font-size:.65rem;color:var(--muted);letter-spacing:.06em}
 .rdesc{font-size:.92rem;color:var(--muted);line-height:1.6;margin-bottom:18px}
@@ -170,8 +174,8 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .tag{border:1px solid var(--border);color:var(--gold);font-size:.68rem;letter-spacing:.06em;padding:3px 8px;border-radius:1px}
 .rgrid{display:grid;grid-template-columns:1fr;gap:10px}
 .rblock h4{font-size:.66rem;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:7px}
-.rblock ul{list-style:none;display:flex;flex-direction:column;gap:5px}
-.rblock li{font-size:.76rem;color:var(--text);padding-left:10px;position:relative;line-height:1.5}
+.rblock ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+.rblock li{font-size:.85rem;color:var(--text);padding-left:10px;position:relative;line-height:1.65}
 .rblock li::before{content:'—';position:absolute;left:0;color:var(--gold);font-size:.66rem}
 .fg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .fi{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:2px;padding:12px}
@@ -666,6 +670,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
         <div class="rhead">
           <div class="remoji" id="r-emoji">🏌️</div>
           <div><div class="rname" id="r-name">—</div><div class="ren" id="r-en">—</div><div class="rtour" id="r-tour">—</div></div>
+          <div class="rkeyfeat" id="r-keyfeat"><div class="rkflbl">핵심 스윙 특징</div><div class="rkfval" id="r-keyfeat-val"></div></div>
           <div class="mbadge"><div class="mpct" id="r-pct">—</div><div class="mlbl">매칭률</div></div>
         </div>
         <p class="rdesc" id="r-desc"></p>
@@ -2198,6 +2203,18 @@ function renderResult(d, videoInfo) {
   document.getElementById('r-name').textContent = t.name;
   document.getElementById('r-en').textContent = t.nameEn;
   document.getElementById('r-tour').textContent = t.tour + ' · ' + t.nationality;
+  // 핵심 스윙 특징 (대표 키워드 1개를 매칭률 옆에 강조)
+  const keyfeat = document.getElementById('r-keyfeat');
+  const keyfeatVal = document.getElementById('r-keyfeat-val');
+  if (keyfeat && keyfeatVal) {
+    const topKeyword = (t.keywords && t.keywords.length) ? t.keywords[0] : '';
+    if (topKeyword) {
+      keyfeatVal.textContent = topKeyword;
+      keyfeat.style.display = 'block';
+    } else {
+      keyfeat.style.display = 'none';
+    }
+  }
   document.getElementById('r-pct').textContent = t.matchPct + '%';
   document.getElementById('r-desc').textContent = t.swingDesc;
   // 정확도 · 파워 별표 표시 (백엔드가 보내는 ⭐ 문자열에서 개수 추출)
