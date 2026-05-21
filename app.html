@@ -1943,12 +1943,16 @@ async function updateCountDisplay() {
 
 // ── 분석 시작 ──
 async function startAnalysis() {
-  if (!file) return;
+  console.log('[진단] ① startAnalysis 진입. file =', file);
+  if (!file) { console.log('[진단] ✗ file 없음 → 중단'); return; }
   
   // 일일 분석 횟수 체크 (Pro 무제한 / 회원 5회 / 비회원 3회)
+  console.log('[진단] ② checkDailyLimit 호출 직전');
   const allowed = await checkDailyLimit();
-  if (!allowed) return;
+  console.log('[진단] ③ checkDailyLimit 결과 =', allowed);
+  if (!allowed) { console.log('[진단] ✗ 횟수 제한 → 중단'); return; }
   
+  console.log('[진단] ④ 통과! 분석 시작 (fetch 직전까지 진행)');
   document.getElementById('abtn').disabled = true;
   const pg = document.getElementById('prog'); pg.classList.add('on');
   const progSteps = [
