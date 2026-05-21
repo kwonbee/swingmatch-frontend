@@ -201,6 +201,39 @@
     font-size:1.3rem;
     margin-right:10px
   }
+  /* 결제 유형(단건/정기) 선택 - payment-method 스타일 재사용 + 설명 추가 */
+  .plan-type{
+    align-items:flex-start;
+    padding:16px
+  }
+  .plan-type .plan-type-body{
+    flex:1
+  }
+  .plan-type .plan-type-title{
+    font-weight:600;
+    color:#fff;
+    font-size:.95rem;
+    display:flex;
+    align-items:center;
+    gap:8px
+  }
+  .plan-type .plan-type-desc{
+    margin-top:4px;
+    font-size:.8rem;
+    color:rgba(229,229,229,0.55);
+    line-height:1.5
+  }
+  .plan-badge{
+    display:inline-block;
+    font-size:.68rem;
+    font-weight:600;
+    color:var(--gold);
+    background:rgba(200,169,110,0.14);
+    border:1px solid var(--gold-dim);
+    border-radius:6px;
+    padding:1px 7px;
+    vertical-align:middle
+  }
   .refund-box{
     background:rgba(200,169,110,0.06);
     border:1px solid var(--border-strong);
@@ -446,9 +479,9 @@
     <div class="product-name">MySwingMatch Pro</div>
     <div class="product-tagline">프로처럼 스윙하세요</div>
     <div class="price-display">
-      <span class="currency">₩</span>4,900<span class="period">/ 월</span>
+      <span class="currency">₩</span>4,900<span class="period" id="heroPeriod">/ 월</span>
     </div>
-    <div class="vat-info">VAT 포함 · 매월 자동결제</div>
+    <div class="vat-info" id="heroVatInfo">VAT 포함 · 매월 자동결제</div>
   </div>
 
   <div class="card">
@@ -475,7 +508,7 @@
       <li class="feature-item">
         <span class="feature-icon">◆</span>
         <div class="feature-text">
-          <strong>영구 히스토리 보관</strong> <span>— 모든 분석 기록 유지</span>
+          <strong>분석 히스토리 보관</strong> <span>— 구독 기간 내 모든 분석 기록 유지</span>
         </div>
       </li>
       <li class="feature-item">
@@ -485,6 +518,26 @@
         </div>
       </li>
     </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-title">결제 유형 선택</div>
+    <label class="payment-method plan-type selected">
+      <input type="radio" name="planType" value="subscription" checked>
+      <span class="payment-method-icon">🔄</span>
+      <span class="plan-type-body">
+        <span class="plan-type-title">정기결제 <span class="plan-badge">추천</span></span>
+        <span class="plan-type-desc">월 4,900원 · 매월 자동결제로 끊김 없이 이용. 언제든 해지 가능.</span>
+      </span>
+    </label>
+    <label class="payment-method plan-type">
+      <input type="radio" name="planType" value="onetime">
+      <span class="payment-method-icon">1️⃣</span>
+      <span class="plan-type-body">
+        <span class="plan-type-title">단건결제 (1개월 이용권)</span>
+        <span class="plan-type-desc">4,900원 1회 결제 · 자동연장 없음. 30일 후 자동으로 무료 전환.</span>
+      </span>
+    </label>
   </div>
 
   <div class="card">
@@ -499,7 +552,7 @@
     </div>
     <div class="info-row">
       <span class="info-label">결제 주기</span>
-      <span class="info-value">매월 자동결제 (30일)</span>
+      <span class="info-value" id="infoCycle">매월 자동결제 (30일)</span>
     </div>
     <div class="info-row">
       <span class="info-label">서비스 시작</span>
@@ -531,6 +584,7 @@
       <p><strong>◆ 7일 이내 미사용 시 100% 환불</strong> — Pro 기능을 1회도 사용하지 않은 경우</p>
       <p><strong>◆ 회사 귀책사유</strong> — 서비스 장애, 결제 오류 시 100% 환불 또는 잔여 일수 일할 계산</p>
       <p><strong>◆ 정기결제 해지</strong> — <a href="/mypage.html" style="color:var(--gold)">My Diary</a>에서 언제든 가능. 현재 결제 주기는 만료일까지 이용 가능</p>
+      <p><strong>◆ 데이터 보관</strong> — 구독 만료(또는 단건 이용 종료) 후 저장된 영상·분석 히스토리는 90일간 보관됩니다. 이 기간 내 재구독 시 그대로 복구되며, 90일이 지나면 자동 삭제됩니다.</p>
       <p style="margin-top:12px;color:rgba(229,229,229,0.5);font-size:.8rem">자세한 환불 정책은 <a href="/terms.html" style="color:var(--gold)">이용약관 제7조</a>를 참고해주세요.</p>
     </div>
   </div>
@@ -562,7 +616,7 @@
           <span class="required">[필수]</span> <a href="/privacy.html" target="_blank">개인정보처리방침</a>에 동의합니다
         </label>
       </div>
-      <div class="term-item">
+      <div class="term-item" id="term4Wrap">
         <input type="checkbox" id="term4" class="term-required">
         <label for="term4" class="term-label">
           <span class="required">[필수]</span> 정기결제(매월 자동결제)에 동의합니다
@@ -608,13 +662,33 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ─── 약관 동의 체크박스 로직 ───
-const requiredTerms = document.querySelectorAll('.term-required');
 const agreeAll = document.getElementById('agreeAll');
 const submitBtn = document.getElementById('submitBtn');
-const paymentMethods = document.querySelectorAll('.payment-method input[type="radio"]');
+// 결제수단(카드/카카오페이) 라디오만 선택 — 결제유형(planType) 라디오와 구분
+const paymentMethods = document.querySelectorAll('input[name="payment"]');
+// 결제유형(단건/정기) 라디오
+const planTypes = document.querySelectorAll('input[name="planType"]');
+const term4Wrap = document.getElementById('term4Wrap');
+const term4 = document.getElementById('term4');
+
+// 현재 선택된 결제 유형 반환 ('subscription' | 'onetime')
+function getPlanType() {
+  const checked = document.querySelector('input[name="planType"]:checked');
+  return checked ? checked.value : 'subscription';
+}
+
+// 현재 유효한 필수 약관 목록 반환
+// (단건결제일 때는 '정기결제 동의'(term4)를 제외)
+function getActiveRequiredTerms() {
+  const all = Array.from(document.querySelectorAll('.term-required'));
+  if (getPlanType() === 'onetime') {
+    return all.filter(cb => cb.id !== 'term4');
+  }
+  return all;
+}
 
 function updateSubmitButton() {
-  const allChecked = Array.from(requiredTerms).every(cb => cb.checked);
+  const allChecked = getActiveRequiredTerms().every(cb => cb.checked);
   if (allChecked) {
     submitBtn.disabled = false;
     submitBtn.textContent = '결제하기';
@@ -625,20 +699,62 @@ function updateSubmitButton() {
 }
 
 agreeAll.addEventListener('change', (e) => {
-  requiredTerms.forEach(cb => cb.checked = e.target.checked);
+  // 전체동의는 화면에 보이는(유효한) 필수 약관만 체크
+  getActiveRequiredTerms().forEach(cb => cb.checked = e.target.checked);
   updateSubmitButton();
 });
 
-requiredTerms.forEach(cb => {
+document.querySelectorAll('.term-required').forEach(cb => {
   cb.addEventListener('change', () => {
-    agreeAll.checked = Array.from(requiredTerms).every(c => c.checked);
+    agreeAll.checked = getActiveRequiredTerms().every(c => c.checked);
     updateSubmitButton();
   });
 });
 
+// ─── 결제 유형(단건/정기) 선택 시 화면 전환 ───
+function applyPlanTypeUI() {
+  const type = getPlanType();
+  const heroPeriod  = document.getElementById('heroPeriod');
+  const heroVatInfo = document.getElementById('heroVatInfo');
+  const infoCycle   = document.getElementById('infoCycle');
+
+  // 선택된 카드에 .selected 표시
+  document.querySelectorAll('.plan-type').forEach(pm => {
+    const radio = pm.querySelector('input[name="planType"]');
+    pm.classList.toggle('selected', radio && radio.checked);
+  });
+
+  if (type === 'onetime') {
+    // 단건결제: 자동연장 없음
+    if (heroPeriod)  heroPeriod.textContent  = '/ 1개월';
+    if (heroVatInfo) heroVatInfo.textContent = 'VAT 포함 · 1회 결제 (자동연장 없음)';
+    if (infoCycle)   infoCycle.textContent   = '1회 결제 · 30일 이용 (자동연장 없음)';
+    // 정기결제 동의 약관 숨김 + 체크 해제
+    if (term4Wrap) term4Wrap.style.display = 'none';
+    if (term4) term4.checked = false;
+  } else {
+    // 정기결제: 매월 자동결제
+    if (heroPeriod)  heroPeriod.textContent  = '/ 월';
+    if (heroVatInfo) heroVatInfo.textContent = 'VAT 포함 · 매월 자동결제';
+    if (infoCycle)   infoCycle.textContent   = '매월 자동결제 (30일)';
+    // 정기결제 동의 약관 다시 표시
+    if (term4Wrap) term4Wrap.style.display = '';
+  }
+  // 약관 변동 반영 + 전체동의 체크 상태 재계산
+  agreeAll.checked = getActiveRequiredTerms().every(c => c.checked);
+  updateSubmitButton();
+}
+
+planTypes.forEach(radio => {
+  radio.addEventListener('change', applyPlanTypeUI);
+});
+// 페이지 로드 시 초기 상태 반영 (기본: 정기결제)
+applyPlanTypeUI();
+
 paymentMethods.forEach(radio => {
   radio.addEventListener('change', () => {
-    document.querySelectorAll('.payment-method').forEach(pm => pm.classList.remove('selected'));
+    // 결제수단 카드만 selected 토글 (plan-type 카드는 건드리지 않음)
+    document.querySelectorAll('.payment-method:not(.plan-type)').forEach(pm => pm.classList.remove('selected'));
     radio.closest('.payment-method').classList.add('selected');
   });
 });
@@ -705,6 +821,12 @@ async function proceedToPayment() {
   const selectedPayment = document.querySelector('input[name="payment"]:checked').value;
   const payMethod = selectedPayment === 'kakaopay' ? 'EASY_PAY' : 'CARD';
 
+  // 2-1) 선택된 결제 유형 (단건/정기)
+  const planType = getPlanType(); // 'subscription' | 'onetime'
+  const orderName = planType === 'onetime'
+    ? 'MySwingMatch Pro 1개월 이용권 (단건 4,900원)'
+    : 'MySwingMatch Pro 멤버십 (월 정기 4,900원)';
+
   // 3) 주문 ID — 매 결제마다 고유해야 함
   //    KG이니시스는 oid 길이를 1~40자로 제한.
   //    UUID 32자(하이픈 제거) + 'p-' 접두사 2자 = 34자 (안전)
@@ -717,11 +839,13 @@ async function proceedToPayment() {
   //    KG이니시스 V2는 customer.phoneNumber, customer.fullName이 필수.
   //    현재 회원가입 시 휴대폰 번호를 받지 않으므로 더미 값으로 채움.
   //    TODO(귀국 후): 회원가입 시 휴대폰 번호 수집 → 여기서 user.phone 사용
+  //    TODO(귀국 후): 정기결제(subscription)는 빌링키 발급(issueBillingKey) 방식으로 전환 필요.
+  //                  현재는 카드사 심사용으로 단건/정기 모두 단건 결제창을 띄움.
   const paymentRequest = {
     storeId: PORTONE_STORE_ID,
     channelKey: PORTONE_CHANNEL_KEY,
     paymentId: paymentId,
-    orderName: 'MySwingMatch Pro 멤버십 (월 4,900원)',
+    orderName: orderName,
     totalAmount: 4900,
     currency: 'CURRENCY_KRW',
     payMethod: payMethod,
@@ -761,6 +885,7 @@ async function proceedToPayment() {
     alert(
       '✅ 결제가 완료되었습니다!\n\n' +
       '주문번호: ' + paymentId + '\n' +
+      '결제유형: ' + (planType === 'onetime' ? '단건결제 (1개월 이용권)' : '정기결제 (매월 자동결제)') + '\n' +
       '결제수단: ' + (selectedPayment === 'kakaopay' ? '카카오페이' : '신용/체크카드') + '\n' +
       '금액: 4,900원\n\n' +
       '※ 현재 테스트 환경이므로 실제 결제는 이루어지지 않았습니다.\n' +
