@@ -2240,7 +2240,14 @@ function renderResult(d, videoInfo) {
   const im = document.getElementById('r-imp'); im.innerHTML = '';
   (t.improvements||[]).forEach(s => { const li = document.createElement('li'); li.textContent = s; im.appendChild(li); });
   const fr = document.getElementById('r-frames'); fr.innerHTML = '';
-  (d.frameAnalysis||[]).forEach((f, i) => {
+  // 화면엔 핵심 4자세만 노출 (AI는 8프레임 전부 분석하나, 중복·오해 방지 위해 표시는 4개). 매칭 실패 시 앞 4개로 폴백.
+  const KEY_PHASES = ['어드레스','테이크어웨이','임팩트','피니시'];
+  const allFrames = d.frameAnalysis || [];
+  let shownFrames = KEY_PHASES
+    .map(name => { const idx = allFrames.findIndex(f => f && f.phase === name); return idx >= 0 ? { f: allFrames[idx], i: idx } : null; })
+    .filter(Boolean);
+  if (shownFrames.length < 4) shownFrames = allFrames.slice(0, 4).map((f, i) => ({ f, i }));
+  shownFrames.forEach(({ f, i }) => {
     const imgHtml = (extractedFrames && extractedFrames[i])
       ? `<img src="${extractedFrames[i].dataUrl}" style="width:100%;border-radius:2px;margin-bottom:6px;aspect-ratio:16/9;object-fit:cover">`
       : '';
