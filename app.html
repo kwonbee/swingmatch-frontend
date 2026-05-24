@@ -871,10 +871,21 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 </div>
 
 <script>
-// ── Supabase 초기화 (어제 검증된 방식) ──
+// ── Supabase 초기화 ──
 const SUPABASE_URL = 'https://vldcmanngfexfwvvnqbb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsZGNtYW5uZ2ZleGZ3dnZucWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4ODY0MTcsImV4cCI6MjA5NDQ2MjQxN30.3K_jL1HVdOKMEoSSsmacJGNVDkf6iFa2PU7XuEFuUBY';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// auth.lock을 no-op으로 오버라이드:
+// 기본값인 Navigator LockManager 락이 풀리지 않으면 getSession()을 포함한
+// 모든 sb 호출이 영원히 pending → 광고/분석/카운트 전부 먹통 (자동 로그인 재방문 시 재현).
+// 단일 탭 SPA에서는 이 락이 불필요하므로 그냥 콜백을 바로 실행하게 해 데드락을 차단한다.
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    lock: async (_name, _acquireTimeout, fn) => await fn()
+  }
+});
 
 const BACKEND = 'https://swingmatch-backend-production.up.railway.app';
 let extractedFrames = [];
