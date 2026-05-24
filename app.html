@@ -957,15 +957,44 @@ let charts = {};
 let currentHistClub = 'all';
 let currentGraphClub = 'all';
 
+// ────────────────────────────────────
+// 🔑 로그인 상태 확정 직후 "모든 것"을 한 곳에서 재로드하는 단일 함수
+//    (Pro 캐시 / 광고 / 카운트 / 히스토리 — 초기화 순서 통일)
+//    checkSession() 과 onAuthStateChange() 양쪽에서 이 함수만 호출한다.
+//    중복 실행은 _authStateApplying 플래그로 방지.
+// ────────────────────────────────────
+let _authStateApplying = false;
+async function applyAuthedState(user) {
+  if (_authStateApplying) return;
+  _authStateApplying = true;
+  try {
+    currentUser = user || null;
+    initAuth();                 // 1) 헤더/메뉴 즉시 갱신 (await 불필요)
+    await refreshProStatus();    // 2) Pro 상태를 DB에서 확정 (반드시 await)
+    await loadAds();             // 3) Pro 확정 후 광고 재로드 (자동 로그인 시 누락 방지)
+    await updateCountDisplay();   // 4) 카운트 갱신
+    syncHistoryFromDB();          // 5) 영상 히스토리 동기화 (백그라운드)
+  } catch (e) {
+    console.error('[Init] applyAuthedState 오류:', e);
+  } finally {
+    _authStateApplying = false;
+  }
+}
+
+// 로그아웃 / 비로그인 상태 초기화도 한 곳에서
+async function applyGuestState() {
+  currentUser = null;
+  cachedProStatus = false;
+  initAuth();
+  await loadAds();              // 비로그인도 광고는 떠야 함
+  await updateCountDisplay();
+}
+
 // ── 세션 확인 ──
 async function checkSession() {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
-    currentUser = session.user;
-    initAuth();
-    await refreshProStatus(); // 이미 로그인된 상태라면 Pro 상태도 가져옴
-    updateCountDisplay();
-    syncHistoryFromDB(); // 영상 히스토리 동기화 (PC/모바일 공유)
+    await applyAuthedState(session.user); // 이미 로그인된 상태 → 통합 초기화
 
     // ?next=subscribe 면 이미 로그인되어 있으므로 즉시 구독 페이지로
     const nextParam = new URLSearchParams(location.search).get('next');
@@ -974,7 +1003,7 @@ async function checkSession() {
       return;
     }
   } else {
-    updateCountDisplay();
+    await applyGuestState();
 
     // ?next=subscribe 인데 비로그인 상태 → 회원가입 모달 자동 오픈
     const nextParam = new URLSearchParams(location.search).get('next');
@@ -985,8 +1014,7 @@ async function checkSession() {
     }
   }
 }
-checkSession();
-loadAds(); // 광고 로드 (DB에서)
+checkSession(); // loadAds()는 이제 applyAuthedState/applyGuestState 안에서 호출됨
 
 // ────────────────────────────────────
 // 광고 로드 (어드민에서 설정한 광고를 DB에서 불러오기)
@@ -1050,21 +1078,45 @@ sb.auth.onAuthStateChange(async (event, session) => {
     return;
   }
   if (event === 'SIGNED_IN' && session) {
-    currentUser = session.user;
-    initAuth();
     closeModal('login');
     closeModal('signup');
-    await refreshProStatus(); // Pro 상태 가져오기
-    updateCountDisplay(); // 로그인 시 카운트 새로고침
-    syncHistoryFromDB(); // 영상 히스토리 동기화 (PC/모바일 공유)
+    await applyAuthedState(session.user); // 통합 초기화 (Pro/광고/카운트/히스토리)
+  } else if (event === 'TOKEN_REFRESHED' && session) {
+    // 탭 복귀/자동 토큰 갱신 → 세션은 살아있으나 상태가 멈춰 있을 수 있음 → 재로드
+    // (단, 현재 사용자와 동일할 때만. 굳이 모달은 건드리지 않음)
+    await applyAuthedState(session.user);
   } else if (event === 'SIGNED_OUT') {
-    currentUser = null;
-    cachedProStatus = false;
     swingHistory = []; // 로그아웃 시 히스토리 초기화
     localStorage.removeItem('swingHistory');
-    initAuth();
-    updateCountDisplay(); // 로그아웃 시 카운트 새로고침
+    await applyGuestState();
     if (typeof renderHistory === 'function') renderHistory();
+  }
+});
+
+// ── 탭 복귀 시 상태 재동기화 (페이지 복귀 먹통 방지) ──
+// 모바일에서 앱 전환 후 돌아오거나, PC에서 다른 탭 갔다 오면
+// 세션 토큰만 백그라운드 갱신되고 화면 상태(Pro/광고/카운트)는 멈춰 있을 수 있음.
+// 복귀 시점에 한 번 더 맞춰준다. (중복은 _authStateApplying 플래그가 막아줌)
+let _lastVisibilitySync = 0;
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible') return;
+  // 너무 잦은 재호출 방지 (10초 쓰로틀)
+  const now = Date.now();
+  if (now - _lastVisibilitySync < 10000) return;
+  _lastVisibilitySync = now;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      await applyAuthedState(session.user);
+    } else if (currentUser) {
+      // 떠나 있는 동안 세션이 만료됨 → 게스트 상태로 정리
+      swingHistory = [];
+      localStorage.removeItem('swingHistory');
+      await applyGuestState();
+      if (typeof renderHistory === 'function') renderHistory();
+    }
+  } catch (e) {
+    console.warn('[Visibility] 복귀 동기화 실패:', e);
   }
 });
 
@@ -2022,6 +2074,11 @@ async function startAnalysis() {
     if (!normalized || !normalized.topMatch) {
       throw new Error('응답 구조 오류: ' + JSON.stringify(data).slice(0,200));
     }
+    // 백엔드가 INSERT한 analysis_logs row의 id (영상 정보 UPDATE에 사용).
+    // 게스트이거나 저장 실패 시 null일 수 있음 → 그럴 땐 폴백 SELECT 사용.
+    const logId = (normalized.logId != null) ? normalized.logId
+                : (data.logId != null) ? data.logId
+                : null;
     // 비회원만 localStorage 카운트 증가 (회원은 DB의 analysis_logs로 자동 카운트)
     if (!currentUser || !currentUser.id) {
       incrementGuestCount();
@@ -2056,32 +2113,40 @@ async function startAnalysis() {
         }
         
         // ★★★ 우선순위 2: DB에 영상 정보 저장
+        // 백엔드가 응답에 실어준 logId로 곧장 UPDATE한다.
+        // (기존: "video_path가 null인 가장 최근 row"를 추측 SELECT → 백엔드 INSERT와
+        //  타이밍 경쟁으로 PC에서 저장 실패/모바일 간헐 발생. logId 직접 사용으로 race 제거.)
         let dbId = null;
         try {
-          // Step 1: video_path 없는 가장 최근 로그 ID 찾기 (SELECT는 order 가능)
-          const { data: recentRows, error: selectErr } = await sb.from('analysis_logs')
-            .select('id')
-            .eq('user_id', currentUser.id)
-            .is('video_path', null)
-            .order('created_at', { ascending: false })
-            .limit(1);
-          
-          if (selectErr) {
-            console.warn('[Video] 최근 로그 조회 실패:', selectErr);
-          } else if (!recentRows || recentRows.length === 0) {
-            console.warn('[Video] 업데이트할 로그를 찾지 못함');
+          let targetId = logId;
+
+          // 폴백: logId가 없을 때만(게스트/구버전 백엔드/저장 실패) 기존 추측 SELECT 사용
+          if (targetId == null) {
+            console.warn('[Video] logId 없음 → 폴백 SELECT 사용');
+            const { data: recentRows, error: selectErr } = await sb.from('analysis_logs')
+              .select('id')
+              .eq('user_id', currentUser.id)
+              .is('video_path', null)
+              .order('created_at', { ascending: false })
+              .limit(1);
+            if (selectErr) {
+              console.warn('[Video] 폴백 로그 조회 실패:', selectErr);
+            } else if (recentRows && recentRows.length > 0) {
+              targetId = recentRows[0].id;
+            }
+          }
+
+          if (targetId == null) {
+            console.warn('[Video] 업데이트할 로그 ID를 확정하지 못함');
           } else {
-            const targetId = recentRows[0].id;
             console.log('[Video] 업데이트 대상 로그 ID:', targetId);
-            
-            // Step 2: 그 ID로 UPDATE (UPDATE에는 order 없음)
             const { error: updateErr } = await sb.from('analysis_logs')
-              .update({ 
-                video_path: videoInfo.path, 
-                video_url: videoInfo.url 
+              .update({
+                video_path: videoInfo.path,
+                video_url: videoInfo.url
               })
               .eq('id', targetId);
-            
+
             if (updateErr) {
               console.warn('[Video] DB 업데이트 실패:', updateErr);
             } else {
@@ -2124,14 +2189,24 @@ async function startAnalysis() {
     clearInterval(iv); pg.classList.remove('on');
     document.getElementById('abtn').disabled = false;
     const msg = e.message || '';
-    if (msg.includes('503') || msg.includes('overloaded') || msg.includes('rate') || msg.includes('fetch')) {
-      alert('⚠️ 현재 사용자가 많아 분석이 지연되고 있습니다.\n잠시 후 다시 시도해주세요.');
-    } else if (msg.includes('JSON') || msg.includes('parse') || msg.includes('파싱')) {
-      alert('⚠️ 분석 중 오류가 발생했습니다.\n영상이 너무 짧거나 화질이 불명확한 경우 발생할 수 있습니다.\n다른 영상으로 시도해주세요.');
-    } else if (msg.includes('프레임') || msg.includes('frame')) {
-      alert('⚠️ 영상에서 스윙을 감지하지 못했습니다.\n밝은 환경에서 전신이 보이는 영상으로 다시 시도해주세요.');
+    // 진짜 원인은 콘솔에 남겨 디버깅 가능하게 (사용자 메시지와 별개)
+    console.error('[Analyze] 실패 원인:', msg, e);
+
+    if (msg.includes('503') || msg.includes('overloaded') || msg.includes('rate')) {
+      // 서버 과부하 (확실한 경우만)
+      alert('⚠️ 현재 사용자가 많아 분석이 지연되고 있어요.\n잠시 후 다시 시도해주세요.');
+    } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('fetch')) {
+      // 네트워크 단절 (기존엔 "사용자 많음"으로 잘못 안내하던 케이스)
+      alert('⚠️ 네트워크 연결이 불안정해요.\n인터넷 상태를 확인하고 다시 시도해주세요.');
+    } else if (msg.includes('프레임 추출') || msg.includes('스윙을 감지') || msg.includes('frame')) {
+      // 영상에서 스윙/프레임을 못 잡은 경우 — 이때만 영상 관련 안내 (정직)
+      alert('⚠️ 영상에서 스윙 동작을 찾지 못했어요.\n밝은 곳에서 전신이 보이게, 스윙 전체가 담기도록 다시 촬영해주세요.');
+    } else if (msg.includes('파싱') || msg.includes('parse') || msg.includes('JSON')) {
+      // ★ AI 응답 파싱 실패 = 서버/AI 측 문제. 더 이상 "영상이 짧다"고 단정하지 않음.
+      alert('⚠️ 분석 결과를 처리하는 중 문제가 생겼어요.\n잠시 후 다시 시도해주세요. (반복되면 문의해주세요.)');
     } else {
-      alert('⚠️ 분석 중 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.');
+      // 원인 불명 — 솔직하게 일시적 오류로 안내
+      alert('⚠️ 분석 중 일시적인 오류가 발생했어요.\n잠시 후 다시 시도해주세요.');
     }
   }
 }
@@ -2265,9 +2340,23 @@ function renderResult(d, videoInfo) {
     .map(name => { const idx = allFrames.findIndex(f => f && f.phase === name); return idx >= 0 ? { f: allFrames[idx], i: idx } : null; })
     .filter(Boolean);
   if (shownFrames.length < 4) shownFrames = allFrames.slice(0, 4).map((f, i) => ({ f, i }));
+
+  // 썸네일은 phase 이름으로 매칭한다.
+  // (기존 버그: AI의 frameAnalysis 인덱스 i로 extractedFrames[i]를 찾았는데,
+  //  두 배열은 순서·개수가 달라 사진이 어긋나거나 1~2개 빈 칸이 생겼음.
+  //  extractedFrames는 PHASES 순서로 캡처되므로, 같은 phase 이름으로 찾으면 정확히 맞음.)
+  function thumbForPhase(phaseName, fallbackIdx) {
+    if (!extractedFrames || !extractedFrames.length) return null;
+    const hit = extractedFrames.find(fr => fr && fr.phase === phaseName);
+    if (hit) return hit.dataUrl;
+    // 이름으로 못 찾으면 인덱스 폴백 (단, 범위 안일 때만 — 없으면 빈 칸 대신 생략)
+    if (extractedFrames[fallbackIdx]) return extractedFrames[fallbackIdx].dataUrl;
+    return null;
+  }
   shownFrames.forEach(({ f, i }) => {
-    const imgHtml = (extractedFrames && extractedFrames[i])
-      ? `<img src="${extractedFrames[i].dataUrl}" style="width:100%;border-radius:2px;margin-bottom:6px;aspect-ratio:16/9;object-fit:cover">`
+    const thumbUrl = thumbForPhase(f.phase, i);
+    const imgHtml = thumbUrl
+      ? `<img src="${thumbUrl}" style="width:100%;border-radius:2px;margin-bottom:6px;aspect-ratio:16/9;object-fit:cover">`
       : '';
     fr.innerHTML += `<div class="fi">${imgHtml}<div class="fph">${f.phase}</div><div class="fsc">${f.score}</div><div class="fco">${f.comment}</div></div>`;
   });
