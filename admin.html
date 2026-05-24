@@ -114,6 +114,15 @@ body { background:var(--bg); color:var(--text); font-family:'Pretendard',-apple-
 .stat-card.gold .value { color:var(--gold); }
 .stat-card.green .value { color:var(--green); }
 
+/* ── 사용량 집계 기간 토글 ── */
+.ug-period-btn {
+  background:var(--surface2); color:var(--muted); border:1px solid var(--border);
+  border-radius:7px; padding:6px 14px; font-size:.76rem; cursor:pointer; font-family:inherit;
+  transition:all .15s;
+}
+.ug-period-btn:hover { color:var(--text); border-color:var(--gold); }
+.ug-period-btn.active { background:var(--gold); color:#1a1a1a; border-color:var(--gold); font-weight:500; }
+
 /* ── 섹션 헤더 ── */
 .section-header {
   display:flex; align-items:center; justify-content:space-between;
@@ -261,6 +270,69 @@ tr:hover td { background:rgba(255,255,255,0.02); }
           <canvas id="chart-club" height="200"></canvas>
         </div>
       </div>
+
+      <!-- ── 사용량 집계 (그룹별) ── -->
+      <div class="section-header">
+        <h2>사용량 집계 — 그룹별</h2>
+        <button class="btn-refresh" onclick="loadUsageByGroup()">↻ 새로고침</button>
+      </div>
+      <div style="font-size:.72rem; color:var(--muted); margin:-8px 0 12px;">분석 요청을 사용자 그룹별로 집계 · plan 기준</div>
+
+      <!-- 기간 토글 -->
+      <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; align-items:center;">
+        <button class="ug-period-btn active" data-period="all" onclick="setUsagePeriod('all',this)">전체</button>
+        <button class="ug-period-btn" data-period="month" onclick="setUsagePeriod('month',this)">이번 달</button>
+        <button class="ug-period-btn" data-period="7days" onclick="setUsagePeriod('7days',this)">최근 7일</button>
+        <button class="ug-period-btn" data-period="today" onclick="setUsagePeriod('today',this)">오늘</button>
+        <button class="ug-period-btn" data-period="custom" onclick="setUsagePeriod('custom',this)">📅 직접 지정</button>
+      </div>
+
+      <!-- 직접 지정 날짜 입력 (custom일 때만 표시) -->
+      <div id="ug-custom-range" style="display:none; gap:8px; align-items:center; margin-bottom:14px; padding:10px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:8px;">
+        <span style="font-size:.7rem; color:var(--muted);">기간</span>
+        <input type="date" id="ug-date-start" style="background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:5px 8px; font-size:.78rem;">
+        <span style="color:var(--muted);">~</span>
+        <input type="date" id="ug-date-end" style="background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:5px 8px; font-size:.78rem;">
+        <button class="btn-refresh" style="margin-left:auto;" onclick="loadUsageByGroup()">조회</button>
+      </div>
+
+      <!-- 그룹별 카드 4개 -->
+      <div class="stat-grid">
+        <div class="stat-card gold">
+          <div class="label">프로 구독자</div>
+          <div class="value" id="ug-pro">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">일반 회원</div>
+          <div class="value" id="ug-free">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">비회원</div>
+          <div class="value" id="ug-guest">—</div>
+        </div>
+        <div class="stat-card green">
+          <div class="label">전체 합계</div>
+          <div class="value" id="ug-total">—</div>
+        </div>
+      </div>
+
+      <!-- 가입 사용자별 상위 10명 + 검색 -->
+      <div class="section-header" style="margin-top:8px;">
+        <h2 style="font-size:.95rem;">가입 사용자별 사용량 <span style="font-weight:400; color:var(--muted); font-size:.72rem;">· 분석 많은 순 · 상위 10명</span></h2>
+        <input type="text" id="ug-search" placeholder="이메일·이름 검색" oninput="renderUsageTable()"
+               style="background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px 12px; font-size:.78rem; width:220px;">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>사용자</th><th>등급</th><th style="text-align:right;">분석 횟수</th><th style="text-align:right;">마지막 사용</th>
+            </tr>
+          </thead>
+          <tbody id="ug-user-table"><tr><td colspan="4" class="loading">로딩 중...</td></tr></tbody>
+        </table>
+      </div>
+      <div style="font-size:.68rem; color:var(--muted); margin-top:8px;">프로·일반 회원 전체 리스트는 '유저' 탭에서 확인</div>
 
       <div class="section-header">
         <h2>최근 분석 로그</h2>
@@ -517,10 +589,148 @@ async function loadDashboard() {
     await loadDailyChart();
     await loadClubChart();
 
+    // 사용량 집계 (그룹별)
+    await loadUsageByGroup();
+
   } catch(e) {
     console.error('[Admin] 대시보드 전체 에러:', e);
     alert('데이터 로드 중 오류 발생. 콘솔(F12)을 확인해주세요.\n' + e.message);
   }
+}
+
+// ── 사용량 집계 (그룹별) ──
+// plan 기준: 프로 = user_profiles.plan==='pro', 일반 = 로그인+pro아님, 비회원 = is_guest/user_id없음
+let usagePeriod = 'all';          // 현재 선택된 기간
+let usageTableRows = [];          // 가입 사용자별 집계 결과 캐시 (검색 필터용)
+
+function setUsagePeriod(period, el) {
+  usagePeriod = period;
+  document.querySelectorAll('.ug-period-btn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  // '직접 지정'이면 날짜 입력 줄을 보이고, 조회 버튼으로 실행. 그 외는 즉시 조회.
+  const custom = document.getElementById('ug-custom-range');
+  if (period === 'custom') {
+    custom.style.display = 'flex';
+  } else {
+    custom.style.display = 'none';
+    loadUsageByGroup();
+  }
+}
+
+// 현재 기간을 [startISO, endISO]로 변환 (endISO는 미포함 상한 = 다음 날 00:00)
+function getUsageRange() {
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  if (usagePeriod === 'all') {
+    return { start: null, end: null };
+  } else if (usagePeriod === 'today') {
+    return { start: todayStr + 'T00:00:00', end: null };
+  } else if (usagePeriod === '7days') {
+    const d = new Date(Date.now() - 6*86400000); // 오늘 포함 7일
+    return { start: d.toISOString().split('T')[0] + 'T00:00:00', end: null };
+  } else if (usagePeriod === 'month') {
+    return { start: todayStr.slice(0,7) + '-01T00:00:00', end: null };
+  } else if (usagePeriod === 'custom') {
+    const s = document.getElementById('ug-date-start').value;
+    const e = document.getElementById('ug-date-end').value;
+    return {
+      start: s ? s + 'T00:00:00' : null,
+      // 끝 날짜는 그 날 23:59:59까지 포함되도록 다음 날 00:00을 상한으로
+      end: e ? new Date(new Date(e).getTime() + 86400000).toISOString().split('T')[0] + 'T00:00:00' : null
+    };
+  }
+  return { start: null, end: null };
+}
+
+async function loadUsageByGroup() {
+  try {
+    const { start, end } = getUsageRange();
+
+    // 1) 기간 내 분석 로그 조회 (그룹 판정에 필요한 필드만)
+    let q = sb.from('analysis_logs').select('user_id, is_guest, created_at');
+    if (start) q = q.gte('created_at', start);
+    if (end)   q = q.lt('created_at', end);
+    const { data: logs, error: logErr } = await q;
+    if (logErr) { console.error('[Admin] 사용량 로그 조회 실패:', logErr); return; }
+
+    // 2) plan 판정을 위해 user_profiles 조회 (id → {plan, email, display_name})
+    const { data: profiles, error: pErr } = await sb
+      .from('user_profiles').select('id, plan, email, display_name');
+    if (pErr) console.error('[Admin] user_profiles 조회 실패:', pErr);
+    const planMap = {};
+    (profiles || []).forEach(p => { planMap[p.id] = p; });
+
+    // 3) 그룹별 카운트 + 사용자별 집계
+    let proCnt = 0, freeCnt = 0, guestCnt = 0;
+    const userAgg = {}; // user_id → { count, lastDate }
+    (logs || []).forEach(log => {
+      const uid = log.user_id;
+      const isGuest = log.is_guest || !uid;
+      if (isGuest) {
+        guestCnt++;
+        return;
+      }
+      const prof = planMap[uid];
+      if (prof && prof.plan === 'pro') proCnt++;
+      else freeCnt++;
+      // 가입 사용자별 집계 (비회원 제외)
+      if (!userAgg[uid]) userAgg[uid] = { count: 0, lastDate: log.created_at };
+      userAgg[uid].count++;
+      if (log.created_at > userAgg[uid].lastDate) userAgg[uid].lastDate = log.created_at;
+    });
+
+    // 4) 카드 갱신
+    document.getElementById('ug-pro').textContent   = proCnt.toLocaleString();
+    document.getElementById('ug-free').textContent  = freeCnt.toLocaleString();
+    document.getElementById('ug-guest').textContent = guestCnt.toLocaleString();
+    document.getElementById('ug-total').textContent = (proCnt + freeCnt + guestCnt).toLocaleString();
+
+    // 5) 사용자별 표 데이터 구성 (프로필 정보 결합 → 횟수 내림차순)
+    usageTableRows = Object.keys(userAgg).map(uid => {
+      const prof = planMap[uid] || {};
+      return {
+        userId: uid,
+        name: prof.display_name || (prof.email ? prof.email.split('@')[0] : '(이름없음)'),
+        email: prof.email || '—',
+        isPro: prof.plan === 'pro',
+        count: userAgg[uid].count,
+        lastDate: userAgg[uid].lastDate
+      };
+    }).sort((a, b) => b.count - a.count);
+
+    renderUsageTable();
+  } catch (e) {
+    console.error('[Admin] 사용량 집계 에러:', e);
+  }
+}
+
+// 검색어 적용 + 상위 10명 렌더 (DB 재조회 없이 캐시된 usageTableRows 사용)
+function renderUsageTable() {
+  const kw = (document.getElementById('ug-search')?.value || '').trim().toLowerCase();
+  let rows = usageTableRows;
+  if (kw) {
+    rows = rows.filter(r =>
+      r.email.toLowerCase().includes(kw) || (r.name || '').toLowerCase().includes(kw));
+  }
+  const top = rows.slice(0, 10);
+  const tbody = document.getElementById('ug-user-table');
+  if (!top.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">' + (kw ? '검색 결과 없음' : '데이터 없음') + '</td></tr>';
+    return;
+  }
+  tbody.innerHTML = top.map(r => `<tr>
+    <td><div style="color:var(--text)">${escapeHtml(r.name)}</div><div style="color:var(--muted); font-size:.7rem;">${escapeHtml(r.email)}</div></td>
+    <td><span class="badge ${r.isPro ? 'pro' : 'free'}">${r.isPro ? 'PRO' : 'FREE'}</span></td>
+    <td style="text-align:right; color:${r.isPro ? 'var(--gold)' : 'var(--text)'}">${r.count}</td>
+    <td style="text-align:right; color:var(--muted)">${fmt(r.lastDate)}</td>
+  </tr>`).join('');
+}
+
+// XSS 방지: 이메일/이름을 HTML에 넣기 전 이스케이프
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 async function loadDailyChart() {

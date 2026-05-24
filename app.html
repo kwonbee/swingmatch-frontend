@@ -922,8 +922,6 @@ let swingHistory = JSON.parse(localStorage.getItem('swingHistory') || '[]');
 async function syncHistoryFromDB() {
   if (!currentUser || !currentUser.id) return;
   
-  console.log('[History] DB 동기화 시작...');
-  
   try {
     const { data, error } = await sb.from('analysis_logs')
       .select('*')
@@ -935,10 +933,6 @@ async function syncHistoryFromDB() {
       console.warn('[History] DB 조회 실패:', error);
       return;
     }
-    
-    console.log(`[History] DB에서 ${data.length}개 row 조회됨`);
-    const videoRows = data.filter(r => r.video_path);
-    console.log(`[History] 그 중 video_path 있는 row: ${videoRows.length}개`);
     
     // DB 데이터를 swingHistory 포맷으로 변환
     const labels = { driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터' };
@@ -974,10 +968,6 @@ async function syncHistoryFromDB() {
     }));
     
     swingHistory = items.filter(h => h.topMatch); // topMatch 없는 데이터는 제외
-    
-    const withVideo = swingHistory.filter(h => h.videoUrl).length;
-    const favorites = swingHistory.filter(h => h.isFavorite).length;
-    console.log(`[History] ✅ ${swingHistory.length}개 로드 완료 (영상 ${withVideo}개, 즐겨찾기 ${favorites}개)`);
     
     // localStorage에도 캐시 (오프라인 대응)
     localStorage.setItem('swingHistory', JSON.stringify(swingHistory));
@@ -1056,7 +1046,6 @@ checkSession(); // loadAds()는 이제 applyAuthedState/applyGuestState 안에�
 // 광고 로드 (어드민에서 설정한 광고를 DB에서 불러오기)
 // ────────────────────────────────────
 async function loadAds() {
-  console.log('[Ads] loadAds() 시작');
   try {
     // sb 클라이언트가 내부 락 등으로 멈추는 사례가 있어, 공개 데이터인 광고는
     // sb를 거치지 않고 REST 엔드포인트를 직접 fetch한다 (anon 권한으로 충분).
@@ -1076,10 +1065,7 @@ async function loadAds() {
       return;
     }
 
-    console.log('[Ads] 조회된 활성 광고 행 수:', data ? data.length : 0,
-                '| ids:', (data || []).map(a => a.id));
     if (!data || data.length === 0) {
-      console.log('[Ads] 활성 광고 없음 (기본 표시)');
       return;
     }
 
@@ -1092,7 +1078,6 @@ async function loadAds() {
       // (기존 버그 가능성: id가 정확히 'main-bottom'이 아니면 통째로 스킵 →
       //  운영 중 row id가 다르면 광고가 조용히 사라짐. id 매칭 실패를 로그로 드러냄.)
       if (ad.id !== 'main-bottom') {
-        console.log('[Ads] 메인 슬롯 대상 아님, 스킵:', ad.id);
         return;
       }
       const imgEl = document.getElementById('ad-main-img');
@@ -1112,7 +1097,6 @@ async function loadAds() {
       const adContainer = document.getElementById('ad-callaway');
       if (adContainer) adContainer.style.display = 'block';
       drewSomething = true;
-      console.log('[Ads] ✅ 광고 로드 완료:', ad.id, '| isMobile:', isMobile, '| img:', imgUrl.slice(0, 60));
     });
 
     if (!drewSomething) {
@@ -1858,7 +1842,6 @@ async function refreshProStatus() {
     // sb.from 대신 REST 직접 호출 (sb 락 데드락 회피)
     const row = await SB_REST.selectOne('user_profiles', 'plan', 'id', currentUser.id);
     cachedProStatus = (row && row.plan === 'pro');
-    console.log('[Pro] 회원 상태:', cachedProStatus ? 'PRO ✨' : 'FREE');
     return cachedProStatus;
   } catch (e) {
     console.error('[Pro] 조회 오류:', e);
@@ -2068,16 +2051,12 @@ async function updateCountDisplay() {
 
 // ── 분석 시작 ──
 async function startAnalysis() {
-  console.log('[진단] ① startAnalysis 진입. file =', file);
-  if (!file) { console.log('[진단] ✗ file 없음 → 중단'); return; }
+  if (!file) { return; }
   
   // 일일 분석 횟수 체크 (Pro 무제한 / 회원 5회 / 비회원 3회)
-  console.log('[진단] ② checkDailyLimit 호출 직전');
   const allowed = await checkDailyLimit();
-  console.log('[진단] ③ checkDailyLimit 결과 =', allowed);
-  if (!allowed) { console.log('[진단] ✗ 횟수 제한 → 중단'); return; }
+  if (!allowed) { return; }
   
-  console.log('[진단] ④ 통과! 분석 시작 (fetch 직전까지 진행)');
   document.getElementById('abtn').disabled = true;
   const pg = document.getElementById('prog'); pg.classList.add('on');
   const progSteps = [
