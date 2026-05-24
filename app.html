@@ -474,6 +474,16 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
   .stat-row{grid-template-columns:repeat(3,1fr)}
   .modal{padding:28px 20px}
 }
+#pro-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);z-index:9999;width:min(440px,calc(100vw - 32px));background:#161c17;border:1px solid rgba(200,169,110,0.35);border-radius:12px;padding:14px 16px;gap:12px;align-items:flex-start;box-shadow:0 8px 30px rgba(0,0,0,0.45);opacity:0;transition:opacity .3s ease, transform .3s ease;}
+#pro-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#pro-toast .pt-icon{font-size:18px;line-height:1.4;}
+#pro-toast .pt-body{flex:1;}
+#pro-toast .pt-title{font-size:13px;color:#e8e8e8;line-height:1.6;}
+#pro-toast .pt-desc{font-size:12px;color:#999;margin-top:4px;line-height:1.6;}
+#pro-toast .pt-desc span{color:#c8a96e;}
+#pro-toast .pt-cta{display:inline-block;margin-top:10px;background:#c8a96e;color:#1a1a1a;font-size:12px;font-weight:500;padding:6px 14px;border-radius:7px;text-decoration:none;}
+#pro-toast .pt-close{color:#666;font-size:15px;cursor:pointer;padding:2px;}
+#pro-toast .pt-close:hover{color:#aaa;}
 </style>
 </head>
 <body>
@@ -733,6 +743,22 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
     <div class="empty-state" id="hist-empty"><span class="eico">📂</span>아직 분석한 스윙이 없습니다.<br>스윙 분석 탭에서 영상을 업로드해보세요.</div>
     <div class="empty-state" id="hist-filter-empty" style="display:none"><span class="eico">🔍</span>해당 클럽의 분석 기록이 없습니다.</div>
     <div class="hist-list" id="hist-list" style="display:none"></div>
+    <!-- Pro 유도 상시 배너 (renderHistory에서 무료 회원에게만 표시) -->
+    <div id="hist-pro-banner" style="display:none; background:#161c17; border:1px solid rgba(200,169,110,0.25); border-radius:12px; padding:18px 20px; margin-top:18px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:240px;">
+          <div style="font-size:14px; color:#c8a96e; font-weight:500; margin-bottom:8px;">✨ Pro로 더 깊이 분석하세요</div>
+          <div style="display:flex; gap:18px; flex-wrap:wrap; font-size:12.5px; color:#bbb; line-height:1.6;">
+            <span>♾️ <span style="color:#e8e8e8;">무제한 분석</span></span>
+            <span>📂 전체 기록 <span style="color:#e8e8e8;">영구 보관</span></span>
+            <span>🎥 분석 영상 <span style="color:#e8e8e8;">저장 30개</span></span>
+            <span>❤️ 즐겨찾기 영상 <span style="color:#e8e8e8;">추가 10개</span></span>
+            <span>🆚 스윙 <span style="color:#e8e8e8;">영상 비교</span></span>
+          </div>
+        </div>
+        <a href="/subscribe.html" style="background:#c8a96e; color:#1a1a1a; font-size:13px; font-weight:500; padding:9px 20px; border-radius:8px; text-decoration:none; white-space:nowrap;">Pro 구독 · 월 4,900원</a>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2264,6 +2290,25 @@ async function startAnalysis() {
   }
 }
 
+// Pro 유도 토스트: 무료 회원 기록이 5개를 넘겨 밀려날 때 1회 노출 (5초 자동 사라짐 + 닫기)
+let _proToastTimer = null;
+function showProToast() {
+  const t = document.getElementById('pro-toast');
+  if (!t) return;
+  t.style.display = 'flex';
+  // 다시 그릴 때 애니메이션 트리거
+  requestAnimationFrame(() => t.classList.add('show'));
+  if (_proToastTimer) clearTimeout(_proToastTimer);
+  _proToastTimer = setTimeout(hideProToast, 5000);
+}
+function hideProToast() {
+  const t = document.getElementById('pro-toast');
+  if (!t) return;
+  t.classList.remove('show');
+  setTimeout(() => { t.style.display = 'none'; }, 300);
+  if (_proToastTimer) { clearTimeout(_proToastTimer); _proToastTimer = null; }
+}
+
 function saveToHistory(data, videoInfo) {
   // 비회원은 히스토리 미지원 (플랜표 기준). 서버 analysis_logs 카운팅만 하고 localStorage 저장은 하지 않는다.
   if (!currentUser || !currentUser.id) return;
@@ -2285,8 +2330,11 @@ function saveToHistory(data, videoInfo) {
   // 히스토리 보관(localStorage 캐시): Pro=50개 / 무료 회원=5개 (플랜표 기준).
   // ※ Pro의 실제 기록은 서버(analysis_logs)에 영구 저장되며, 50개는 화면 표시용 캐시일 뿐이다.
   const cap = isProUser() ? 50 : 5;
-  if (swingHistory.length > cap) swingHistory = swingHistory.slice(0, cap);
+  const willTruncate = swingHistory.length > cap;
+  if (willTruncate) swingHistory = swingHistory.slice(0, cap);
   localStorage.setItem('swingHistory', JSON.stringify(swingHistory));
+  // 무료 회원의 기록이 한도(5개)를 넘어 가장 오래된 것이 밀려난 순간에만 Pro 유도 토스트.
+  if (willTruncate && !isProUser()) showProToast();
 }
 
 // ────────────────────────────────────
@@ -2492,6 +2540,10 @@ function renderHistory() {
   }
   if (guestLock) guestLock.style.display = 'none';
   if (memberContent) memberContent.style.display = '';
+
+  // Pro 유도 배너: 무료 회원에게만 표시 (Pro는 이미 모든 혜택 보유 → 숨김)
+  const proBanner = document.getElementById('hist-pro-banner');
+  if (proBanner) proBanner.style.display = isProUser() ? 'none' : '';
 
   ['driver','iron','wedge','putter'].forEach(c => {
     const el = document.getElementById('hc-' + c);
@@ -2896,6 +2948,16 @@ function renderGraph() {
   Object.entries(clubMap).forEach(([k, v]) => { const pct = Math.round(v / graphSource.length * 100); dist.innerHTML += `<div class="club-bar"><span class="club-bar-label">${k}</span><div class="club-bar-track"><div class="club-bar-fill" style="width:${pct}%"></div></div><span class="club-bar-cnt">${v}회</span></div>`; });
 }
 </script>
+<!-- Pro 유도 토스트 (무료 회원 기록 밀림 시) -->
+<div id="pro-toast" style="display:none;">
+  <div class="pt-icon">💡</div>
+  <div class="pt-body">
+    <div class="pt-title">무료 회원은 최근 기록 5개까지만 보관됩니다.</div>
+    <div class="pt-desc">Pro로 업그레이드하면 모든 기록이 <span>영구 보관</span>되고, <span>영상 저장·비교</span>까지 가능합니다.</div>
+    <a href="/subscribe.html" class="pt-cta">Pro 자세히 보기</a>
+  </div>
+  <div class="pt-close" onclick="hideProToast()">✕</div>
+</div>
 <footer class="site-footer">
   <div class="footer-inner">
     <div class="footer-links">
