@@ -891,6 +891,29 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 const BACKEND = 'https://swingmatch-backend-production.up.railway.app';
+
+// sb 클라이언트가 auth 락 데드락으로 멈출 수 있어, 분석 경로의 DB 조회는
+// REST 엔드포인트를 직접 fetch한다 (광고 loadAds와 동일한 검증된 우회 방식).
+// 토큰을 수동으로 다루지 않고 anon 키만 사용하므로 인증/결제 보안에 영향 없음.
+const SB_REST = {
+  headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+  async rpc(name, params) {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
+      method: 'POST', headers: this.headers, body: JSON.stringify(params || {})
+    });
+    if (!r.ok) throw new Error('RPC ' + name + ' status ' + r.status);
+    return await r.json();
+  },
+  async selectOne(table, columns, eqCol, eqVal) {
+    const url = SUPABASE_URL + '/rest/v1/' + table +
+      '?select=' + encodeURIComponent(columns) +
+      '&' + encodeURIComponent(eqCol) + '=eq.' + encodeURIComponent(eqVal) + '&limit=1';
+    const r = await fetch(url, { headers: this.headers });
+    if (!r.ok) throw new Error('SELECT ' + table + ' status ' + r.status);
+    const rows = await r.json();
+    return Array.isArray(rows) && rows.length ? rows[0] : null;
+  }
+};
 let extractedFrames = [];
 let file = null, club = 'driver';
 let swingHistory = JSON.parse(localStorage.getItem('swingHistory') || '[]');
@@ -1813,11 +1836,8 @@ function incrementGuestCount() {
 async function getMemberTodayCount(userId) {
   if (!userId) return 0;
   try {
-    const { data, error } = await sb.rpc('get_daily_analysis_count', { p_user_id: userId });
-    if (error) {
-      console.error('[Limit] DB 카운트 조회 실패:', error);
-      return 0;
-    }
+    // sb.rpc 대신 REST 직접 호출 (sb 락 데드락 회피)
+    const data = await SB_REST.rpc('get_daily_analysis_count', { p_user_id: userId });
     console.log('[Limit] 회원 오늘 분석 횟수:', data);
     return data || 0;
   } catch (e) {
@@ -1835,16 +1855,9 @@ async function refreshProStatus() {
     return false;
   }
   try {
-    const { data, error } = await sb.from('user_profiles')
-      .select('plan')
-      .eq('id', currentUser.id)
-      .single();
-    if (error) {
-      console.warn('[Pro] plan 조회 실패:', error.message);
-      cachedProStatus = false;
-      return false;
-    }
-    cachedProStatus = (data && data.plan === 'pro');
+    // sb.from 대신 REST 직접 호출 (sb 락 데드락 회피)
+    const row = await SB_REST.selectOne('user_profiles', 'plan', 'id', currentUser.id);
+    cachedProStatus = (row && row.plan === 'pro');
     console.log('[Pro] 회원 상태:', cachedProStatus ? 'PRO ✨' : 'FREE');
     return cachedProStatus;
   } catch (e) {
