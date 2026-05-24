@@ -161,7 +161,12 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .rkeyfeat{flex:1;display:none;text-align:center;padding:0 12px;min-width:0}
 .rkeyfeat .rkflbl{font-size:.58rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
 .rkeyfeat .rkfval{font-family:'Noto Serif KR',serif;font-weight:300;font-size:1.18rem;color:var(--gold);line-height:1.25}
-@media(max-width:560px){.rkeyfeat{display:none!important}}
+@media(max-width:560px){
+  .rhead{flex-wrap:wrap;gap:10px}
+  .rkeyfeat{flex:1 1 100%;order:4;text-align:left;padding:10px 0 0;border-top:1px solid rgba(255,255,255,.06);margin-top:4px}
+  .rkeyfeat .rkflbl{margin-bottom:3px}
+  .rkeyfeat .rkfval{font-size:1.05rem}
+}
 .mpct{font-family:'Noto Serif KR',serif;font-weight:200;font-size:1.9rem;color:var(--gold);line-height:1}
 .mlbl{font-size:.65rem;color:var(--muted);letter-spacing:.06em}
 .rdesc{font-size:.92rem;color:var(--muted);line-height:1.6;margin-bottom:18px}
@@ -1967,20 +1972,33 @@ async function startAnalysis() {
   document.getElementById('abtn').disabled = true;
   const pg = document.getElementById('prog'); pg.classList.add('on');
   const progSteps = [
-    { pct: 15, msg: '영상에서 핵심 프레임 추출 중...' },
-    { pct: 40, msg: '200명의 프로 데이터와 비교 중...' },
-    { pct: 70, msg: '스윙 특성 분석 중...' },
-    { pct: 90, msg: '결과 생성 중...' }
+    { pct: 12, msg: '스윙 영상에서 핵심 프레임을 추출하고 있어요' },
+    { pct: 28, msg: '관절과 자세 데이터를 정밀 분석하고 있어요' },
+    { pct: 46, msg: '200명의 프로 스윙 데이터와 대조하고 있어요' },
+    { pct: 64, msg: '클럽별 스윙 특성을 정밀 진단하고 있어요' },
+    { pct: 80, msg: '가장 닮은 프로를 매칭하고 있어요' },
+    { pct: 90, msg: '맞춤 분석 리포트를 작성하고 있어요' }
   ];
   let si = 0;
+  let curPct = 0;
   const setProgStep = (idx) => {
     const s = progSteps[Math.min(idx, progSteps.length-1)];
+    curPct = s.pct;
     document.getElementById('prog-pct').textContent = s.pct + '%';
     document.getElementById('prog-bar').style.width = s.pct + '%';
     document.getElementById('prog-msg').textContent = s.msg;
   };
   setProgStep(0);
-  const iv = setInterval(() => { si = Math.min(si+1, 3); setProgStep(si); }, 1500);
+  // 단계별로 메시지·퍼센트 전진 (2초 간격, 마지막 단계까지 약 12초)
+  const iv = setInterval(() => { si = Math.min(si+1, progSteps.length-1); setProgStep(si); }, 2000);
+  // 마지막 단계 도달 후에도 90→99%까지 천천히 차오르게 (대기 체감 완화: 멈춰있지 않고 계속 진행 중으로 보임)
+  const creepIv = setInterval(() => {
+    if (si >= progSteps.length-1 && curPct < 99) {
+      curPct += 1;
+      document.getElementById('prog-pct').textContent = curPct + '%';
+      document.getElementById('prog-bar').style.width = curPct + '%';
+    }
+  }, 1200);
   try {
     const fd = new FormData(); 
     fd.append('video', file); 
@@ -1993,7 +2011,7 @@ async function startAnalysis() {
       console.log('[Analyze] 비회원 분석');
     }
     const r = await fetch(BACKEND + '/api/analyze', { method: 'POST', body: fd });
-    clearInterval(iv); document.getElementById('prog-pct').textContent='분석 완료'; document.getElementById('prog-bar').style.width='100%'; document.getElementById('prog-msg').textContent='';
+    clearInterval(iv); clearInterval(creepIv); document.getElementById('prog-pct').textContent='분석 완료'; document.getElementById('prog-bar').style.width='100%'; document.getElementById('prog-msg').textContent='';
     if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || 'HTTP ' + r.status); }
     const data = await r.json();
     console.log('백엔드 응답:', JSON.stringify(data));
