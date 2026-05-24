@@ -874,17 +874,19 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 // ── Supabase 초기화 ──
 const SUPABASE_URL = 'https://vldcmanngfexfwvvnqbb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsZGNtYW5uZ2ZleGZ3dnZucWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4ODY0MTcsImV4cCI6MjA5NDQ2MjQxN30.3K_jL1HVdOKMEoSSsmacJGNVDkf6iFa2PU7XuEFuUBY';
-// auth.lock을 no-op으로 오버라이드:
-// 기본값인 Navigator LockManager 락이 풀리지 않으면 getSession()을 포함한
-// 모든 sb 호출이 영원히 pending → 광고/분석/카운트 전부 먹통 (자동 로그인 재방문 시 재현).
-// 단일 탭 SPA에서는 이 락이 불필요하므로 그냥 콜백을 바로 실행하게 해 데드락을 차단한다.
-// supabase-js 2.105.4 사용 (2.49.4의 Chrome 락 hang 버그 회피).
-// 광고는 추가로 fetch 우회(loadAds)까지 해두어 이중 안전장치를 둠.
+// 🔑 auth 락 데드락 차단 (확정된 원인):
+//   navigator.locks 의 'lock:sb-...-auth-token' 이 exclusive로 잡힌 뒤 풀리지 않아
+//   sb.auth/sb.from/sb.rpc 등 sb를 통한 모든 호출이 영원히 pending → 분석/카운트/Pro 먹통.
+//   (supabase-js의 알려진 고아 락 이슈. 단일 탭 SPA에서는 이 락이 불필요.)
+//   lock 콜백이 실제 LockManager를 쓰지 않고 즉시 콜백을 실행하도록 오버라이드해 데드락을 원천 차단한다.
+//   토큰을 수동으로 다루지 않으므로 인증/결제 보안에는 영향이 없다.
+const noopLock = async (_name, _acquireTimeout, fn) => { return await fn(); };
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    lock: noopLock
   }
 });
 
