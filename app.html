@@ -703,7 +703,13 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 <!-- 분석 히스토리 패널 -->
 <div class="panel" id="panel-history">
   <div class="ph"><h1>분석 히스토리</h1><p>지금까지 분석한 스윙 기록입니다</p></div>
-  <div style="width:100%">
+  <!-- 비회원 전용 안내 (renderHistory에서 비회원일 때만 표시) -->
+  <div class="empty-state" id="hist-guest-lock" style="display:none">
+    <span class="eico">🔒</span>분석 히스토리는 회원 전용 기능입니다.<br>
+    무료 회원가입하면 최근 5개 기록이 보관됩니다.
+    <div style="margin-top:16px"><button class="btn-login" onclick="openModal('login')">회원가입 / 로그인</button></div>
+  </div>
+  <div style="width:100%" id="hist-member-content">
     <div class="filter-tabs" id="hist-filters">
       <button class="ftab active" data-club="all" onclick="filterHistory('all',this)">전체</button>
       <button class="ftab" data-club="driver" onclick="filterHistory('driver',this)">드라이버<span class="filter-count" id="hc-driver">0</span></button>
@@ -751,7 +757,13 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 <!-- 개선 그래프 패널 -->
 <div class="panel" id="panel-graph">
   <div class="ph"><h1>개선 그래프</h1><p>스윙이 쌓일수록 성장 곡선이 보입니다</p></div>
-  <div style="width:100%">
+  <!-- 비회원 전용 안내 (renderGraph에서 비회원일 때만 표시) -->
+  <div class="empty-state" id="graph-guest-lock" style="display:none">
+    <span class="eico">🔒</span>개선 그래프는 회원 전용 기능입니다.<br>
+    무료 회원가입하면 최근 30일 성장 곡선을 볼 수 있습니다.
+    <div style="margin-top:16px"><button class="btn-login" onclick="openModal('login')">회원가입 / 로그인</button></div>
+  </div>
+  <div style="width:100%" id="graph-member-content">
     <div class="filter-tabs" id="graph-filters">
       <button class="ftab active" data-club="all" onclick="filterGraph('all',this)">전체</button>
       <button class="ftab" data-club="driver" onclick="filterGraph('driver',this)">드라이버<span class="filter-count" id="gc-driver">0</span></button>
@@ -936,9 +948,14 @@ async function syncHistoryFromDB() {
     
     // DB 데이터를 swingHistory 포맷으로 변환
     const labels = { driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터' };
-    
+
+    // 플랜별 히스토리 표시 개수: Pro=50 / 무료 회원=5 (플랜표 기준).
+    // 자른 뒤에 signed URL을 생성해 불필요한 URL 발급을 줄인다.
+    const histCap = isProUser() ? 50 : 5;
+    const capped = data.slice(0, histCap);
+
     // 영상 URL 일괄 갱신 (signed URL 7일 만료 대비 + PC/모바일 공유)
-    const items = await Promise.all(data.map(async row => {
+    const items = await Promise.all(capped.map(async row => {
       const result = row.result_json || {};
       const created = new Date(row.created_at);
       
@@ -2248,6 +2265,9 @@ async function startAnalysis() {
 }
 
 function saveToHistory(data, videoInfo) {
+  // 비회원은 히스토리 미지원 (플랜표 기준). 서버 analysis_logs 카운팅만 하고 localStorage 저장은 하지 않는다.
+  if (!currentUser || !currentUser.id) return;
+
   const labels = { driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터' };
   const entry = { 
     id: Date.now(), 
@@ -2262,7 +2282,10 @@ function saveToHistory(data, videoInfo) {
     isFavorite: false
   };
   swingHistory.unshift(entry);
-  if (swingHistory.length > 50) swingHistory = swingHistory.slice(0, 50);
+  // 히스토리 보관(localStorage 캐시): Pro=50개 / 무료 회원=5개 (플랜표 기준).
+  // ※ Pro의 실제 기록은 서버(analysis_logs)에 영구 저장되며, 50개는 화면 표시용 캐시일 뿐이다.
+  const cap = isProUser() ? 50 : 5;
+  if (swingHistory.length > cap) swingHistory = swingHistory.slice(0, cap);
   localStorage.setItem('swingHistory', JSON.stringify(swingHistory));
 }
 
@@ -2459,6 +2482,17 @@ function filterHistory(club, btn) {
 }
 
 function renderHistory() {
+  // 비회원: 히스토리는 회원 전용. 잠금 안내만 표시하고 종료.
+  const guestLock = document.getElementById('hist-guest-lock');
+  const memberContent = document.getElementById('hist-member-content');
+  if (!currentUser || !currentUser.id) {
+    if (guestLock) guestLock.style.display = '';
+    if (memberContent) memberContent.style.display = 'none';
+    return;
+  }
+  if (guestLock) guestLock.style.display = 'none';
+  if (memberContent) memberContent.style.display = '';
+
   ['driver','iron','wedge','putter'].forEach(c => {
     const el = document.getElementById('hc-' + c);
     if (el) el.textContent = swingHistory.filter(h => h.club === c).length;
@@ -2802,13 +2836,32 @@ function filterGraph(club, btn) {
 }
 
 function renderGraph() {
+  // 비회원: 개선 그래프는 회원 전용. 잠금 안내만 표시하고 종료.
+  const gLock = document.getElementById('graph-guest-lock');
+  const gMember = document.getElementById('graph-member-content');
+  if (!currentUser || !currentUser.id) {
+    if (gLock) gLock.style.display = '';
+    if (gMember) gMember.style.display = 'none';
+    return;
+  }
+  if (gLock) gLock.style.display = 'none';
+  if (gMember) gMember.style.display = '';
+
+  // 무료 회원: 최근 30일만 (플랜표 기준). Pro: 전체 기간.
+  // createdAt이 없는 항목(과거 localStorage 캐시 등)은 안전하게 포함한다.
+  let graphSource = swingHistory;
+  if (!isProUser()) {
+    const cutoff = Date.now() - 30 * 86400000;
+    graphSource = swingHistory.filter(h => !h.createdAt || new Date(h.createdAt).getTime() >= cutoff);
+  }
+
   ['driver','iron','wedge','putter'].forEach(c => {
     const el = document.getElementById('gc-' + c);
-    if (el) el.textContent = swingHistory.filter(h => h.club === c).length;
+    if (el) el.textContent = graphSource.filter(h => h.club === c).length;
   });
   const empty = document.getElementById('graph-empty');
   const content = document.getElementById('graph-content');
-  const filtered = currentGraphClub === 'all' ? swingHistory : swingHistory.filter(h => h.club === currentGraphClub);
+  const filtered = currentGraphClub === 'all' ? graphSource : graphSource.filter(h => h.club === currentGraphClub);
   if (filtered.length < 2) {
     empty.style.display = ''; content.style.display = 'none';
     empty.innerHTML = filtered.length === 1 ? '<span class="eico">📈</span>해당 클럽 데이터가 1개입니다.<br>1개 더 분석하면 그래프가 표시됩니다.' : '<span class="eico">📈</span>분석 데이터가 2개 이상 쌓이면<br>개선 그래프가 표시됩니다.';
@@ -2838,9 +2891,9 @@ function renderGraph() {
   const phAvgs = phLabels.map(k => Math.round(phaseMap[k].reduce((a, b) => a + b, 0) / phaseMap[k].length));
   if (charts['phases']) charts['phases'].destroy();
   charts['phases'] = new Chart(document.getElementById('chart-phases'), { type: 'bar', data: { labels: phLabels, datasets: [{ data: phAvgs, backgroundColor: 'rgba(200,169,110,.22)', borderColor: '#c8a96e', borderWidth: 1, borderRadius: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: ax, y: { ...ax, min: 0, max: 100 } } } });
-  const clubMap = {}; swingHistory.forEach(h => { clubMap[h.clubLabel] = (clubMap[h.clubLabel] || 0) + 1; });
+  const clubMap = {}; graphSource.forEach(h => { clubMap[h.clubLabel] = (clubMap[h.clubLabel] || 0) + 1; });
   const dist = document.getElementById('club-dist'); dist.innerHTML = '';
-  Object.entries(clubMap).forEach(([k, v]) => { const pct = Math.round(v / swingHistory.length * 100); dist.innerHTML += `<div class="club-bar"><span class="club-bar-label">${k}</span><div class="club-bar-track"><div class="club-bar-fill" style="width:${pct}%"></div></div><span class="club-bar-cnt">${v}회</span></div>`; });
+  Object.entries(clubMap).forEach(([k, v]) => { const pct = Math.round(v / graphSource.length * 100); dist.innerHTML += `<div class="club-bar"><span class="club-bar-label">${k}</span><div class="club-bar-track"><div class="club-bar-fill" style="width:${pct}%"></div></div><span class="club-bar-cnt">${v}회</span></div>`; });
 }
 </script>
 <footer class="site-footer">
