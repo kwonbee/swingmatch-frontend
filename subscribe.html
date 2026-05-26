@@ -840,31 +840,50 @@ async function proceedToPayment() {
   //    KG이니시스 V2는 customer.phoneNumber, customer.fullName이 필수.
   //    현재 회원가입 시 휴대폰 번호를 받지 않으므로 더미 값으로 채움.
   //    TODO(귀국 후): 회원가입 시 휴대폰 번호 수집 → 여기서 user.phone 사용
-  //    TODO(귀국 후): 정기결제(subscription)는 빌링키 발급(issueBillingKey) 방식으로 전환 필요.
-  //                  현재는 카드사 심사용으로 단건/정기 모두 단건 결제창을 띄움.
-  const paymentRequest = {
-    storeId: PORTONE_STORE_ID,
-    channelKey: PORTONE_CHANNEL_KEY,
-    paymentId: paymentId,
-    orderName: orderName,
-    totalAmount: 4900,
-    currency: 'CURRENCY_KRW',
-    payMethod: payMethod,
-    customer: {
-      customerId: user.id,
-      fullName: (user.email || 'MySwingMatch 회원').split('@')[0],
-      phoneNumber: '010-0000-0000',
-      email: user.email || 'guest@myswingmatch.com',
-    },
-    redirectUrl: window.location.origin + '/subscribe.html',
+  //    정기결제(subscription) → 빌링키 발급(requestIssueBillingKey)
+  //    단건(onetime)         → 기존 단건결제(requestPayment)
+  const customer = {
+    customerId: user.id,
+    fullName: (user.email || 'MySwingMatch 회원').split('@')[0],
+    phoneNumber: '010-0000-0000',
+    email: user.email || 'guest@myswingmatch.com',
   };
-  console.log('[결제 요청 페이로드]', paymentRequest);
+  const redirectUrl = window.location.origin + '/subscribe.html';
 
   try {
-    const response = await PortOne.requestPayment(paymentRequest);
-    console.log('[결제 응답]', response);
+    let response;
+    if (planType === 'subscription') {
+      // 정기결제: 빌링키 발급 (매월 자동결제는 백엔드에서 이 키로 청구)
+      const billingKeyRequest = {
+        storeId: PORTONE_STORE_ID,
+        channelKey: PORTONE_CHANNEL_KEY,
+        billingKeyMethod: 'CARD',
+        issueId: paymentId,        // 'p-'+UUID 형식 재사용
+        issueName: orderName,
+        customer: customer,
+        redirectUrl: redirectUrl,
+      };
+      console.log('[빌링키 발급 요청 페이로드]', billingKeyRequest);
+      response = await PortOne.requestIssueBillingKey(billingKeyRequest);
+    } else {
+      // 단건결제: 기존 그대로
+      const paymentRequest = {
+        storeId: PORTONE_STORE_ID,
+        channelKey: PORTONE_CHANNEL_KEY,
+        paymentId: paymentId,
+        orderName: orderName,
+        totalAmount: 4900,
+        currency: 'CURRENCY_KRW',
+        payMethod: payMethod,
+        customer: customer,
+        redirectUrl: redirectUrl,
+      };
+      console.log('[결제 요청 페이로드]', paymentRequest);
+      response = await PortOne.requestPayment(paymentRequest);
+    }
+    console.log('[결제/빌링키 응답]', response);
 
-    // 결제 실패 또는 취소
+    // 결제/발급 실패 또는 취소 (단건·정기 공통 처리)
     if (response && response.code !== undefined) {
       // 사용자가 결제창을 닫은 경우 등
       if (response.code === 'CLIENT_ERROR' || (response.message && response.message.includes('사용자'))) {
@@ -879,19 +898,38 @@ async function proceedToPayment() {
       return;
     }
 
-    // 결제 성공 (테스트 모드: 실제 돈은 빠지지 않음)
-    // ⚠️ 운영 환경에서는 이 시점에 백엔드로 paymentId를 전송하여
-    //    포트원 API로 결제 검증 + DB 기록 + Pro 권한 부여를 처리해야 함.
-    //    현재는 카카오페이 가맹점 심사용 결제창 노출 검증 단계.
-    alert(
-      '✅ 결제가 완료되었습니다!\n\n' +
-      '주문번호: ' + paymentId + '\n' +
-      '결제유형: ' + (planType === 'onetime' ? '단건결제 (1개월 이용권)' : '정기결제 (매월 자동결제)') + '\n' +
-      '결제수단: ' + (selectedPayment === 'kakaopay' ? '카카오페이' : '신용/체크카드') + '\n' +
-      '금액: 4,900원\n\n' +
-      '※ 현재 테스트 환경이므로 실제 결제는 이루어지지 않았습니다.\n' +
-      '정식 오픈일(2026년 6월 8일)부터 정상 결제가 진행됩니다.'
-    );
+    if (planType === 'subscription') {
+      // 빌링키 발급 성공 — billingKey 존재 확인
+      if (!response || !response.billingKey) {
+        alert('빌링키 발급 응답이 비어있습니다. 다시 시도해주세요.');
+        return;
+      }
+      console.log('[빌링키 발급 성공] billingKey:', response.billingKey);
+      // TODO(6월 실연동): billingKey를 백엔드로 보내 첫 결제+구독 생성
+      alert(
+        '✅ 정기결제 카드 등록이 완료되었습니다!\n\n' +
+        '주문번호: ' + paymentId + '\n' +
+        '결제유형: 정기결제 (매월 자동결제)\n' +
+        '결제수단: ' + (selectedPayment === 'kakaopay' ? '카카오페이' : '신용/체크카드') + '\n' +
+        '금액: 매월 4,900원\n\n' +
+        '※ 현재 테스트 환경이므로 실제 결제는 이루어지지 않았습니다.\n' +
+        '정식 오픈일(2026년 6월 8일)부터 정상 결제가 진행됩니다.'
+      );
+    } else {
+      // 단건결제 성공 (테스트 모드: 실제 돈은 빠지지 않음)
+      // ⚠️ 운영 환경에서는 이 시점에 백엔드로 paymentId를 전송하여
+      //    포트원 API로 결제 검증 + DB 기록 + Pro 권한 부여를 처리해야 함.
+      //    현재는 카카오페이 가맹점 심사용 결제창 노출 검증 단계.
+      alert(
+        '✅ 결제가 완료되었습니다!\n\n' +
+        '주문번호: ' + paymentId + '\n' +
+        '결제유형: 단건결제 (1개월 이용권)\n' +
+        '결제수단: ' + (selectedPayment === 'kakaopay' ? '카카오페이' : '신용/체크카드') + '\n' +
+        '금액: 4,900원\n\n' +
+        '※ 현재 테스트 환경이므로 실제 결제는 이루어지지 않았습니다.\n' +
+        '정식 오픈일(2026년 6월 8일)부터 정상 결제가 진행됩니다.'
+      );
+    }
   } catch (e) {
     console.error('[결제 예외]', e);
     // 디버깅을 위해 실제 에러 메시지를 alert에 노출
