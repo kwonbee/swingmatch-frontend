@@ -796,7 +796,8 @@ submitBtn.addEventListener('click', async () => {
 
 // ─── 포트원 V2 결제 설정 ───
 const PORTONE_STORE_ID    = 'store-8175252d-f743-4823-805c-780fba21509e';
-const PORTONE_CHANNEL_KEY = 'channel-key-8bdb4c12-5437-4cd0-a5ce-919c5f14d71c';
+const PORTONE_CHANNEL_KEY_ONETIME = 'channel-key-8bdb4c12-5437-4cd0-a5ce-919c5f14d71c'; // 일반결제(단건)
+const PORTONE_CHANNEL_KEY_BILLING = 'channel-key-90464792-54e8-44e2-be0b-3ff762c7d15b'; // 정기결제(빌링)
 
 async function proceedToPayment() {
   // 0) 포트원 SDK 로드 확인
@@ -856,7 +857,7 @@ async function proceedToPayment() {
       // 정기결제: 빌링키 발급 (매월 자동결제는 백엔드에서 이 키로 청구)
       const billingKeyRequest = {
         storeId: PORTONE_STORE_ID,
-        channelKey: PORTONE_CHANNEL_KEY,
+        channelKey: PORTONE_CHANNEL_KEY_BILLING,
         billingKeyMethod: 'CARD',
         issueId: paymentId,        // 'p-'+UUID 형식 재사용
         issueName: orderName,
@@ -869,7 +870,7 @@ async function proceedToPayment() {
       // 단건결제: 기존 그대로
       const paymentRequest = {
         storeId: PORTONE_STORE_ID,
-        channelKey: PORTONE_CHANNEL_KEY,
+        channelKey: PORTONE_CHANNEL_KEY_ONETIME,
         paymentId: paymentId,
         orderName: orderName,
         totalAmount: 4900,
