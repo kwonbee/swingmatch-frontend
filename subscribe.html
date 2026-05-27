@@ -881,6 +881,12 @@ async function proceedToPayment() {
         issueName: orderName,
         customer: customer,
         redirectUrl: redirectUrl,
+        // KG이니시스 V2 모바일 빌링키 발급 시 offerPeriod 필수
+        // (PC는 optional, 모바일은 누락 시 에러 발생)
+        // interval '1m' = 매월 자동결제
+        offerPeriod: {
+          interval: '1m',
+        },
       };
       console.log('[빌링키 발급 요청 페이로드]', billingKeyRequest);
       response = await PortOne.requestIssueBillingKey(billingKeyRequest);
