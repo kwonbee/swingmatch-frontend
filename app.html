@@ -760,19 +760,19 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
     <div class="empty-state" id="hist-filter-empty" style="display:none"><span class="eico">🔍</span>해당 클럽의 분석 기록이 없습니다.</div>
     <div class="hist-list" id="hist-list" style="display:none"></div>
     <!-- Pro 유도 상시 배너 (renderHistory에서 무료 회원에게만 표시) -->
-    <div id="hist-pro-banner" style="display:none; background:#F5F3EF; border:1px solid rgba(76,120,87,0.25); border-radius:12px; padding:18px 20px; margin-top:18px;">
+    <div id="hist-pro-banner" style="display:none; background:#2D4A33; border:none; border-radius:12px; padding:18px 20px; margin-top:18px;">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
         <div style="flex:1; min-width:240px;">
-          <div style="font-size:14px; color:#4C7857; font-weight:500; margin-bottom:8px;">✨ Pro로 더 깊이 분석하세요</div>
-          <div style="display:flex; gap:18px; flex-wrap:wrap; font-size:12.5px; color:#bbb; line-height:1.6;">
-            <span>♾️ <span style="color:#e8e8e8;">무제한 분석</span></span>
-            <span>📂 전체 기록 <span style="color:#e8e8e8;">영구 보관</span></span>
-            <span>🎥 분석 영상 <span style="color:#e8e8e8;">저장 30개</span></span>
-            <span>❤️ 즐겨찾기 영상 <span style="color:#e8e8e8;">추가 10개</span></span>
-            <span>🆚 스윙 <span style="color:#e8e8e8;">영상 비교</span></span>
+          <div style="font-size:14px; color:#FFFFFF; font-weight:600; margin-bottom:8px;">✨ Pro로 더 깊이 분석하세요</div>
+          <div style="display:flex; gap:18px; flex-wrap:wrap; font-size:12.5px; color:rgba(255,255,255,0.7); line-height:1.6;">
+            <span>♾️ <span style="color:#FFFFFF;font-weight:500;">무제한 분석</span></span>
+            <span>📂 전체 기록 <span style="color:#FFFFFF;font-weight:500;">영구 보관</span></span>
+            <span>🎥 분석 영상 <span style="color:#FFFFFF;font-weight:500;">저장 30개</span></span>
+            <span>❤️ 즐겨찾기 영상 <span style="color:#FFFFFF;font-weight:500;">추가 10개</span></span>
+            <span>🆚 스윙 <span style="color:#FFFFFF;font-weight:500;">영상 비교</span></span>
           </div>
         </div>
-        <a href="/subscribe.html" style="background:#4C7857; color:#1a1a1a; font-size:13px; font-weight:500; padding:9px 20px; border-radius:8px; text-decoration:none; white-space:nowrap;">Pro 구독 · 월 4,900원</a>
+        <a href="/subscribe.html" style="background:#FFFFFF; color:#2D4A33; font-size:13px; font-weight:600; padding:9px 20px; border-radius:8px; text-decoration:none; white-space:nowrap;">Pro 구독 · 월 4,900원</a>
       </div>
     </div>
   </div>
@@ -1268,7 +1268,7 @@ document.addEventListener('click', function(e) {
 async function loginWithGoogle() {
   // next 파라미터를 redirectTo에 전파 (subscribe에서 온 경우 가입 후 자동 복귀)
   const nextParam = new URLSearchParams(location.search).get('next');
-  const redirectBase = 'https://myswingmatch.com';
+  const redirectBase = window.location.origin;
   const redirectTo = nextParam === 'subscribe'
     ? redirectBase + '/subscribe.html'
     : redirectBase + '/app.html';
