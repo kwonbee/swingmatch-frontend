@@ -814,8 +814,23 @@ submitBtn.addEventListener('click', async () => {
 
 // ─── 포트원 V2 결제 설정 ───
 const PORTONE_STORE_ID    = 'store-8175252d-f743-4823-805c-780fba21509e';
-const PORTONE_CHANNEL_KEY_ONETIME = 'channel-key-8bdb4c12-5437-4cd0-a5ce-919c5f14d71c'; // 일반결제(단건)
-const PORTONE_CHANNEL_KEY_BILLING = 'channel-key-90464792-54e8-44e2-be0b-3ff762c7d15b'; // 정기결제(빌링)
+// ── 결제수단 × 결제유형별 채널키 ──
+// 카드(신용/체크) → KG이니시스 채널 / 카카오페이 → 카카오페이 채널
+// 단건(onetime)   → 일반결제 채널   / 정기(subscription) → 정기(빌링) 채널
+const PORTONE_CHANNEL_KEY_INICIS_ONETIME = 'channel-key-8bdb4c12-5437-4cd0-a5ce-919c5f14d71c'; // 이니시스 단건
+const PORTONE_CHANNEL_KEY_INICIS_BILLING = 'channel-key-90464792-54e8-44e2-be0b-3ff762c7d15b'; // 이니시스 정기(빌링)
+const PORTONE_CHANNEL_KEY_KAKAO_ONETIME  = 'channel-key-4e498f58-a886-45f0-8a6d-0956cb370872'; // 카카오 단건 (테스트 CID: TC0ONETIME)
+const PORTONE_CHANNEL_KEY_KAKAO_BILLING  = 'channel-key-435fe471-8aae-4c44-ad2c-65932883089d'; // 카카오 정기 (테스트 CID: TCSUBSCRIP)
+
+// 결제수단(카드/카카오) × 유형(단건/정기) → 채널키 선택
+function pickChannelKey(selectedPayment, planType) {
+  const isKakao = selectedPayment === 'kakaopay';
+  const isBilling = planType === 'subscription';
+  if (isKakao) {
+    return isBilling ? PORTONE_CHANNEL_KEY_KAKAO_BILLING : PORTONE_CHANNEL_KEY_KAKAO_ONETIME;
+  }
+  return isBilling ? PORTONE_CHANNEL_KEY_INICIS_BILLING : PORTONE_CHANNEL_KEY_INICIS_ONETIME;
+}
 
 async function proceedToPayment() {
   // 0) 포트원 SDK 로드 확인
@@ -847,6 +862,10 @@ async function proceedToPayment() {
     ? 'MySwingMatch Pro 1개월 이용권 (단건 4,900원)'
     : 'MySwingMatch Pro 멤버십 (월 정기 4,900원)';
 
+  // 2-2) 결제수단 × 유형 → 채널키 선택 (카드=이니시스 / 카카오페이=카카오 채널)
+  const channelKey = pickChannelKey(selectedPayment, planType);
+  console.log('[채널 선택]', { selectedPayment, planType, payMethod, channelKey });
+
   // 3) 주문 ID — 매 결제마다 고유해야 함
   //    KG이니시스는 oid 길이를 1~40자로 제한.
   //    UUID 32자(하이픈 제거) + 'p-' 접두사 2자 = 34자 (안전)
@@ -873,10 +892,11 @@ async function proceedToPayment() {
     let response;
     if (planType === 'subscription') {
       // 정기결제: 빌링키 발급 (매월 자동결제는 백엔드에서 이 키로 청구)
+      // 카카오페이는 billingKeyMethod를 'EASY_PAY'로, 카드(이니시스)는 'CARD'로 설정
       const billingKeyRequest = {
         storeId: PORTONE_STORE_ID,
-        channelKey: PORTONE_CHANNEL_KEY_BILLING,
-        billingKeyMethod: 'CARD',
+        channelKey: channelKey,
+        billingKeyMethod: selectedPayment === 'kakaopay' ? 'EASY_PAY' : 'CARD',
         issueId: paymentId,        // 'p-'+UUID 형식 재사용
         issueName: orderName,
         customer: customer,
@@ -894,7 +914,7 @@ async function proceedToPayment() {
       // 단건결제: 기존 그대로
       const paymentRequest = {
         storeId: PORTONE_STORE_ID,
-        channelKey: PORTONE_CHANNEL_KEY_ONETIME,
+        channelKey: channelKey,
         paymentId: paymentId,
         orderName: orderName,
         totalAmount: 4900,
