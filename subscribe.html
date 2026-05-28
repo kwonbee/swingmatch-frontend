@@ -589,7 +589,9 @@
       <span class="payment-method-icon">💳</span>
       <span class="payment-method-label">신용 / 체크카드</span>
     </label>
-    <label class="payment-method">
+    <!-- 베타: 카카오페이 직접연동 미노출 (이니시스 결제창 안에 카카오페이 이미 포함됨).
+         베타 후 수수료 보고 직접연동 판단 시 아래 display:none 제거하면 4채널 분기 그대로 동작. -->
+    <label class="payment-method" style="display:none">
       <input type="radio" name="payment" value="kakaopay">
       <span class="payment-method-icon">💛</span>
       <span class="payment-method-label">카카오페이</span>
