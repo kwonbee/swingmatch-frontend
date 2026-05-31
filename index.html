@@ -574,6 +574,12 @@ footer {
   font-weight: 400; transition: color 0.2s;
 }
 .footer-menu a:hover { color: var(--accent-light); }
+.footer-menu a.footer-kakao {
+  display: inline-flex; align-items: center;
+  background: #FEE500; color: #191919; font-weight: 600;
+  padding: 0.32rem 0.7rem; border-radius: 999px;
+}
+.footer-menu a.footer-kakao:hover { background: #f5dc00; color: #191919; }
 .footer-social { display: flex; gap: 0.6rem; align-items: center; }
 .footer-social a {
   width: 32px; height: 32px; border-radius: 50%;
@@ -1181,7 +1187,10 @@ footer {
 </svg></div>
 
       <nav class="footer-menu">
-        <a href="mailto:myswingmatch@gmail.com">1:1 문의</a>
+        <a href="http://pf.kakao.com/_PxaMGX/chat" target="_blank" rel="noopener" class="footer-kakao">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:1em;height:1em;vertical-align:-0.12em;margin-right:0.35em;">
+            <path d="M12 3C6.48 3 2 6.58 2 10.99c0 2.86 1.92 5.36 4.8 6.77-.21.77-.76 2.78-.87 3.21-.14.54.2.53.41.39.17-.11 2.68-1.82 3.77-2.56.6.09 1.23.13 1.89.13 5.52 0 10-3.58 10-7.99C22 6.58 17.52 3 12 3z"/>
+          </svg>카카오톡 문의</a>
         <a href="/terms.html">이용약관</a>
         <a href="/privacy.html">개인정보처리방침</a>
       </nav>
