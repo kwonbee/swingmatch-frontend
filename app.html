@@ -1522,7 +1522,7 @@ async function forgotPassword() {
     if (msg.includes('rate limit') || error.status === 429) {
       errEl.innerHTML = '⏰ <strong>너무 자주 시도하셨어요!</strong><br>' +
         '<span style="font-size:0.8rem;opacity:0.85">잠시 후(약 1시간 후) 다시 시도해주세요.<br>' +
-        '급하시면 <a href="https://pf.kakao.com/myswingmatch" target="_blank" style="color:#c8a96e;text-decoration:underline">카카오톡 문의</a>해주세요.</span>';
+        '급하시면 <a href="http://pf.kakao.com/_PxaMGX/chat" target="_blank" rel="noopener" style="color:#c8a96e;text-decoration:underline">카카오톡 문의</a>해주세요.</span>';
     } else if (msg.includes('not found') || msg.includes('user not')) {
       errEl.innerHTML = '⚠️ <strong>등록되지 않은 이메일이에요</strong><br>' +
         '<span style="font-size:0.8rem;opacity:0.85">회원가입을 먼저 해주시거나, Google 로그인을 이용해보세요.</span>';
