@@ -2413,7 +2413,59 @@ async function toggleFavorite(dbId, btnEl) {
   console.log(`[Favorite] ${newFavoriteState ? '추가' : '해제'}: ${dbId}`);
 }
 
+// ───────────────────────────────────────────────
+// 류소연 연속 노출 방지 필터 (localStorage 기반, 임시 보완)
+// 정지프레임 분석의 류소연 쏠림을 근본 해결하는 건 아니며(그건 포즈추정),
+// "한 사람이 연속으로 류소연만 보는" 체감 문제만 완화한다.
+// 류소연이 1순위로 뜬 직후 N회는, 응답에 같이 온 2순위 후보로 표시만 교체.
+// 서버·DB·점수·분석내용은 일절 건드리지 않음. 류소연 한정.
+const RYU_KEY = 'msm_ryu_recent';   // 최근 류소연 노출 카운트다운 저장
+const RYU_COOLDOWN = 3;             // 류소연 1회 노출 후 다음 3회는 제외 시도
+function isRyu(p){
+  if(!p) return false;
+  const n = (p.name||'').replace(/\s/g,'');
+  const en = (p.nameEn||'').toLowerCase().replace(/\s/g,'');
+  return n.indexOf('류소연')>-1 || en.indexOf('soyeon')>-1 || en.indexOf('soyeonryu')>-1;
+}
+function applyRyuFilter(d){
+  try {
+    let cd = parseInt(localStorage.getItem(RYU_KEY)) || 0;  // 남은 쿨다운 횟수
+    const topIsRyu = isRyu(d.topMatch);
+    if (topIsRyu && cd > 0) {
+      // 쿨다운 중인데 또 류소연 → 류소연 아닌 첫 2순위 후보로 표시 교체
+      const alt = (d.similar||[]).find(s => s && s.name && !isRyu(s));
+      if (alt) {
+        const oldTop = d.topMatch;
+        // 표시 선수 정보만 교체, 점수·분석은 유지 (기존 3%p 스위치와 동일 방식)
+        d.topMatch = Object.assign({}, oldTop, {
+          name: alt.name,
+          nameEn: alt.nameEn || oldTop.nameEn,
+          tour: alt.tour || oldTop.tour,
+          nationality: alt.nationality || oldTop.nationality,
+          emoji: alt.emoji || oldTop.emoji
+        });
+        // 밀려난 류소연을 2순위 자리에 넣어 정보 손실 방지
+        d.similar = [{ emoji: oldTop.emoji, name: oldTop.name, nameEn: oldTop.nameEn,
+                       tour: oldTop.tour, nationality: oldTop.nationality,
+                       pct: (d.similar && d.similar[0] && d.similar[0].pct) || oldTop.matchPct }]
+                    .concat((d.similar||[]).filter(s => s && !isRyu(s)));
+      }
+      // 교체 성공 여부와 무관하게 쿨다운은 1 감소
+      cd = Math.max(0, cd - 1);
+      localStorage.setItem(RYU_KEY, String(cd));
+    } else if (isRyu(d.topMatch)) {
+      // 이번에 실제로 류소연이 표시됨 → 쿨다운 재충전
+      localStorage.setItem(RYU_KEY, String(RYU_COOLDOWN));
+    } else if (cd > 0) {
+      // 류소연 아닌 결과가 나온 회차도 쿨다운 1 소모(시간이 지나면 자연 해제)
+      localStorage.setItem(RYU_KEY, String(Math.max(0, cd - 1)));
+    }
+  } catch(e) { /* localStorage 불가 환경: 필터 무시, 원본 그대로 */ }
+  return d;
+}
+
 function renderResult(d, videoInfo) {
+  d = applyRyuFilter(d);
   const t = d.topMatch;
   document.getElementById('r-emoji').textContent = t.emoji || '🏌️';
   document.getElementById('r-name').textContent = t.name;
