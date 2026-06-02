@@ -915,6 +915,7 @@ async function proceedToPayment() {
       planType: planType,
       selectedPayment: selectedPayment,
       orderName: orderName,
+      customer: customer,
       savedAt: Date.now(),
     }));
   } catch (e) {
@@ -1007,6 +1008,7 @@ async function proceedToPayment() {
             planType: 'subscription',
             orderName: orderName,
             amount: 4900,
+            customer: customer,
           }),
         });
         const verifyData = await verifyRes.json().catch(() => ({}));
@@ -1271,11 +1273,22 @@ async function handlePaymentRedirectReturn() {
       return true;
     }
 
+    // customer 정보 구성: sessionStorage 저장값 우선, 없으면 로그인 세션 user로 재구성
+    // (포트원 빌링키 청구는 customer.name/email/phoneNumber 필수)
+    const sUser = (session && session.user) || {};
+    const customer = (pending && pending.customer) || {
+      customerId: sUser.id,
+      fullName: (sUser.email || 'MySwingMatch 회원').split('@')[0],
+      phoneNumber: '010-2513-9241',
+      email: sUser.email || 'guest@myswingmatch.com',
+    };
+
     const body = {
       paymentId: paymentId,
       planType: planType,
       orderName: orderName,
       amount: 4900,
+      customer: customer,
     };
     // 정기결제(빌링키) 복귀: redirect 쿼리에서 billingKey를 받아 verify로 전달.
     // KG/포트원 SDK마다 키 이름이 달라 후보를 넓게 수집.
