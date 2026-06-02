@@ -1210,6 +1210,10 @@ async function handlePaymentRedirectReturn() {
   params.forEach((v, k) => { allParams[k] = v; });
   console.log('[모바일 복귀 감지] 전체 URL:', window.location.href);
   console.log('[모바일 복귀 감지] 쿼리 파라미터:', allParams);
+  // 모바일은 콘솔을 못 보므로, 빌링키 디버그 모드일 때 화면에도 노출 (?dbg=1 일 때만)
+  if (params.get('dbg') === '1') {
+    alert('[복귀 파라미터 디버그]\nURL: ' + window.location.href + '\n\n' + JSON.stringify(allParams, null, 2));
+  }
 
   // URL 정리 (새로고침 시 재처리 방지) — 쿼리 제거
   function cleanUrl() {
@@ -1271,9 +1275,12 @@ async function handlePaymentRedirectReturn() {
       orderName: orderName,
       amount: 4900,
     };
-    // 정기결제(빌링키)인데 billingKey를 쿼리로 못 받은 경우:
-    // server.js의 verify는 billingKey 없이도 paymentId로 결제/구독을 재조회·처리하도록 폴백돼 있음.
-    const qsBillingKey = params.get('billingKey') || null;
+    // 정기결제(빌링키) 복귀: redirect 쿼리에서 billingKey를 받아 verify로 전달.
+    // KG/포트원 SDK마다 키 이름이 달라 후보를 넓게 수집.
+    const qsBillingKey =
+      params.get('billingKey') || params.get('billing_key') ||
+      params.get('billingKeyId') || params.get('issueId') ||
+      params.get('customer_uid') || params.get('customerUid') || null;
     if (planType === 'subscription' && qsBillingKey) body.billingKey = qsBillingKey;
 
     console.log('[모바일 복귀 verify 요청]', body);
