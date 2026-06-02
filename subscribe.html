@@ -816,12 +816,16 @@ submitBtn.addEventListener('click', async () => {
 });
 
 // ─── 포트원 V2 결제 설정 ───
+const BACKEND_URL         = 'https://swingmatch-backend-production.up.railway.app';
 const PORTONE_STORE_ID    = 'store-8175252d-f743-4823-805c-780fba21509e';
 // ── 결제수단 × 결제유형별 채널키 ──
 // 카드(신용/체크) → KG이니시스 채널 / 카카오페이 → 카카오페이 채널
 // 단건(onetime)   → 일반결제 채널   / 정기(subscription) → 정기(빌링) 채널
-const PORTONE_CHANNEL_KEY_INICIS_ONETIME = 'channel-key-8bdb4c12-5437-4cd0-a5ce-919c5f14d71c'; // 이니시스 단건
-const PORTONE_CHANNEL_KEY_INICIS_BILLING = 'channel-key-90464792-54e8-44e2-be0b-3ff762c7d15b'; // 이니시스 정기(빌링)
+// 2026-06-02 실연동 전환: 이니시스 실연동 채널(MID MOI9122178)은 단일 채널이 단건+정기 모두 처리.
+// 따라서 단건/정기 둘 다 같은 실연동 채널키를 사용한다.
+const PORTONE_CHANNEL_KEY_INICIS_ONETIME = 'channel-key-d67d15a9-a1a1-44f9-9149-e2ceb68a9ff6'; // 이니시스 실연동 (단건)
+const PORTONE_CHANNEL_KEY_INICIS_BILLING = 'channel-key-d67d15a9-a1a1-44f9-9149-e2ceb68a9ff6'; // 이니시스 실연동 (정기/빌링) — 동일 채널
+// 카카오페이는 베타 미노출 상태 → 테스트 채널키 그대로 보존 (노출 켤 때 실 CID 발급 후 교체)
 const PORTONE_CHANNEL_KEY_KAKAO_ONETIME  = 'channel-key-4e498f58-a886-45f0-8a6d-0956cb370872'; // 카카오 단건 (테스트 CID: TC0ONETIME)
 const PORTONE_CHANNEL_KEY_KAKAO_BILLING  = 'channel-key-435fe471-8aae-4c44-ad2c-65932883089d'; // 카카오 정기 (테스트 CID: TCSUBSCRIP)
 
@@ -953,30 +957,126 @@ async function proceedToPayment() {
         return;
       }
       console.log('[빌링키 발급 성공] billingKey:', response.billingKey);
-      // TODO(6월 실연동): billingKey를 백엔드로 보내 첫 결제+구독 생성
-      alert(
-        '✅ 정기결제 카드 등록이 완료되었습니다!\n\n' +
-        '주문번호: ' + paymentId + '\n' +
-        '결제유형: 정기결제 (매월 자동결제)\n' +
-        '결제수단: ' + (selectedPayment === 'kakaopay' ? '카카오페이' : '신용/체크카드') + '\n' +
-        '금액: 매월 4,900원\n\n' +
-        '※ 현재 테스트 환경이므로 실제 결제는 이루어지지 않았습니다.\n' +
-        '정식 오픈일(2026년 6월 8일)부터 정상 결제가 진행됩니다.'
-      );
+
+      // ── 백엔드 검증 + 첫 결제 + 구독 생성 (실연동) ──
+      // 프론트는 billingKey를 신뢰하지 않고, access_token과 함께 백엔드로 전달.
+      // 백엔드(server.js)가 포트원 API로 빌링키 검증 → 첫 결제 청구 → subscriptions 생성 → plan='pro' 부여.
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        const accessToken = session && session.access_token;
+        if (!accessToken) {
+          alert('로그인 세션이 만료되었습니다. 다시 로그인 후 시도해주세요.');
+          window.location.href = '/app.html?next=subscribe';
+          return;
+        }
+        const verifyRes = await fetch(BACKEND_URL + '/api/payment/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + accessToken,
+          },
+          body: JSON.stringify({
+            paymentId: paymentId,
+            billingKey: response.billingKey,
+            planType: 'subscription',
+            orderName: orderName,
+            amount: 4900,
+          }),
+        });
+        const verifyData = await verifyRes.json().catch(() => ({}));
+        console.log('[백엔드 검증 응답 — 정기]', verifyRes.status, verifyData);
+
+        if (!verifyRes.ok || !(verifyData && verifyData.success)) {
+          alert(
+            '결제 등록은 되었으나 구독 처리 중 문제가 발생했습니다.\n\n' +
+            '주문번호: ' + paymentId + '\n' +
+            (verifyData && verifyData.message ? '사유: ' + verifyData.message + '\n' : '') +
+            '\n잠시 후 마이페이지에서 구독 상태를 확인하시거나, ' +
+            'myswingmatch@gmail.com으로 주문번호와 함께 문의해주세요.'
+          );
+          return;
+        }
+
+        alert(
+          '✅ Pro 멤버십 구독이 완료되었습니다!\n\n' +
+          '주문번호: ' + paymentId + '\n' +
+          '결제유형: 정기결제 (매월 자동결제)\n' +
+          '결제수단: ' + (selectedPayment === 'kakaopay' ? '카카오페이' : '신용/체크카드') + '\n' +
+          '금액: 매월 4,900원\n\n' +
+          '지금부터 무제한 분석을 이용하실 수 있습니다. 감사합니다!'
+        );
+        // Pro 상태 즉시 반영 (캐시 꼬임 방지) — 마이페이지로 이동
+        window.location.href = '/mypage.html';
+        return;
+      } catch (verr) {
+        console.error('[백엔드 검증 예외 — 정기]', verr);
+        alert(
+          '결제 등록은 되었으나 서버 통신 중 오류가 발생했습니다.\n\n' +
+          '주문번호: ' + paymentId + '\n' +
+          '잠시 후 마이페이지에서 구독 상태를 확인해주세요. ' +
+          '반영되지 않았다면 myswingmatch@gmail.com으로 주문번호와 함께 문의해주세요.'
+        );
+        return;
+      }
     } else {
-      // 단건결제 성공 (테스트 모드: 실제 돈은 빠지지 않음)
-      // ⚠️ 운영 환경에서는 이 시점에 백엔드로 paymentId를 전송하여
-      //    포트원 API로 결제 검증 + DB 기록 + Pro 권한 부여를 처리해야 함.
-      //    현재는 카카오페이 가맹점 심사용 결제창 노출 검증 단계.
-      alert(
-        '✅ 결제가 완료되었습니다!\n\n' +
-        '주문번호: ' + paymentId + '\n' +
-        '결제유형: 단건결제 (1개월 이용권)\n' +
-        '결제수단: ' + (selectedPayment === 'kakaopay' ? '카카오페이' : '신용/체크카드') + '\n' +
-        '금액: 4,900원\n\n' +
-        '※ 현재 테스트 환경이므로 실제 결제는 이루어지지 않았습니다.\n' +
-        '정식 오픈일(2026년 6월 8일)부터 정상 결제가 진행됩니다.'
-      );
+      // ── 단건결제 성공 → 백엔드 검증 + Pro 권한 부여 (실연동) ──
+      // 프론트는 결제 성공을 신뢰하지 않고, paymentId를 백엔드로 보내
+      // server.js가 포트원 API로 직접 결제 조회·금액 대조 후 plan='pro' 부여.
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        const accessToken = session && session.access_token;
+        if (!accessToken) {
+          alert('로그인 세션이 만료되었습니다. 다시 로그인 후 시도해주세요.');
+          window.location.href = '/app.html?next=subscribe';
+          return;
+        }
+        const verifyRes = await fetch(BACKEND_URL + '/api/payment/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + accessToken,
+          },
+          body: JSON.stringify({
+            paymentId: paymentId,
+            planType: 'onetime',
+            orderName: orderName,
+            amount: 4900,
+          }),
+        });
+        const verifyData = await verifyRes.json().catch(() => ({}));
+        console.log('[백엔드 검증 응답 — 단건]', verifyRes.status, verifyData);
+
+        if (!verifyRes.ok || !(verifyData && verifyData.success)) {
+          alert(
+            '결제는 되었으나 이용권 처리 중 문제가 발생했습니다.\n\n' +
+            '주문번호: ' + paymentId + '\n' +
+            (verifyData && verifyData.message ? '사유: ' + verifyData.message + '\n' : '') +
+            '\n잠시 후 마이페이지에서 확인하시거나, ' +
+            'myswingmatch@gmail.com으로 주문번호와 함께 문의해주세요.'
+          );
+          return;
+        }
+
+        alert(
+          '✅ 결제가 완료되었습니다!\n\n' +
+          '주문번호: ' + paymentId + '\n' +
+          '결제유형: 단건결제 (1개월 이용권)\n' +
+          '결제수단: ' + (selectedPayment === 'kakaopay' ? '카카오페이' : '신용/체크카드') + '\n' +
+          '금액: 4,900원\n\n' +
+          '지금부터 1개월간 무제한 분석을 이용하실 수 있습니다. 감사합니다!'
+        );
+        window.location.href = '/mypage.html';
+        return;
+      } catch (verr) {
+        console.error('[백엔드 검증 예외 — 단건]', verr);
+        alert(
+          '결제는 되었으나 서버 통신 중 오류가 발생했습니다.\n\n' +
+          '주문번호: ' + paymentId + '\n' +
+          '잠시 후 마이페이지에서 확인해주세요. ' +
+          '반영되지 않았다면 myswingmatch@gmail.com으로 주문번호와 함께 문의해주세요.'
+        );
+        return;
+      }
     }
   } catch (e) {
     console.error('[결제 예외]', e);
