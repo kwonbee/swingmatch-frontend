@@ -2414,7 +2414,10 @@ async function toggleFavorite(dbId, btnEl) {
 }
 
 // ───────────────────────────────────────────────
-// 류소연 연속 노출 방지 필터 (localStorage 기반, 임시 보완)
+// ⚠️ [사용 중단 2026-06-02] 류소연 스위치 로직은 백엔드(server.js)로 이전됨.
+//   백엔드가 선수 정보 + 분석 본문을 함께 교체하므로 화면·본문·히스토리(DB)가 정합한다.
+//   아래 함수는 더 이상 호출되지 않는다(renderResult에서 호출 제거). 참고용으로만 남겨둠.
+// 류소연 연속 노출 방지 필터 (localStorage 기반, 임시 보완) — [DEPRECATED, 미사용]
 // 정지프레임 분석의 류소연 쏠림을 근본 해결하는 건 아니며(그건 포즈추정),
 // "한 사람이 연속으로 류소연만 보는" 체감 문제만 완화한다.
 // 류소연이 1순위로 뜬 직후 N회는, 응답에 같이 온 2순위 후보로 표시만 교체.
@@ -2465,7 +2468,8 @@ function applyRyuFilter(d){
 }
 
 function renderResult(d, videoInfo) {
-  d = applyRyuFilter(d);
+  // 류소연 스위치는 이제 백엔드(server.js)에서 본문까지 함께 교체해 처리한다.
+  // 프론트에서 한 번 더 덮어쓰면 화면과 DB(히스토리)가 어긋나므로 여기선 적용하지 않는다.
   const t = d.topMatch;
   document.getElementById('r-emoji').textContent = t.emoji || '🏌️';
   document.getElementById('r-name').textContent = t.name;
