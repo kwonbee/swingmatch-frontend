@@ -895,6 +895,23 @@ async function proceedToPayment() {
   };
   const redirectUrl = window.location.origin + '/subscribe.html';
 
+  // ── 모바일 redirect 대비: 결제 컨텍스트를 sessionStorage에 저장 ──
+  // 모바일(KG이니시스 V2)은 결제 후 페이지가 redirectUrl로 통째로 새로 로드되며
+  // requestPayment()/requestIssueBillingKey()의 반환값(아래 코드)에 도달하지 못한다.
+  // 복귀 시 쿼리스트링(paymentId 등)만 전달되므로, verify에 필요한 정보를 미리 저장해둔다.
+  // (PC는 콜백 방식이라 반환값으로 그대로 처리되고, 이 저장값은 복귀 핸들러에서 정리됨.)
+  try {
+    sessionStorage.setItem('msm_pending_payment', JSON.stringify({
+      paymentId: paymentId,
+      planType: planType,
+      selectedPayment: selectedPayment,
+      orderName: orderName,
+      savedAt: Date.now(),
+    }));
+  } catch (e) {
+    console.warn('[결제 컨텍스트 저장 실패]', e);
+  }
+
   try {
     let response;
     if (planType === 'subscription') {
@@ -1158,8 +1175,149 @@ async function checkProStatus() {
   }
 }
 
+// ─── 모바일 redirect 복귀 처리 ───
+// 모바일(KG이니시스 V2)은 결제 후 subscribe.html?paymentId=...&transactionType=...&txId=...
+// 형태로 페이지가 새로 로드된다(PC 콜백과 달리 함수 반환값을 못 받음).
+// 복귀 쿼리를 감지하면 저장해둔 결제 컨텍스트로 verify를 호출해 Pro를 부여한다.
+async function handlePaymentRedirectReturn() {
+  let params;
+  try {
+    params = new URLSearchParams(window.location.search);
+  } catch (e) {
+    return false;
+  }
+
+  // 복귀 파라미터 감지 (SDK/PG마다 키가 달라 관대하게 수집)
+  const qsPaymentId =
+    params.get('paymentId') || params.get('payment_id') ||
+    params.get('imp_uid')  || params.get('merchant_uid') || null;
+  const transactionType = params.get('transactionType') || null; // PAYMENT | ISSUE_BILLING_KEY 등
+  const errorCode = params.get('code') || params.get('error_code') || null;
+  const errorMsg  = params.get('message') || params.get('error_msg') || null;
+
+  // 결제 관련 복귀가 아니면 통과
+  if (!qsPaymentId && !transactionType && !errorCode) return false;
+
+  // 디버그: 실제 모바일 복귀 파라미터를 콘솔에 그대로 출력 (다음 QA에서 키 확정용)
+  const allParams = {};
+  params.forEach((v, k) => { allParams[k] = v; });
+  console.log('[모바일 복귀 감지] 전체 URL:', window.location.href);
+  console.log('[모바일 복귀 감지] 쿼리 파라미터:', allParams);
+
+  // URL 정리 (새로고침 시 재처리 방지) — 쿼리 제거
+  function cleanUrl() {
+    try {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } catch (e) {}
+  }
+
+  // 저장해둔 결제 컨텍스트 복원
+  let pending = null;
+  try {
+    const raw = sessionStorage.getItem('msm_pending_payment');
+    if (raw) pending = JSON.parse(raw);
+  } catch (e) {}
+
+  // 결제창에서 사용자가 취소/실패한 경우
+  if (errorCode) {
+    console.warn('[모바일 복귀] 결제 실패/취소 코드:', errorCode, errorMsg);
+    try { sessionStorage.removeItem('msm_pending_payment'); } catch (e) {}
+    // 사용자 취소는 조용히, 그 외는 안내
+    if (!(errorMsg && errorMsg.indexOf('사용자') !== -1) && errorCode !== 'CLIENT_ERROR') {
+      alert('결제가 완료되지 않았습니다.\n에러: ' + errorCode + (errorMsg ? ' / ' + errorMsg : ''));
+    }
+    cleanUrl();
+    return true;
+  }
+
+  // verify 호출에 쓸 값 결정: 저장값 우선, 없으면 쿼리에서 추론
+  const paymentId = (pending && pending.paymentId) || qsPaymentId;
+  if (!paymentId) { cleanUrl(); return false; }
+
+  let planType = (pending && pending.planType) || null;
+  if (!planType) {
+    // 저장값이 없으면 transactionType으로 추론 (ISSUE_BILLING_KEY → subscription)
+    planType = (transactionType === 'ISSUE_BILLING_KEY') ? 'subscription' : 'onetime';
+  }
+  const selectedPayment = (pending && pending.selectedPayment) || 'card';
+  const orderName = (pending && pending.orderName) ||
+    (planType === 'onetime'
+      ? 'MySwingMatch Pro 1개월 이용권 (단건 4,900원)'
+      : 'MySwingMatch Pro 멤버십 (월 정기 4,900원)');
+
+  // 로딩 화면 유지하며 verify 진행
+  const loadingEl = document.getElementById('proCheckLoading');
+  if (loadingEl) loadingEl.style.display = 'block';
+
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const accessToken = session && session.access_token;
+    if (!accessToken) {
+      alert('로그인 세션이 만료되었습니다. 결제는 처리되었을 수 있으니, 다시 로그인 후 마이페이지에서 확인해주세요.');
+      cleanUrl();
+      return true;
+    }
+
+    const body = {
+      paymentId: paymentId,
+      planType: planType,
+      orderName: orderName,
+      amount: 4900,
+    };
+    // 정기결제(빌링키)인데 billingKey를 쿼리로 못 받은 경우:
+    // server.js의 verify는 billingKey 없이도 paymentId로 결제/구독을 재조회·처리하도록 폴백돼 있음.
+    const qsBillingKey = params.get('billingKey') || null;
+    if (planType === 'subscription' && qsBillingKey) body.billingKey = qsBillingKey;
+
+    console.log('[모바일 복귀 verify 요청]', body);
+    const verifyRes = await fetch(BACKEND_URL + '/api/payment/verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + accessToken,
+      },
+      body: JSON.stringify(body),
+    });
+    const verifyData = await verifyRes.json().catch(() => ({}));
+    console.log('[모바일 복귀 verify 응답]', verifyRes.status, verifyData);
+
+    try { sessionStorage.removeItem('msm_pending_payment'); } catch (e) {}
+
+    if (verifyRes.ok && verifyData && verifyData.success) {
+      // 성공 → 마이페이지로 (Pro 캐시 꼬임 방지)
+      window.location.href = '/mypage.html';
+      return true;
+    }
+
+    alert(
+      '결제는 처리되었으나 이용권 반영 중 문제가 발생했습니다.\n\n' +
+      '주문번호: ' + paymentId + '\n' +
+      (verifyData && verifyData.message ? '사유: ' + verifyData.message + '\n' : '') +
+      '\n잠시 후 마이페이지에서 확인하시거나, myswingmatch@gmail.com으로 주문번호와 함께 문의해주세요.'
+    );
+    cleanUrl();
+    return true;
+  } catch (e) {
+    console.error('[모바일 복귀 verify 예외]', e);
+    alert(
+      '결제는 처리되었을 수 있으나 서버 통신 중 오류가 발생했습니다.\n\n' +
+      '주문번호: ' + paymentId + '\n' +
+      '잠시 후 마이페이지에서 확인해주세요.'
+    );
+    cleanUrl();
+    return true;
+  }
+}
+
 // 페이지 로드 후 자동 실행
-checkProStatus();
+// 먼저 모바일 결제 복귀인지 확인 → 복귀면 verify 처리(성공 시 mypage 이동),
+// 복귀가 아니면 평소대로 Pro 상태 체크.
+(async function initSubscribePage() {
+  const handled = await handlePaymentRedirectReturn();
+  if (!handled) {
+    checkProStatus();
+  }
+})();
 
 // OAuth/로그인 후 세션 변경 감지
 supabaseClient.auth.onAuthStateChange((event, session) => {
