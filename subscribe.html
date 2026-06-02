@@ -577,8 +577,8 @@
       <span class="info-value">결제 즉시</span>
     </div>
     <div class="info-row">
-      <span class="info-label">해지</span>
-      <span class="info-value">언제든 가능</span>
+      <span class="info-label" id="infoLastLabel">해지</span>
+      <span class="info-value" id="infoLastValue">언제든 가능</span>
     </div>
   </div>
 
@@ -739,6 +739,8 @@ function applyPlanTypeUI() {
   const heroPeriod  = document.getElementById('heroPeriod');
   const heroVatInfo = document.getElementById('heroVatInfo');
   const infoCycle   = document.getElementById('infoCycle');
+  const infoLastLabel = document.getElementById('infoLastLabel');
+  const infoLastValue = document.getElementById('infoLastValue');
 
   // 선택된 카드에 .selected 표시
   document.querySelectorAll('.plan-type').forEach(pm => {
@@ -751,6 +753,9 @@ function applyPlanTypeUI() {
     if (heroPeriod)  heroPeriod.textContent  = '/ 1개월';
     if (heroVatInfo) heroVatInfo.textContent = 'VAT 포함 · 1회 결제 (자동연장 없음)';
     if (infoCycle)   infoCycle.textContent   = '1회 결제 · 30일 이용 (자동연장 없음)';
+    // 단건은 '해지' 개념이 없음 → 환불 안내로 교체
+    if (infoLastLabel) infoLastLabel.textContent = '환불';
+    if (infoLastValue) infoLastValue.textContent = '7일 이내 미사용 시 가능';
     // 정기결제 동의 약관 숨김 + 체크 해제
     if (term4Wrap) term4Wrap.style.display = 'none';
     if (term4) term4.checked = false;
@@ -759,6 +764,8 @@ function applyPlanTypeUI() {
     if (heroPeriod)  heroPeriod.textContent  = '/ 월';
     if (heroVatInfo) heroVatInfo.textContent = 'VAT 포함 · 매월 자동결제';
     if (infoCycle)   infoCycle.textContent   = '매월 자동결제 (30일)';
+    if (infoLastLabel) infoLastLabel.textContent = '해지';
+    if (infoLastValue) infoLastValue.textContent = '언제든 가능';
     // 정기결제 동의 약관 다시 표시
     if (term4Wrap) term4Wrap.style.display = '';
   }
