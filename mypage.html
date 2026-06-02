@@ -1220,7 +1220,7 @@ async function loadUserProfile(){
 }
 
 async function loadSubscription(){
-  // 우선 RPC 시도, 실패 시 빈 객체
+  // 1) RPC 시도
   try {
     const { data, error } = await supabaseClient.rpc('my_active_subscription');
     if (!error && data && data.length > 0) {
@@ -1228,6 +1228,32 @@ async function loadSubscription(){
     }
   } catch (e) {
     console.warn('[subscription RPC 미지원]', e);
+  }
+
+  // 2) 백엔드 status로 보강 (plan/기간/주문번호 정확값 — 단건/정기 구분의 기준)
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+      const r = await fetch(BACKEND_URL + '/api/subscription/status', {
+        headers: { 'Authorization': 'Bearer ' + session.access_token }
+      });
+      if (r.ok) {
+        const s = await r.json();
+        if (s && s.hasSubscription) {
+          activeSubscription = Object.assign({}, activeSubscription, {
+            plan: s.plan,
+            status: s.status,
+            amount: s.amount,
+            payment_method: s.paymentMethod,
+            current_period_end: s.currentPeriodEnd,
+            canceled_at: s.canceledAt,
+            order_id: (activeSubscription && activeSubscription.order_id) || s.portonePaymentId
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[subscription status 폴백 실패]', e);
   }
 }
 
@@ -1658,20 +1684,64 @@ function renderSubscription(){
   }
 
   // Pro 회원
-  const startDate = activeSubscription?.started_at || userProfile.created_at;
-  const expiresAt = activeSubscription?.expires_at;
-  const orderId = activeSubscription?.order_id || '—';
+  const startDate = activeSubscription?.started_at || activeSubscription?.current_period_start || userProfile.created_at;
+  const periodEnd = activeSubscription?.current_period_end || activeSubscription?.expires_at;
+  const orderId = activeSubscription?.portone_payment_id || activeSubscription?.order_id || '—';
   const status = activeSubscription?.status || 'active';
+  const isOnetime = activeSubscription?.plan === 'pro_onetime';
 
+  if (isOnetime) {
+    // ── 단건결제: '다음 결제일' 아님 → '이용 만료일', '구독 해지' 아님 → '결제 취소/환불' ──
+    const canceled = status === 'canceled' || !!activeSubscription?.canceled_at;
+    section.innerHTML = `
+      <div class="sub-card">
+        <div class="sub-row">
+          <span class="sub-label">현재 플랜</span>
+          <span class="sub-value gold">✦ Pro (단건 이용권)</span>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">상태</span>
+          <span class="sub-value">${canceled ? '해지됨' : 'Pro 이용 중'}</span>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">결제 금액</span>
+          <span class="sub-value">4,900원 (1회 결제)</span>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">결제일</span>
+          <span class="sub-value">${startDate ? formatDate(startDate) : '—'}</span>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">이용 만료일</span>
+          <span class="sub-value">${periodEnd ? formatDate(periodEnd) : '확인 중'}</span>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">주문번호</span>
+          <span class="sub-value" style="font-family:monospace;font-size:.78rem">${orderId}</span>
+        </div>
+        <div class="sub-actions">
+          <button class="btn btn-secondary" onclick="alert('영수증은 카드사 앱 또는 카카오페이 앱에서 확인하실 수 있습니다.')">영수증</button>
+          ${canceled ? '' : '<button class="btn btn-danger" id="cancelSubBtn">결제 취소 / 환불</button>'}
+        </div>
+      </div>
+      <p style="font-size:.75rem;color:var(--text-dim);margin-top:14px;line-height:1.6">
+        ※ 단건 이용권은 자동 갱신되지 않으며, 이용 만료일이 지나면 자동으로 무료 회원으로 전환됩니다.<br>
+        ※ 환불은 <strong>결제 후 7일 이내 + Pro 기능 미사용</strong> 시 전액 가능합니다. (그 외에는 환불이 제한됩니다)<br>
+        ※ 영상과 분석 기록은 만료 후에도 90일간 보관됩니다.
+      </p>`;
+    return;
+  }
+
+  // ── 정기결제: 기존 UI 유지 ──
   section.innerHTML = `
     <div class="sub-card">
       <div class="sub-row">
         <span class="sub-label">현재 플랜</span>
-        <span class="sub-value gold">✦ Pro 멤버십</span>
+        <span class="sub-value gold">✦ Pro 멤버십 (정기구독)</span>
       </div>
       <div class="sub-row">
         <span class="sub-label">상태</span>
-        <span class="sub-value">${status === 'active' ? '정상 결제 중' : status === 'cancelled' ? '해지 예정' : status}</span>
+        <span class="sub-value">${(status === 'active' && !activeSubscription?.canceled_at) ? '정상 결제 중' : (activeSubscription?.canceled_at || status === 'cancelled' || status === 'canceled') ? '해지 예정' : status}</span>
       </div>
       <div class="sub-row">
         <span class="sub-label">월 구독료</span>
@@ -1682,8 +1752,8 @@ function renderSubscription(){
         <span class="sub-value">${startDate ? formatDate(startDate) : '—'}</span>
       </div>
       <div class="sub-row">
-        <span class="sub-label">다음 결제일</span>
-        <span class="sub-value">${expiresAt ? formatDate(expiresAt) : '확인 중'}</span>
+        <span class="sub-label">${activeSubscription?.canceled_at ? '이용 만료일' : '다음 결제일'}</span>
+        <span class="sub-value">${periodEnd ? formatDate(periodEnd) : '확인 중'}</span>
       </div>
       <div class="sub-row">
         <span class="sub-label">주문번호</span>
@@ -1691,12 +1761,12 @@ function renderSubscription(){
       </div>
       <div class="sub-actions">
         <button class="btn btn-secondary" onclick="alert('영수증은 카드사 앱 또는 카카오페이 앱에서 확인하실 수 있습니다.')">영수증</button>
-        <button class="btn btn-danger" id="cancelSubBtn">구독 해지</button>
+        ${activeSubscription?.canceled_at ? '' : '<button class="btn btn-danger" id="cancelSubBtn">구독 해지</button>'}
       </div>
     </div>
     <p style="font-size:.75rem;color:var(--text-dim);margin-top:14px;line-height:1.6">
       ※ 구독 해지 시 현재 결제 주기 만료일까지는 Pro 기능을 계속 이용하실 수 있습니다.<br>
-      ※ 영상과 분석 기록은 해지 후에도 30일간 보관됩니다. 재가입 시 그대로 복원됩니다.
+      ※ 영상과 분석 기록은 해지 후에도 90일간 보관됩니다. 재가입 시 그대로 복원됩니다.
     </p>`;
 }
 
@@ -1754,16 +1824,25 @@ function bindEvents(){
 
 // ─── 구독 해지 ───
 async function handleCancelSubscription(){
-  const confirmed = confirm(
-    '정말 구독을 해지하시겠습니까?\n\n' +
-    '· 현재 결제 주기 만료일까지는 Pro 기능 이용 가능\n' +
-    '· 만료 후 무료 회원으로 전환됩니다\n' +
-    '· 영상과 분석 기록은 30일간 보관 (재가입 시 복원)\n\n' +
-    '해지를 진행하시려면 [확인]을 눌러주세요.'
-  );
+  const isOnetime = activeSubscription?.plan === 'pro_onetime';
+
+  const confirmed = isOnetime
+    ? confirm(
+        '단건 이용권 결제를 취소하시겠습니까?\n\n' +
+        '· 결제 후 7일 이내 + Pro 기능 미사용 시: 전액 환불 후 즉시 종료\n' +
+        '· 그 외의 경우: 자동 환불 불가 (만료일까지 이용, 환불은 이메일 문의)\n\n' +
+        '계속하시려면 [확인]을 눌러주세요.'
+      )
+    : confirm(
+        '정말 구독을 해지하시겠습니까?\n\n' +
+        '· 현재 결제 주기 만료일까지는 Pro 기능 이용 가능\n' +
+        '· 만료 후 무료 회원으로 전환됩니다\n' +
+        '· 영상과 분석 기록은 90일간 보관 (재가입 시 복원)\n\n' +
+        '해지를 진행하시려면 [확인]을 눌러주세요.'
+      );
   if (!confirmed) return;
 
-  const reason = prompt('해지 사유를 한 줄로 적어주시면 서비스 개선에 큰 도움이 됩니다. (선택사항)') || '';
+  const reason = prompt('사유를 한 줄로 적어주시면 서비스 개선에 큰 도움이 됩니다. (선택사항)') || '';
 
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
@@ -1784,19 +1863,17 @@ async function handleCancelSubscription(){
 
     if (!response.ok) {
       const err = await response.text();
-      throw new Error(err || '해지 요청 실패');
+      throw new Error(err || '요청 실패');
     }
 
-    alert(
-      '구독 해지가 접수되었습니다.\n\n' +
-      '현재 결제 주기 만료일까지는 Pro 기능을 계속 이용하실 수 있습니다.\n' +
-      '언제든 마이페이지에서 재가입하실 수 있어요.'
-    );
+    const result = await response.json().catch(() => ({}));
+    // 백엔드가 상황별 정확한 안내문을 내려줌 (즉시환불 / 환불불가 / 정기해지)
+    alert(result.message || '요청이 정상 처리되었습니다.');
     location.reload();
   } catch (err) {
     console.error('[해지 오류]', err);
     alert(
-      '해지 요청 중 오류가 발생했습니다.\n\n' +
+      '요청 처리 중 오류가 발생했습니다.\n\n' +
       '잠시 후 다시 시도하시거나 myswingmatch@gmail.com 으로 문의해주세요.\n\n' +
       '에러: ' + (err.message || err)
     );
