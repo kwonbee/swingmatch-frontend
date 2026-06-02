@@ -1245,9 +1245,12 @@ async function loadSubscription(){
             status: s.status,
             amount: s.amount,
             payment_method: s.paymentMethod,
+            started_at: s.startedAt || (activeSubscription && activeSubscription.started_at),
+            current_period_start: s.currentPeriodStart || (activeSubscription && activeSubscription.current_period_start),
             current_period_end: s.currentPeriodEnd,
             canceled_at: s.canceledAt,
-            order_id: (activeSubscription && activeSubscription.order_id) || s.portonePaymentId
+            portone_payment_id: s.portonePaymentId || (activeSubscription && activeSubscription.portone_payment_id),
+            order_id: s.portonePaymentId || (activeSubscription && activeSubscription.order_id)
           });
         }
       }
@@ -1684,7 +1687,9 @@ function renderSubscription(){
   }
 
   // Pro 회원
-  const startDate = activeSubscription?.started_at || activeSubscription?.current_period_start || userProfile.created_at;
+  // 가입일/결제일은 '구독 시작일'이어야 함. 회원가입일(userProfile.created_at)로
+  // 폴백하면 옛 날짜가 떠서 만료일이 과거로 계산되므로 폴백에서 제외.
+  const startDate = activeSubscription?.started_at || activeSubscription?.current_period_start || null;
   const periodEnd = activeSubscription?.current_period_end || activeSubscription?.expires_at;
   const orderId = activeSubscription?.portone_payment_id || activeSubscription?.order_id || '—';
   const status = activeSubscription?.status || 'active';
@@ -1720,14 +1725,14 @@ function renderSubscription(){
           <span class="sub-value" style="font-family:monospace;font-size:.78rem">${orderId}</span>
         </div>
         <div class="sub-actions">
-          <button class="btn btn-secondary" onclick="alert('영수증은 카드사 앱 또는 카카오페이 앱에서 확인하실 수 있습니다.')">영수증</button>
           ${canceled ? '' : '<button class="btn btn-danger" id="cancelSubBtn">결제 취소 / 환불</button>'}
         </div>
       </div>
       <p style="font-size:.75rem;color:var(--text-dim);margin-top:14px;line-height:1.6">
         ※ 단건 이용권은 자동 갱신되지 않으며, 이용 만료일이 지나면 자동으로 무료 회원으로 전환됩니다.<br>
         ※ 환불은 <strong>결제 후 7일 이내 + Pro 기능 미사용</strong> 시 전액 가능합니다. (그 외에는 환불이 제한됩니다)<br>
-        ※ 영상과 분석 기록은 만료 후에도 90일간 보관됩니다.
+        ※ 영상과 분석 기록은 만료 후에도 90일간 보관됩니다.<br>
+        ※ 결제 영수증은 카드사 앱 또는 카카오페이 앱에서 확인하실 수 있습니다.
       </p>`;
     return;
   }
@@ -1760,13 +1765,13 @@ function renderSubscription(){
         <span class="sub-value" style="font-family:monospace;font-size:.78rem">${orderId}</span>
       </div>
       <div class="sub-actions">
-        <button class="btn btn-secondary" onclick="alert('영수증은 카드사 앱 또는 카카오페이 앱에서 확인하실 수 있습니다.')">영수증</button>
         ${activeSubscription?.canceled_at ? '' : '<button class="btn btn-danger" id="cancelSubBtn">구독 해지</button>'}
       </div>
     </div>
     <p style="font-size:.75rem;color:var(--text-dim);margin-top:14px;line-height:1.6">
       ※ 구독 해지 시 현재 결제 주기 만료일까지는 Pro 기능을 계속 이용하실 수 있습니다.<br>
-      ※ 영상과 분석 기록은 해지 후에도 90일간 보관됩니다. 재가입 시 그대로 복원됩니다.
+      ※ 영상과 분석 기록은 해지 후에도 90일간 보관됩니다. 재가입 시 그대로 복원됩니다.<br>
+      ※ 결제 영수증은 카드사 앱 또는 카카오페이 앱에서 확인하실 수 있습니다.
     </p>`;
 }
 
