@@ -1220,17 +1220,9 @@ async function loadUserProfile(){
 }
 
 async function loadSubscription(){
-  // 1) RPC 시도
-  try {
-    const { data, error } = await supabaseClient.rpc('my_active_subscription');
-    if (!error && data && data.length > 0) {
-      activeSubscription = data[0];
-    }
-  } catch (e) {
-    console.warn('[subscription RPC 미지원]', e);
-  }
-
-  // 2) 백엔드 status로 보강 (plan/기간/주문번호 정확값 — 단건/정기 구분의 기준)
+  // 1) 백엔드 status를 단일 소스로 우선 사용 (서버 DB의 정확한 값)
+  //    started_at/period/주문번호/plan/status 모두 여기서 받는다.
+  let gotStatus = false;
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
@@ -1240,23 +1232,36 @@ async function loadSubscription(){
       if (r.ok) {
         const s = await r.json();
         if (s && s.hasSubscription) {
-          activeSubscription = Object.assign({}, activeSubscription, {
+          activeSubscription = {
             plan: s.plan,
             status: s.status,
             amount: s.amount,
             payment_method: s.paymentMethod,
-            started_at: s.startedAt || (activeSubscription && activeSubscription.started_at),
-            current_period_start: s.currentPeriodStart || (activeSubscription && activeSubscription.current_period_start),
+            started_at: s.startedAt,
+            current_period_start: s.currentPeriodStart,
             current_period_end: s.currentPeriodEnd,
             canceled_at: s.canceledAt,
-            portone_payment_id: s.portonePaymentId || (activeSubscription && activeSubscription.portone_payment_id),
-            order_id: s.portonePaymentId || (activeSubscription && activeSubscription.order_id)
-          });
+            portone_payment_id: s.portonePaymentId,
+            order_id: s.portonePaymentId
+          };
+          gotStatus = true;
         }
       }
     }
   } catch (e) {
-    console.warn('[subscription status 폴백 실패]', e);
+    console.warn('[subscription status 실패]', e);
+  }
+
+  // 2) status를 못 받은 경우에만 RPC로 폴백
+  if (!gotStatus) {
+    try {
+      const { data, error } = await supabaseClient.rpc('my_active_subscription');
+      if (!error && data && data.length > 0) {
+        activeSubscription = data[0];
+      }
+    } catch (e) {
+      console.warn('[subscription RPC 미지원]', e);
+    }
   }
 }
 
@@ -1753,7 +1758,7 @@ function renderSubscription(){
         <span class="sub-value">4,900원</span>
       </div>
       <div class="sub-row">
-        <span class="sub-label">가입일</span>
+        <span class="sub-label">PRO 가입일</span>
         <span class="sub-value">${startDate ? formatDate(startDate) : '—'}</span>
       </div>
       <div class="sub-row">
