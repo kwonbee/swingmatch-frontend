@@ -830,8 +830,8 @@ const PORTONE_STORE_ID    = 'store-8175252d-f743-4823-805c-780fba21509e';
 // 단건(onetime)   → 일반결제 채널   / 정기(subscription) → 정기(빌링) 채널
 // 2026-06-02 실연동 전환: 이니시스 실연동 채널(MID MOI9122178)은 단일 채널이 단건+정기 모두 처리.
 // 따라서 단건/정기 둘 다 같은 실연동 채널키를 사용한다.
-const PORTONE_CHANNEL_KEY_INICIS_ONETIME = 'channel-key-d67d15a9-a1a1-44f9-9149-e2ceb68a9ff6'; // 이니시스 실연동 (단건)
-const PORTONE_CHANNEL_KEY_INICIS_BILLING = 'channel-key-d67d15a9-a1a1-44f9-9149-e2ceb68a9ff6'; // 이니시스 실연동 (정기/빌링) — 동일 채널
+const PORTONE_CHANNEL_KEY_INICIS_ONETIME = 'channel-key-d67d15a9-a1a1-44f9-9149-e2ceb68a9ff6'; // 이니시스 실연동 단건 (MID MOI9122178)
+const PORTONE_CHANNEL_KEY_INICIS_BILLING = 'channel-key-f4db7f90-febc-443e-8574-c8efbded989d'; // 이니시스 실연동 정기/빌링 (MID MOI6691071, INILite Key 포함)
 // 카카오페이는 베타 미노출 상태 → 테스트 채널키 그대로 보존 (노출 켤 때 실 CID 발급 후 교체)
 const PORTONE_CHANNEL_KEY_KAKAO_ONETIME  = 'channel-key-4e498f58-a886-45f0-8a6d-0956cb370872'; // 카카오 단건 (테스트 CID: TC0ONETIME)
 const PORTONE_CHANNEL_KEY_KAKAO_BILLING  = 'channel-key-435fe471-8aae-4c44-ad2c-65932883089d'; // 카카오 정기 (테스트 CID: TCSUBSCRIP)
