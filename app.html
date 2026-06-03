@@ -350,17 +350,6 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 /* 구글 버튼 */
 .btn-google{width:100%;margin-bottom:14px;padding:12px 16px;background:#fff;border:1px solid #1A1A1A;border-radius:2px;font-family:'Pretendard',sans-serif;font-size:.85rem;color:#3c4043;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:.02em}
 .btn-google:hover{background:#F5F3EF;box-shadow:0 2px 8px rgba(0,0,0,0.15)}
-/* ── 인앱 브라우저 안내 배너 ── */
-.inapp-notice{display:none;background:#FFF8E8;border:1px solid #E8C97A;border-radius:4px;padding:12px 14px;margin-bottom:14px;font-size:.78rem;line-height:1.55;color:#7A5C18}
-.inapp-notice strong{color:#6B4E0F}
-.inapp-notice .inapp-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.inapp-notice .inapp-btn{flex:1;min-width:120px;padding:9px 10px;border-radius:3px;font-size:.78rem;font-family:inherit;cursor:pointer;border:1px solid #C9A24A;background:#fff;color:#6B4E0F;transition:all .15s}
-.inapp-notice .inapp-btn.primary{background:#C9A24A;color:#fff;border-color:#C9A24A}
-.inapp-notice .inapp-btn:hover{opacity:.88}
-/* 인앱 환경일 때: 구글 버튼/구분선 숨기고 이메일 가입을 전면에 */
-body.is-inapp .btn-google{display:none}
-body.is-inapp .modal-divider{display:none}
-body.is-inapp .inapp-notice{display:block}
 .modal-divider{display:flex;align-items:center;gap:10px;margin-bottom:16px}
 .modal-divider::before,.modal-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 .modal-divider span{font-size:.7rem;color:var(--muted);letter-spacing:.06em;white-space:nowrap}
@@ -848,14 +837,6 @@ body.is-inapp .inapp-notice{display:block}
   <div class="modal">
     <button class="modal-close" onclick="closeModal('login')">✕</button>
     <h2>로그인</h2>
-    <div class="inapp-notice" id="inapp-notice-login">
-      ⚠️ <strong>카카오톡·인스타·페이스북 인앱 브라우저</strong>에서는 구글 로그인이 차단됩니다.<br>
-      아래 <strong>이메일로 로그인</strong>하시거나, 크롬·사파리로 열어주세요.
-      <div class="inapp-actions">
-        <button type="button" class="inapp-btn primary" onclick="openInExternalBrowser()">크롬/사파리로 열기</button>
-        <button type="button" class="inapp-btn" onclick="copySiteUrl()">주소 복사</button>
-      </div>
-    </div>
     <button class="btn-google" onclick="loginWithGoogle()">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Google로 로그인
@@ -877,14 +858,6 @@ body.is-inapp .inapp-notice{display:block}
   <div class="modal">
     <button class="modal-close" onclick="closeModal('signup')">✕</button>
     <h2>회원가입</h2>
-    <div class="inapp-notice" id="inapp-notice-signup">
-      ⚠️ <strong>카카오톡·인스타·페이스북 인앱 브라우저</strong>에서는 구글 가입이 차단됩니다.<br>
-      아래 <strong>이메일로 가입</strong>하시거나, 크롬·사파리로 열어주세요.
-      <div class="inapp-actions">
-        <button type="button" class="inapp-btn primary" onclick="openInExternalBrowser()">크롬/사파리로 열기</button>
-        <button type="button" class="inapp-btn" onclick="copySiteUrl()">주소 복사</button>
-      </div>
-    </div>
     <button class="btn-google" onclick="loginWithGoogleSignup()">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Google로 가입
@@ -1291,57 +1264,8 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// ── 인앱 브라우저(WebView) 감지 ──
-// 카카오톡/인스타/페북/라인 등 인앱 브라우저는 구글 OAuth를 disallowed_useragent로 차단함.
-// 정식 브라우저(크롬/사파리)로의 탈출 유도 + 이메일 가입 전면화로 우회.
-function isInAppBrowser() {
-  const ua = (navigator.userAgent || navigator.vendor || window.opera || '').toLowerCase();
-  // 대표 인앱 시그니처: 카카오톡, 인스타, 페북(FBAN/FBAV/FB_IAB), 라인, 네이버앱, 밴드, 다음 등
-  const patterns = ['kakaotalk','instagram','fban','fbav','fb_iab','line/','naver','daumapps','band','everytimeapp','snapchat','wirtschaftswoche'];
-  if (patterns.some(p => ua.includes(p))) return true;
-  // 안드로이드 WebView 휴리스틱: 'wv' 토큰 또는 'version/'+chrome 조합이 없는 경우
-  if (/android/.test(ua) && /; wv\)/.test(ua)) return true;
-  return false;
-}
-
-// 현재 페이지를 정식 외부 브라우저로 열기 시도 (안드로이드 우선, iOS는 안내)
-function openInExternalBrowser() {
-  const ua = (navigator.userAgent || '').toLowerCase();
-  const url = window.location.href;
-  if (/android/.test(ua)) {
-    // 안드로이드: intent 스킴으로 크롬 직행 시도
-    const noScheme = url.replace(/^https?:\/\//, '');
-    const intentUrl = 'intent://' + noScheme + '#Intent;scheme=https;package=com.android.chrome;end';
-    window.location.href = intentUrl;
-    // 일부 기기에서 실패 시 폴백: 카카오톡은 외부브라우저 강제 파라미터 지원
-    setTimeout(() => { window.location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url); }, 600);
-  } else {
-    // iOS(인스타/카톡 등 인앱)는 외부 브라우저 강제 전환 API가 없음 → 안내 + 복사
-    copySiteUrl();
-    alert('iOS에서는 우측 상단 메뉴(··· 또는 화살표) → "Safari로 열기"를 눌러주세요.\n주소가 복사되었으니 Safari 주소창에 붙여넣으셔도 됩니다.');
-  }
-}
-
-// 현재 사이트 주소 클립보드 복사
-function copySiteUrl() {
-  const url = window.location.origin + '/app.html';
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(
-      () => alert('주소가 복사되었습니다.\n크롬/사파리 주소창에 붙여넣어 열어주세요.\n' + url),
-      () => prompt('아래 주소를 복사해 크롬/사파리에서 열어주세요:', url)
-    );
-  } else {
-    prompt('아래 주소를 복사해 크롬/사파리에서 열어주세요:', url);
-  }
-}
-
 // ── 구글 로그인 ──
 async function loginWithGoogle() {
-  // 인앱 브라우저 가드: OAuth 호출 자체가 disallowed_useragent로 막히므로 안내로 전환
-  if (isInAppBrowser()) {
-    openInExternalBrowser();
-    return;
-  }
   // next 파라미터를 redirectTo에 전파 (subscribe에서 온 경우 가입 후 자동 복귀)
   const nextParam = new URLSearchParams(location.search).get('next');
   const redirectBase = window.location.origin;
@@ -3019,8 +2943,6 @@ function setPlaybackRate(rate) {
 
 // 모달 배경 클릭 시 닫기
 document.addEventListener('DOMContentLoaded', () => {
-  // 인앱 브라우저면 body에 클래스 부여 → 구글 버튼 숨김 + 안내배너 노출 + 이메일 전면화
-  try { if (isInAppBrowser()) document.body.classList.add('is-inapp'); } catch (e) {}
   const modal = document.getElementById('compare-modal');
   if (modal) {
     modal.addEventListener('click', (e) => {
