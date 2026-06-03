@@ -353,7 +353,17 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .btn-kakao{width:100%;margin-bottom:14px;padding:12px 16px;background:#FEE500;border:1px solid #FEE500;border-radius:2px;font-family:'Pretendard',sans-serif;font-size:.85rem;color:#191600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:.02em}
 .btn-kakao:hover{background:#F2D900;box-shadow:0 2px 8px rgba(0,0,0,0.15)}
 /* 인앱 브라우저(카톡/인스타/페북 등)에서는 구글 버튼 숨김 — 구글이 인앱 UA를 차단하기 때문 */
-body.is-inapp .btn-google{display:none}
+/* 인앱에서도 구글 버튼은 항상 노출 (클릭 시 외부 브라우저 탈출/안내로 처리) */
+.inapp-sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:none;align-items:flex-end;justify-content:center}
+.inapp-sheet-overlay.show{display:flex}
+.inapp-sheet{width:100%;max-width:440px;background:#fff;border-radius:16px 16px 0 0;padding:24px 22px calc(22px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 24px rgba(0,0,0,0.18);animation:inappSheetUp .22s ease}
+@keyframes inappSheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.inapp-sheet h3{font-family:'Pretendard',sans-serif;font-size:1rem;font-weight:700;color:#1A1A1A;margin:0 0 4px}
+.inapp-sheet p{font-family:'Pretendard',sans-serif;font-size:.82rem;color:#6b6b6b;margin:0 0 18px;line-height:1.5}
+.inapp-sheet .btn-kakao,.inapp-sheet .btn-google{margin-bottom:10px}
+.inapp-sheet-hint{font-family:'Pretendard',sans-serif;font-size:.78rem;color:#8a8a8a;text-align:center;margin:14px 0 2px}
+.inapp-sheet-hint b{color:#4C7857;font-weight:600}
+.inapp-sheet-cancel{width:100%;background:transparent;border:none;color:#9a9a9a;font-family:'Pretendard',sans-serif;font-size:.82rem;padding:10px;cursor:pointer;margin-top:6px}
 .modal-divider{display:flex;align-items:center;gap:10px;margin-bottom:16px}
 .modal-divider::before,.modal-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 .modal-divider span{font-size:.7rem;color:var(--muted);letter-spacing:.06em;white-space:nowrap}
@@ -836,6 +846,20 @@ body.is-inapp .btn-google{display:none}
 </div><!-- /main -->
 </div><!-- /page -->
 
+<!-- 인앱(iOS) 외부 브라우저 안내 시트 -->
+<div class="inapp-sheet-overlay" id="inapp-sheet" onclick="if(event.target===this)closeInappSheet()">
+  <div class="inapp-sheet">
+    <h3>카카오로 계속하기</h3>
+    <p>또는 Safari에서 구글 로그인을 이용하실 수 있어요.</p>
+    <button class="btn-kakao" onclick="inappContinueKakao()">
+      <svg width="18" height="18" viewBox="0 0 256 256"><path fill="#191600" d="M128 36C70.6 36 24 72.9 24 118.3c0 29.1 19.1 54.6 47.9 69-1.6 5.8-10.2 35.3-10.5 37.6 0 0-.2 1.8.9 2.5s2.5.2 2.5.2c3.3-.5 38-24.9 44-29.1 6.2.9 12.6 1.4 19.2 1.4 57.4 0 104-36.9 104-82.3S185.4 36 128 36z"/></svg>
+      카카오로 계속하기
+    </button>
+    <div class="inapp-sheet-hint">Safari에서 구글 로그인 — 우측 상단 <b>···</b> → <b>Safari로 열기</b></div>
+    <button class="inapp-sheet-cancel" onclick="closeInappSheet()">닫기</button>
+  </div>
+</div>
+
 <!-- 로그인 모달 -->
 <div class="modal-overlay" id="modal-login">
   <div class="modal">
@@ -1278,6 +1302,9 @@ document.addEventListener('click', function(e) {
 
 // ── 구글 로그인 ──
 async function loginWithGoogle() {
+  // 인앱 브라우저면 구글 OAuth가 막히므로 외부 브라우저 탈출/안내로 가로챈다
+  if (handleInappGoogle()) return;
+
   // next 파라미터를 redirectTo에 전파 (subscribe에서 온 경우 가입 후 자동 복귀)
   const nextParam = new URLSearchParams(location.search).get('next');
   const redirectBase = window.location.origin;
@@ -2987,7 +3014,7 @@ function setPlaybackRate(rate) {
 
 // ── 인앱 브라우저(WebView) 감지 ──
 // 카톡/인스타/페북/라인/네이버앱 등 인앱은 구글 OAuth를 disallowed_useragent로 차단함.
-// 감지되면 body.is-inapp 부여 → 구글 버튼을 조용히 숨기고 카카오만 노출. (별도 안내·팝업 없음)
+// 구글 버튼은 항상 노출하되, 인앱에서 누르면 외부 브라우저로 탈출(안드로이드)하거나 안내(iOS)한다.
 function isInAppBrowser() {
   const ua = (navigator.userAgent || navigator.vendor || window.opera || '').toLowerCase();
   const patterns = ['kakaotalk','instagram','fban','fbav','fb_iab','line/','naver','daumapps','band','everytimeapp','snapchat','trill','musical_ly'];
@@ -2996,10 +3023,48 @@ function isInAppBrowser() {
   return false;
 }
 
+// iOS 인앱 여부 (사파리 강제 탈출 불가 → 안내 시트로 처리)
+function isIOSDevice() {
+  const ua = (navigator.userAgent || '').toLowerCase();
+  return /iphone|ipad|ipod/.test(ua) || (/macintosh/.test(ua) && 'ontouchend' in document);
+}
+
+// iOS 인앱 안내 시트 열기/닫기
+function openInappSheet() { const el = document.getElementById('inapp-sheet'); if (el) el.classList.add('show'); }
+function closeInappSheet() { const el = document.getElementById('inapp-sheet'); if (el) el.classList.remove('show'); }
+function inappContinueKakao() {
+  closeInappSheet();
+  // 회원가입 모달이 열려 있으면 약관 검사 포함 카카오 가입, 아니면 일반 카카오 로그인
+  const signupOpen = document.getElementById('modal-signup');
+  if (signupOpen && signupOpen.classList.contains('open')) {
+    loginWithKakaoSignup();
+  } else {
+    loginWithKakao();
+  }
+}
+
+// 인앱 구글 클릭 처리: 안드로이드는 크롬 자동 탈출, iOS는 안내 시트.
+// 반환값 true = 인앱 처리로 가로챔(이후 OAuth 진행 금지), false = 정상 브라우저(계속 진행).
+function handleInappGoogle() {
+  if (!isInAppBrowser()) return false;
+  if (isIOSDevice()) { openInappSheet(); return true; }
+  // 안드로이드: intent 스킴으로 현재 페이지를 크롬에서 강제로 다시 열기
+  try {
+    const host = window.location.host;
+    const path = window.location.pathname + window.location.search;
+    const intentUrl = 'intent://' + host + path
+      + '#Intent;scheme=https;package=com.android.chrome;'
+      + 'S.browser_fallback_url=' + encodeURIComponent(window.location.href) + ';end';
+    window.location.href = intentUrl;
+  } catch (e) {
+    // 탈출 실패 시 최후 안내
+    openInappSheet();
+  }
+  return true;
+}
+
 // 모달 배경 클릭 시 닫기
 document.addEventListener('DOMContentLoaded', () => {
-  // 인앱이면 구글 버튼 숨김 (구글이 인앱 차단하므로 403 화면 노출 방지)
-  try { if (isInAppBrowser()) document.body.classList.add('is-inapp'); } catch (e) {}
   const modal = document.getElementById('compare-modal');
   if (modal) {
     modal.addEventListener('click', (e) => {
