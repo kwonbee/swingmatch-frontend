@@ -350,6 +350,10 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 /* 구글 버튼 */
 .btn-google{width:100%;margin-bottom:14px;padding:12px 16px;background:#fff;border:1px solid #1A1A1A;border-radius:2px;font-family:'Pretendard',sans-serif;font-size:.85rem;color:#3c4043;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:.02em}
 .btn-google:hover{background:#F5F3EF;box-shadow:0 2px 8px rgba(0,0,0,0.15)}
+.btn-kakao{width:100%;margin-bottom:14px;padding:12px 16px;background:#FEE500;border:1px solid #FEE500;border-radius:2px;font-family:'Pretendard',sans-serif;font-size:.85rem;color:#191600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:.02em}
+.btn-kakao:hover{background:#F2D900;box-shadow:0 2px 8px rgba(0,0,0,0.15)}
+/* 인앱 브라우저(카톡/인스타/페북 등)에서는 구글 버튼 숨김 — 구글이 인앱 UA를 차단하기 때문 */
+body.is-inapp .btn-google{display:none}
 .modal-divider{display:flex;align-items:center;gap:10px;margin-bottom:16px}
 .modal-divider::before,.modal-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 .modal-divider span{font-size:.7rem;color:var(--muted);letter-spacing:.06em;white-space:nowrap}
@@ -837,6 +841,10 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
   <div class="modal">
     <button class="modal-close" onclick="closeModal('login')">✕</button>
     <h2>로그인</h2>
+    <button class="btn-kakao" onclick="loginWithKakao()">
+      <svg width="18" height="18" viewBox="0 0 256 256"><path fill="#191600" d="M128 36C70.6 36 24 72.9 24 118.3c0 29.1 19.1 54.6 47.9 69-1.6 5.8-10.2 35.3-10.5 37.6 0 0-.2 1.8.9 2.5s2.5.2 2.5.2c3.3-.5 38-24.9 44-29.1 6.2.9 12.6 1.4 19.2 1.4 57.4 0 104-36.9 104-82.3S185.4 36 128 36z"/></svg>
+      카카오로 로그인
+    </button>
     <button class="btn-google" onclick="loginWithGoogle()">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Google로 로그인
@@ -858,6 +866,10 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
   <div class="modal">
     <button class="modal-close" onclick="closeModal('signup')">✕</button>
     <h2>회원가입</h2>
+    <button class="btn-kakao" onclick="loginWithKakaoSignup()">
+      <svg width="18" height="18" viewBox="0 0 256 256"><path fill="#191600" d="M128 36C70.6 36 24 72.9 24 118.3c0 29.1 19.1 54.6 47.9 69-1.6 5.8-10.2 35.3-10.5 37.6 0 0-.2 1.8.9 2.5s2.5.2 2.5.2c3.3-.5 38-24.9 44-29.1 6.2.9 12.6 1.4 19.2 1.4 57.4 0 104-36.9 104-82.3S185.4 36 128 36z"/></svg>
+      카카오로 가입
+    </button>
     <button class="btn-google" onclick="loginWithGoogleSignup()">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Google로 가입
@@ -1295,6 +1307,38 @@ async function loginWithGoogleSignup() {
 
   // 약관 통과 → Google OAuth 진입
   await loginWithGoogle();
+}
+
+// ── 카카오 로그인 ──
+async function loginWithKakao() {
+  // next 파라미터를 redirectTo에 전파 (구글과 동일)
+  const nextParam = new URLSearchParams(location.search).get('next');
+  const redirectBase = window.location.origin;
+  const redirectTo = nextParam === 'subscribe'
+    ? redirectBase + '/subscribe.html'
+    : redirectBase + '/app.html';
+
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'kakao',
+    options: { redirectTo }
+  });
+  if (error) alert('카카오 로그인 오류: ' + error.message);
+}
+
+// 회원가입 모달의 카카오 버튼 전용 (약관 동의 필수 검사 — 구글과 동일)
+async function loginWithKakaoSignup() {
+  const agreeAge = document.getElementById('agree-age').checked;
+  const agreeTos = document.getElementById('agree-tos').checked;
+  const agreePrivacy = document.getElementById('agree-privacy').checked;
+  const agreeVideo = document.getElementById('agree-video').checked;
+
+  if (!agreeAge) { showErr('signup-err', '⚠️ 만 19세 이상 확인이 필요합니다.'); return; }
+  if (!agreeTos) { showErr('signup-err', '⚠️ 이용약관 동의가 필요합니다.'); return; }
+  if (!agreePrivacy) { showErr('signup-err', '⚠️ 개인정보처리방침 동의가 필요합니다.'); return; }
+  if (!agreeVideo) { showErr('signup-err', '⚠️ 영상 보관 정책 동의가 필요합니다.'); return; }
+
+  // 약관 통과 → 카카오 OAuth 진입
+  await loginWithKakao();
 }
 
 // ── 이메일 로그인 ──
@@ -2941,8 +2985,21 @@ function setPlaybackRate(rate) {
   getCompareVideos().forEach(v => v.playbackRate = currentRate);
 }
 
+// ── 인앱 브라우저(WebView) 감지 ──
+// 카톡/인스타/페북/라인/네이버앱 등 인앱은 구글 OAuth를 disallowed_useragent로 차단함.
+// 감지되면 body.is-inapp 부여 → 구글 버튼을 조용히 숨기고 카카오만 노출. (별도 안내·팝업 없음)
+function isInAppBrowser() {
+  const ua = (navigator.userAgent || navigator.vendor || window.opera || '').toLowerCase();
+  const patterns = ['kakaotalk','instagram','fban','fbav','fb_iab','line/','naver','daumapps','band','everytimeapp','snapchat','trill','musical_ly'];
+  if (patterns.some(p => ua.includes(p))) return true;
+  if (/android/.test(ua) && /; wv\)/.test(ua)) return true; // 안드로이드 WebView
+  return false;
+}
+
 // 모달 배경 클릭 시 닫기
 document.addEventListener('DOMContentLoaded', () => {
+  // 인앱이면 구글 버튼 숨김 (구글이 인앱 차단하므로 403 화면 노출 방지)
+  try { if (isInAppBrowser()) document.body.classList.add('is-inapp'); } catch (e) {}
   const modal = document.getElementById('compare-modal');
   if (modal) {
     modal.addEventListener('click', (e) => {
