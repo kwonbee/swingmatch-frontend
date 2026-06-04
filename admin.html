@@ -147,7 +147,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .badge.active { background:rgba(74,222,128,0.1); color:var(--green); }
 .badge.free { background:rgba(255,255,255,0.06); color:var(--muted); }
 .badge.pro { background:var(--gold-dim); color:var(--gold); }
-.badge.cancelled { background:rgba(248,113,113,0.1); color:var(--red); }
+.badge.cancelled, .badge.canceled { background:rgba(248,113,113,0.1); color:var(--red); }
 
 /* ── 차트 ── */
 .chart-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:28px; }
@@ -414,7 +414,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         <select id="sub-status-filter" onchange="loadSubscriptions()">
           <option value="">전체 상태</option>
           <option value="active">활성</option>
-          <option value="cancelled">취소됨</option>
+          <option value="canceled">취소됨</option>
           <option value="expired">만료됨</option>
         </select>
       </div>
@@ -476,6 +476,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 const SUPABASE_URL = 'https://vldcmanngfexfwvvnqbb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsZGNtYW5uZ2ZleGZ3dnZucWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4ODY0MTcsImV4cCI6MjA5NDQ2MjQxN30.3K_jL1HVdOKMEoSSsmacJGNVDkf6iFa2PU7XuEFuUBY';
 const ADMIN_EMAILS = ['myswingmatch@gmail.com', 'kwonbee@gmail.com']; // 어드민 계정
+const BACKEND_URL = 'https://swingmatch-backend-production.up.railway.app'; // 구독/결제는 백엔드(service_role) 경유 — subscriptions를 anon에 노출 안 함
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let charts = {};
@@ -563,10 +564,20 @@ async function loadDashboard() {
     document.getElementById('stat-today-analysis').textContent = todayAnalysis;
     document.getElementById('stat-month-analysis').textContent = '이번 달: ' + monthAnalysis;
 
-    // Pro 구독자
-    const { data: subs, error: e3 } = await sb.from('subscriptions').select('*').eq('status', 'active').eq('plan', 'pro');
-    if (e3) console.error('[Admin] subscriptions 조회 실패:', e3);
-    const proCount = subs?.length || 0;
+    // Pro 구독자 — 백엔드(service_role) 경유. plan 값은 pro_monthly/pro_onetime이므로 active 전체를 Pro로 카운트.
+    let proCount = 0;
+    try {
+      const { data: sess } = await sb.auth.getSession();
+      const token = sess?.session?.access_token;
+      const r = await fetch(BACKEND_URL + '/api/admin/subscriptions?status=active', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const j = await r.json();
+      if (r.ok) proCount = (j.subscriptions || []).filter(s => (s.plan || '').startsWith('pro')).length;
+      else console.error('[Admin] Pro 카운트 조회 실패:', j);
+    } catch (e3) {
+      console.error('[Admin] Pro 카운트 통신 실패:', e3);
+    }
     document.getElementById('stat-pro-users').textContent = proCount;
     document.getElementById('stat-pro-revenue').textContent = '예상 월 수익: ₩' + (proCount * 9900).toLocaleString();
 
@@ -901,27 +912,55 @@ async function loadAnalytics() {
 // ── 구독 관리 ──
 async function loadSubscriptions() {
   const status = document.getElementById('sub-status-filter').value;
-  let q = sb.from('subscriptions').select('*, user_profiles(email)').order('created_at', { ascending:false }).limit(100);
-  if (status) q = q.eq('status', status);
-
-  const { data } = await q;
   const tbody = document.getElementById('sub-table');
-  tbody.innerHTML = (data && data.length)
-    ? data.map(s => `<tr>
-        <td>${s.user_profiles?.email || s.user_id?.slice(0,12) + '...'}</td>
-        <td><span class="badge ${s.plan}">${s.plan?.toUpperCase()}</span></td>
+  tbody.innerHTML = '<tr><td colspan="7" class="loading">로딩 중...</td></tr>';
+
+  // 백엔드(service_role) 경유 — subscriptions를 anon에 노출하지 않음. 어드민 access_token으로 인증.
+  const { data: sess } = await sb.auth.getSession();
+  const token = sess?.session?.access_token;
+  if (!token) { tbody.innerHTML = '<tr><td colspan="7" class="loading" style="color:#ff8090">세션이 만료되었습니다. 다시 로그인해주세요.</td></tr>'; return; }
+
+  let resp, json;
+  try {
+    resp = await fetch(BACKEND_URL + '/api/admin/subscriptions' + (status ? '?status=' + encodeURIComponent(status) : ''), {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    json = await resp.json();
+  } catch (e) {
+    console.error('[Admin] 구독 조회 통신 실패:', e);
+    tbody.innerHTML = `<tr><td colspan="7" class="loading" style="color:#ff8090">백엔드 통신 실패: ${e.message}</td></tr>`;
+    return;
+  }
+  if (!resp.ok) {
+    console.error('[Admin] 구독 조회 실패:', json);
+    tbody.innerHTML = `<tr><td colspan="7" class="loading" style="color:#ff8090">구독 조회 실패: ${json.error || resp.status}</td></tr>`;
+    return;
+  }
+
+  const list = json.subscriptions || [];
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">구독 데이터가 없습니다.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(s => {
+    const email = s.email || (s.userId ? s.userId.slice(0,12) + '...' : '—');
+    const key = s.billingKeyMasked || s.paymentIdMasked || '—';
+    return `<tr>
+        <td>${email}</td>
+        <td><span class="badge ${s.plan}">${(s.plan||'').toUpperCase()}</span></td>
         <td><span class="badge ${s.status}">${statusLabel(s.status)}</span></td>
-        <td>${fmtDate(s.started_at)}</td>
-        <td>${fmtDate(s.expires_at)}</td>
-        <td style="color:var(--muted);font-size:.68rem">${s.payment_key?.slice(0,12) || '—'}...</td>
+        <td>${fmtDate(s.startedAt)}</td>
+        <td>${fmtDate(s.currentPeriodEnd)}</td>
+        <td style="color:var(--muted);font-size:.68rem">${key}</td>
         <td>
           ${s.status === 'active'
-            ? `<button onclick="openCancelModal('${s.id}','${s.user_profiles?.email || ''}')"
+            ? `<button onclick="openCancelModal('${s.id}','${email}')"
                 style="padding:4px 10px;background:rgba(248,113,113,0.1);color:var(--red);border:1px solid rgba(248,113,113,0.3);font-size:.65rem;cursor:pointer">취소</button>`
             : '<span style="color:var(--dim)">—</span>'}
         </td>
-      </tr>`).join('')
-    : '<tr><td colspan="7" class="loading">데이터 없음 (결제 도입 후 표시)</td></tr>';
+      </tr>`;
+  }).join('');
 }
 
 // ── 결제 취소 ──
@@ -939,20 +978,29 @@ async function confirmCancel() {
   const reason = document.getElementById('cancel-reason-select').value;
   const memo = document.getElementById('cancel-memo').value;
 
-  if (!confirm('정말 구독을 취소하시겠습니까?')) return;
+  if (!confirm('정말 구독을 취소하시겠습니까? (포트원 빌링키 삭제 + 자동 재청구 중단 + 즉시 만료 처리됩니다)')) return;
 
-  const { error } = await sb.from('subscriptions').update({
-    status: 'cancelled',
-    cancelled_at: new Date().toISOString(),
-    cancel_reason: reason + (memo ? ': ' + memo : '')
-  }).eq('id', subId);
+  const { data: sess } = await sb.auth.getSession();
+  const token = sess?.session?.access_token;
+  if (!token) { alert('세션이 만료되었습니다. 다시 로그인해주세요.'); return; }
 
-  if (error) {
-    alert('취소 실패: ' + error.message);
+  try {
+    const resp = await fetch(BACKEND_URL + '/api/admin/subscription/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ subId, reason: reason + (memo ? ': ' + memo : '') })
+    });
+    const json = await resp.json();
+    if (!resp.ok || !json.success) {
+      alert('취소 실패: ' + (json.error || resp.status));
+      return;
+    }
+  } catch (e) {
+    alert('취소 통신 실패: ' + e.message);
     return;
   }
 
-  alert('구독이 취소되었습니다.');
+  alert('구독이 취소되었습니다. (빌링키 삭제 + 즉시 만료 + 등급 회수 완료)');
   closeModal();
   loadSubscriptions();
 }
@@ -1154,7 +1202,7 @@ function clubLabel(c) {
   return { driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터' }[c] || c || '—';
 }
 function statusLabel(s) {
-  return { active:'활성', cancelled:'취소됨', expired:'만료됨' }[s] || s;
+  return { active:'활성', canceled:'취소됨', cancelled:'취소됨', expired:'만료됨' }[s] || s;
 }
 </script>
 </body>
