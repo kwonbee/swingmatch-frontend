@@ -36,5 +36,28 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/screenshot-mobile-1.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "내 스윙과 가장 닮은 프로 골퍼 매칭 결과"
+    },
+    {
+      "src": "/screenshots/screenshot-mobile-2.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "PGA·LPGA·KPGA 등 프로 200명 이상과 비교 분석"
+    },
+    {
+      "src": "/screenshots/screenshot-wide.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "나의 이상적인 스윙을 찾고 골프 실력 LEVEL UP"
+    }
   ]
 }
