@@ -448,24 +448,25 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   </main>
 </div>
 
-<!-- 결제 취소 모달 -->
+<!-- 환불 처리 모달 -->
 <div class="modal-bg" id="cancel-modal">
   <div class="modal">
-    <h3>구독 취소</h3>
+    <h3>환불 처리</h3>
     <input type="hidden" id="cancel-sub-id" />
+    <input type="hidden" id="cancel-sub-plan" />
     <label>유저 이메일</label>
     <input type="text" id="cancel-user-email" readonly />
-    <label>취소 사유</label>
+    <label>환불 사유</label>
     <select id="cancel-reason-select">
-      <option value="user_request">유저 요청</option>
-      <option value="payment_fail">결제 실패</option>
-      <option value="admin_manual">관리자 수동 취소</option>
-      <option value="abuse">어뷰징 의심</option>
+      <option value="user_request">유저 환불 요청</option>
+      <option value="service_issue">서비스 문제/오류</option>
+      <option value="admin_manual">관리자 수동 환불</option>
+      <option value="duplicate_payment">중복 결제</option>
     </select>
     <label>메모 (선택)</label>
     <textarea id="cancel-memo" placeholder="추가 메모..."></textarea>
     <div class="modal-btns">
-      <button class="btn-cancel-sub" onclick="confirmCancel()">구독 취소 확인</button>
+      <button class="btn-cancel-sub" onclick="confirmCancel()">환불 처리 확인</button>
       <button class="btn-close-modal" onclick="closeModal()">닫기</button>
     </div>
   </div>
@@ -955,8 +956,8 @@ async function loadSubscriptions() {
         <td style="color:var(--muted);font-size:.68rem">${key}</td>
         <td>
           ${s.status === 'active'
-            ? `<button onclick="openCancelModal('${s.id}','${email}')"
-                style="padding:4px 10px;background:rgba(248,113,113,0.1);color:var(--red);border:1px solid rgba(248,113,113,0.3);font-size:.65rem;cursor:pointer">취소</button>`
+            ? `<button onclick="openCancelModal('${s.id}','${email}','${s.plan||''}')"
+                style="padding:4px 10px;background:rgba(248,113,113,0.1);color:var(--red);border:1px solid rgba(248,113,113,0.3);font-size:.65rem;cursor:pointer">환불</button>`
             : '<span style="color:var(--dim)">—</span>'}
         </td>
       </tr>`;
@@ -964,8 +965,9 @@ async function loadSubscriptions() {
 }
 
 // ── 결제 취소 ──
-function openCancelModal(subId, email) {
+function openCancelModal(subId, email, plan) {
   document.getElementById('cancel-sub-id').value = subId;
+  document.getElementById('cancel-sub-plan').value = plan || '';
   document.getElementById('cancel-user-email').value = email;
   document.getElementById('cancel-modal').classList.add('open');
 }
@@ -975,32 +977,37 @@ function closeModal() {
 
 async function confirmCancel() {
   const subId = document.getElementById('cancel-sub-id').value;
+  const plan = document.getElementById('cancel-sub-plan').value;
   const reason = document.getElementById('cancel-reason-select').value;
   const memo = document.getElementById('cancel-memo').value;
 
-  if (!confirm('정말 구독을 취소하시겠습니까? (포트원 빌링키 삭제 + 자동 재청구 중단 + 즉시 만료 처리됩니다)')) return;
+  const confirmMsg = plan === 'pro_monthly'
+    ? '이번 달 결제분(4,900원)을 환불하고 다음 자동 청구를 중단합니다.\n과거 달 결제는 환불되지 않습니다.\n진행하시겠습니까?'
+    : '결제금액(4,900원)을 전액 환불하고 즉시 만료 처리합니다.\n진행하시겠습니까?';
+  if (!confirm(confirmMsg)) return;
 
   const { data: sess } = await sb.auth.getSession();
   const token = sess?.session?.access_token;
   if (!token) { alert('세션이 만료되었습니다. 다시 로그인해주세요.'); return; }
 
+  let json;
   try {
-    const resp = await fetch(BACKEND_URL + '/api/admin/subscription/cancel', {
+    const resp = await fetch(BACKEND_URL + '/api/admin/subscription/refund', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ subId, reason: reason + (memo ? ': ' + memo : '') })
     });
-    const json = await resp.json();
+    json = await resp.json();
     if (!resp.ok || !json.success) {
-      alert('취소 실패: ' + (json.error || resp.status));
+      alert('환불 실패: ' + (json.error || resp.status));
       return;
     }
   } catch (e) {
-    alert('취소 통신 실패: ' + e.message);
+    alert('환불 통신 실패: ' + e.message);
     return;
   }
 
-  alert('구독이 취소되었습니다. (빌링키 삭제 + 즉시 만료 + 등급 회수 완료)');
+  alert(json.message || '환불이 완료되었습니다.');
   closeModal();
   loadSubscriptions();
 }
