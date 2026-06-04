@@ -85,6 +85,13 @@ body {
   grid-template-areas: "hero";
   overflow: hidden;
 }
+/* PWA(홈 화면 설치 앱)에서 히어로가 늘어나는 현상 보정: 화면 비율로 고정 */
+@media (display-mode: standalone) {
+  .hero { min-height: 88vh; }
+}
+@media (display-mode: fullscreen) {
+  .hero { min-height: 88vh; }
+}
 .hero-body {
   grid-area: hero;
   display: flex; flex-direction: column; justify-content: flex-end;
