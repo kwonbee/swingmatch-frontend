@@ -3,6 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1315198966699152');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1315198966699152&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
 <title>SwingMatch — 스윙 분석</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@200;300;400&family=Pretendard:wght@300;400;500&display=swap" rel="stylesheet">
@@ -1218,6 +1235,20 @@ sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_IN' && session) {
     closeModal('login');
     closeModal('signup');
+    // ── Meta Pixel: 신규 가입 전환(CompleteRegistration) ──
+    // SIGNED_IN은 이메일인증후로그인·구글·카카오·자동로그인 전부에서 발화하므로
+    // created_at이 방금(60초 이내) 만들어진 계정 = 신규 가입일 때만 1회 쏜다.
+    // (이미 가입된 유저의 재로그인/자동로그인에서는 발화 안 함 → 전환 중복/오염 방지)
+    try {
+      const u = session.user;
+      const createdMs = u && u.created_at ? new Date(u.created_at).getTime() : 0;
+      const isFresh = createdMs && (Date.now() - createdMs) < 60000;
+      const firedKey = 'msm_fbq_cr_' + (u ? u.id : '');
+      if (isFresh && typeof fbq === 'function' && !sessionStorage.getItem(firedKey)) {
+        fbq('track', 'CompleteRegistration');
+        try { sessionStorage.setItem(firedKey, '1'); } catch (e) {}
+      }
+    } catch (e) { console.warn('[Pixel] CompleteRegistration skip:', e); }
     await applyAuthedState(session.user); // 통합 초기화 (Pro/광고/카운트/히스토리)
   } else if (event === 'TOKEN_REFRESHED' && session) {
     // 탭 복귀/자동 토큰 갱신 → 세션은 살아있으나 상태가 멈춰 있을 수 있음 → 재로드
