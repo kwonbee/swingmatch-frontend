@@ -950,6 +950,14 @@ async function proceedToPayment() {
     console.warn('[결제 컨텍스트 저장 실패]', e);
   }
 
+  // ── Meta Pixel: 결제 시작(InitiateCheckout) — 결제창 호출 직전 발화 ──
+  // 결제창을 연 사람 vs 실제 결제 완료(Purchase)한 사람 비율(결제 이탈)을 광고에서 측정.
+  try {
+    if (typeof fbq === 'function') {
+      fbq('track', 'InitiateCheckout', { value: 4900, currency: 'KRW' });
+    }
+  } catch (e) { console.warn('[Pixel] InitiateCheckout skip:', e); }
+
   try {
     let response;
     if (planType === 'subscription') {
