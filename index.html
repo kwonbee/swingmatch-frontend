@@ -1315,5 +1315,31 @@ footer {
     });
   }
 </script>
+<script>
+  /* PWA(홈 화면 설치 앱)에서 히어로 높이 강제 고정 — iOS Safari 대응 */
+  (function () {
+    function isStandalone() {
+      // iOS Safari 전용 판별
+      if (window.navigator.standalone === true) return true;
+      // 표준 PWA 판별
+      if (window.matchMedia &&
+          (window.matchMedia('(display-mode: standalone)').matches ||
+           window.matchMedia('(display-mode: fullscreen)').matches)) return true;
+      return false;
+    }
+    function applyHeroHeight() {
+      var hero = document.querySelector('.hero');
+      if (!hero) return;
+      if (isStandalone()) {
+        // 화면 세로의 88%로 고정 (Safari 주소창 있을 때 비율에 근접)
+        hero.style.minHeight = Math.round(window.innerHeight * 0.88) + 'px';
+        hero.style.height = Math.round(window.innerHeight * 0.88) + 'px';
+      }
+    }
+    applyHeroHeight();
+    window.addEventListener('resize', applyHeroHeight);
+    window.addEventListener('orientationchange', applyHeroHeight);
+  })();
+</script>
 </body>
 </html>
