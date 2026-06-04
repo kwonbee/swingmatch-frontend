@@ -851,7 +851,7 @@ footer {
 }
 
 </style>
-<!-- ─── PWA (manifest + 아이콘만, service-worker 미사용) ─── -->
+<!-- ─── PWA (manifest + 아이콘 + service-worker) ─── -->
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#2D4A33">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -860,6 +860,16 @@ footer {
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+<script>
+  /* service-worker 등록 (network-first 전략이라 stale 캐시 사고 없음) */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/service-worker.js').catch(function (e) {
+        console.warn('[SW] 등록 실패:', e);
+      });
+    });
+  }
+</script>
 </head>
 <body>
 
