@@ -2213,9 +2213,9 @@ async function updateCountDisplay() {
   // 2줄차: 다음 단계 혜택 안내 (작은 회색 글씨) + 링크
   // 비회원 → 무료 회원가입 / 무료회원 → Pro 구독
   const subLine = currentUser
-    ? 'Pro 구독 시 분석·히스토리 무제한, 영상 30개 저장 · <a href="/subscribe.html" style="color:#4C7857;text-decoration:underline;">Pro 구독</a>'
-    : '무료 회원가입 시 하루 5회, 분석 기록 보관, 영상 1개 저장 · <a onclick="openModal(\'signup\')" style="color:#4C7857;text-decoration:underline;cursor:pointer;">무료 회원가입</a>';
-  const subHtml = '<div style="margin-top:6px;font-size:.72rem;color:#8A8A88;line-height:1.5">' + subLine + '</div>';
+    ? 'Pro는 무제한 분석 · 기록 영구 · 영상 30개 <a href="/subscribe.html" style="color:#4C7857;text-decoration:underline;white-space:nowrap;">Pro 구독</a>'
+    : '가입하면 하루 5회 · 기록 보관 · 영상 1개 <a onclick="openModal(\'signup\')" style="color:#4C7857;text-decoration:underline;cursor:pointer;white-space:nowrap;">가입</a>';
+  const subHtml = '<div style="margin-top:6px;font-size:.7rem;color:#8A8A88;line-height:1.5">' + subLine + '</div>';
 
   if (remaining === 0) {
     const mainColor = '#e27a7a';
@@ -2223,8 +2223,9 @@ async function updateCountDisplay() {
     el.style.color = '';
   } else {
     const label = currentUser ? '회원' : '비회원';
+    const prefix = currentUser ? '오늘 남은 분석 횟수: ' : '분석 횟수: ';
     const mainColor = remaining <= 1 ? '#e27a7a' : '#3F3F3D';
-    el.innerHTML = '<div style="color:' + mainColor + '">오늘 남은 분석 횟수: ' + remaining + '/' + limit + '회 (' + label + ')</div>' + subHtml;
+    el.innerHTML = '<div style="color:' + mainColor + '">' + prefix + remaining + '/' + limit + '회 (' + label + ')</div>' + subHtml;
     el.style.color = '';
   }
 }
