@@ -1326,6 +1326,13 @@ function initAuth() {
 
 // ── 모바일 햄버거 메뉴 토글 ──
 function toggleMobileMenu() {
+  try {
+    var pro = (typeof isProUser === 'function') && isProUser();
+    var pb = document.getElementById('m-pro-btn');
+    var pd = document.getElementById('m-pro-divider');
+    if (pb) pb.style.display = pro ? 'none' : 'block';
+    if (pd) pd.style.display = pro ? 'none' : 'block';
+  } catch (e) {}
   document.getElementById('mobile-menu').classList.toggle('open');
 }
 function closeMobileMenu() {
