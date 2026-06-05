@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>마스터즈 토너먼트 — 그린 재킷과 전설들 | MySwingMatch</title>
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+:root{--gr:#2D4A33;--gr-pale:#4C7857;--ink:#1c1c19;--body:#42413b;--mut:#8a887f;--paper:#fcfcf9;--line:#e8e6dd;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-text-size-adjust:100%;}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:#efeee8;color:var(--body);line-height:1.75;}
+.wrap{max-width:420px;margin:0 auto;background:var(--paper);min-height:100vh;}
+.navbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;height:52px;padding:0 16px;background:rgba(252,252,249,.92);backdrop-filter:blur(10px);border-bottom:0.5px solid var(--line);}
+.navbar a{display:flex;align-items:center;gap:6px;text-decoration:none;color:var(--ink);font-size:14px;font-weight:600;}
+.navbar .arrow{font-size:18px;line-height:1;}
+.navbar .ttl{font-size:13px;color:var(--mut);font-weight:500;margin-left:auto;}
+/* hero */
+.hero{position:relative;height:300px;overflow:hidden;}
+.hero img{width:100%;height:100%;object-fit:cover;object-position:center 45%;}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,30,22,.15) 0%,rgba(20,30,22,.55) 60%,rgba(20,30,22,.82) 100%);}
+.hero-tag{position:absolute;top:18px;left:20px;z-index:2;font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.2);backdrop-filter:blur(4px);padding:5px 12px;border-radius:30px;letter-spacing:.3px;}
+.hero-txt{position:absolute;left:20px;right:20px;bottom:22px;z-index:2;}
+.kicker{font-size:11px;font-weight:700;letter-spacing:1.5px;color:#bcd3c2;}
+.hero h1{font-size:30px;font-weight:800;color:#fff;margin-top:6px;letter-spacing:-.5px;}
+.hero .sub{font-size:14px;color:rgba(255,255,255,.82);margin-top:5px;}
+/* body */
+.content{padding:24px 22px 0;}
+.lead-quote{border-left:3px solid var(--gr);padding:4px 0 4px 14px;margin-bottom:20px;font-size:13px;color:var(--gr);font-weight:600;font-style:italic;line-height:1.6;}
+p{font-size:14.5px;color:var(--body);margin-bottom:15px;letter-spacing:-.2px;}
+p b{color:var(--ink);font-weight:700;}
+h2{font-size:16px;font-weight:600;color:var(--ink);margin:28px 0 10px;letter-spacing:-.3px;position:relative;padding-left:12px;}
+h2::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:2px;background:var(--gr);}
+.divider{height:1px;background:var(--line);margin:28px 0;}
+figure{margin:16px -2px;}
+figure img{width:100%;border-radius:12px;display:block;box-shadow:0 4px 18px rgba(40,50,35,.1);}
+figcaption{font-size:11px;color:var(--mut);margin-top:7px;padding-left:2px;}
+.swing3 img{filter:grayscale(.08) contrast(1.03);}
+.pull{background:#f2f4ee;border-radius:12px;padding:16px 18px;margin:18px 0;font-size:13.5px;color:var(--gr);line-height:1.65;}
+.pull .lbl{display:block;font-size:11px;font-weight:700;color:var(--gr-pale);margin-bottom:5px;letter-spacing:.3px;}
+/* record table */
+.scoretbl{width:100%;border-collapse:collapse;margin:18px 0;font-size:13.5px;}
+.scoretbl th,.scoretbl td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top;}
+.scoretbl th{font-size:11px;font-weight:700;color:var(--gr-pale);letter-spacing:.3px;}
+.scoretbl td:first-child{font-weight:700;color:var(--ink);white-space:nowrap;}
+.scoretbl td:last-child{color:var(--mut);}
+/* cta */
+.cta{background:linear-gradient(155deg,#34503b,#22331f);border-radius:16px;padding:22px;margin:26px 0 0;text-align:center;}
+.cta .cta-logo{height:18px;width:auto;margin:0 auto 16px;display:block;opacity:.95;}
+.cta p{font-size:13px;color:rgba(255,255,255,.88);margin:0 0 16px;line-height:1.65;}
+.cta a{display:block;background:#fff;color:var(--gr);font-size:14.5px;font-weight:800;text-decoration:none;padding:13px;border-radius:10px;}
+.foot{padding:24px 22px 36px;text-align:center;}
+.foot .foot-logo{height:18px;width:auto;opacity:.85;}
+.foot .cr{font-size:10.5px;color:var(--mut);margin-top:8px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="navbar">
+    <a href="encyclopedia.html"><span class="arrow">‹</span> 골프 스토리</a>
+    <span class="ttl">05 · 대회</span>
+  </div>
+  <div class="hero">
+    <img src="encyclopedia/major-hero.jpg" alt="오거스타의 골프 코스 풍경">
+    <div class="hero-tag">대회</div>
+    <div class="hero-txt">
+      <div class="kicker">GOLF STORY · 05</div>
+      <h1>마스터즈 토너먼트</h1>
+      <div class="sub">그린 재킷과 전설들</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="lead-quote">매년 4월, 전 세계 골퍼의 시선이 한곳으로 향합니다. 바로 마스터즈입니다.</div>
+
+    <p>골프에는 <b>4대 메이저 대회</b>가 있습니다. 그중에서도 마스터즈는 특별한 위상을 가집니다. 다른 메이저가 매년 개최지를 바꾸는 것과 달리, 마스터즈는 1934년 창설 이래 단 한 곳, 미국 조지아주 <b>오거스타 내셔널 골프 클럽</b>에서만 열립니다. 오늘은 이 전통의 대회에 얽힌 이야기를 들려드립니다.</p>
+
+    <h2>전설적인 아마추어가 만든 대회</h2>
+    <figure>
+      <img src="encyclopedia/major-jones.jpg" alt="마스터즈 설립자 보비 존스">
+      <figcaption>마스터즈를 세운 전설의 아마추어, 보비 존스</figcaption>
+    </figure>
+    <p>마스터즈의 설립자는 골프 역사상 가장 위대한 아마추어 골퍼로 꼽히는 <b>보비 존스(Bobby Jones)</b>입니다. 그는 은행가 클리퍼드 로버츠와 함께 오거스타 내셔널을 세우고, 코스는 영국의 설계자 알리스터 매켄지와 함께 만들었습니다.</p>
+    <figure>
+      <img src="encyclopedia/major-jones-card.jpg" alt="보비 존스가 그려진 1933년 스포츠 카드">
+      <figcaption>당대의 스타였던 보비 존스 — 1933년 스포츠 카드</figcaption>
+    </figure>
+    <p>존스의 명성 덕분에 당대 최고의 골퍼들이 대회에 몰렸고, 그것이 오늘날 마스터즈의 명성으로 이어졌습니다.</p>
+
+    <h2>그린 재킷의 전통</h2>
+    <p>마스터즈 우승자에게는 특별한 선물이 주어집니다. 바로 초록색 재킷, <b>'그린 재킷(Green Jacket)'</b>입니다. 우승자는 이 재킷을 입고, 이듬해 전년 우승자가 새 챔피언에게 직접 재킷을 입혀줍니다. 마스터즈의 가장 상징적인 명장면이죠.</p>
+
+    <div class="divider"></div>
+
+    <h2>숫자로 보는 마스터즈 명장면</h2>
+    <figure>
+      <img src="encyclopedia/major-legends.jpg" alt="1920년대 골퍼들">
+      <figcaption>마스터즈의 역사는 위대한 이름들로 가득하다</figcaption>
+    </figure>
+    <p>마스터즈의 역사는 위대한 이름들로 가득합니다.</p>
+    <table class="scoretbl">
+      <tr><th>우승</th><th>선수</th><th>비고</th></tr>
+      <tr><td>6승</td><td>잭 니클라우스</td><td>역대 최다 · 1986년 46세 우승</td></tr>
+      <tr><td>5승</td><td>타이거 우즈</td><td>1997년 21세 최연소·12타차 압승</td></tr>
+      <tr><td>4승</td><td>아놀드 파머</td><td>1958·60·62·64년</td></tr>
+    </table>
+    <p><b>잭 니클라우스</b>는 1963년 첫 우승을 시작으로 통산 6승을 거뒀고, 특히 46세에 거둔 1986년 우승은 골프 역사상 가장 극적인 장면으로 꼽힙니다. <b>타이거 우즈</b>의 1997년 첫 우승은 만 21세 최연소 우승이자, 2위와 무려 12타 차라는 역대 최다 타수 차 압승이었습니다.</p>
+
+    <h2>최근의 드라마, 로리 매킬로이</h2>
+    <p>가장 최근의 이야기도 빼놓을 수 없습니다. <b>로리 매킬로이</b>는 2025년 마스터즈에서 마침내 우승하며, 4대 메이저를 모두 제패하는 <b>커리어 그랜드슬램</b>을 달성했습니다. 진 사라젠, 벤 호건, 게리 플레이어, 잭 니클라우스, 타이거 우즈에 이은 역대 여섯 번째 그랜드슬램이었습니다.</p>
+    <p>2011년 혜성같이 등장하고도 11년간 메이저 우승 공백에 시달렸던 그에게는 감격적인 순간이었죠. 그리고 이듬해 2026년, 매킬로이는 <b>마스터즈 2연패</b>까지 달성하며 전설의 반열에 올랐습니다. 90년 역사에서 마스터즈 2연패는 니클라우스, 닉 팔도, 우즈에 이어 단 네 명뿐이었습니다.</p>
+
+    <div class="pull">
+      <span class="lbl">4대 메이저란</span>
+      마스터즈 · US 오픈 · 디 오픈(브리티시 오픈) · PGA 챔피언십. 이 넷을 한 선수가 커리어 통산 모두 제패하면 '커리어 그랜드슬램'이라 부릅니다.
+    </div>
+
+    <div class="divider"></div>
+
+    <h2>마치며</h2>
+    <figure class="swing3">
+      <img src="encyclopedia/major-augusta.jpg" alt="오거스타, 조지아">
+      <figcaption>매년 4월, 오거스타의 철쭉이 필 때 마스터즈가 열린다</figcaption>
+    </figure>
+    <p>마스터즈는 단순한 대회가 아닙니다. 90년간 한 장소에서 쌓여온 <b>전통과 이야기의 집합체</b>입니다. 그린 재킷 하나에 수십 년의 역사가 담겨 있죠.</p>
+    <p>매년 4월, 오거스타의 핑크빛 철쭉(아잘레아)이 필 때 이 이야기를 떠올리며 보면, 골프 중계가 한층 깊어질 것입니다.</p>
+
+    <div class="cta">
+      <img class="cta-logo" src="encyclopedia/logo-mysm.svg" alt="MySwingMatch">
+      <p>니클라우스, 우즈, 매킬로이 — 전설들의 스윙은 제각각 특징이 분명합니다. 내 스윙은 어떤 챔피언과 닮았을까요?</p>
+      <a href="app.html" class="cta-btn">내 스윙 분석하기 →</a>
+    </div>
+  </div>
+
+  <div class="foot">
+    <img class="foot-logo" src="encyclopedia/logo-mysm.svg" alt="MySwingMatch">
+    <div class="cr">사진: 보비 존스·오거스타 외 · 퍼블릭 도메인 / Wikimedia Commons<br>© MySwingMatch · Golf Story</div>
+  </div>
+</div>
+</body>
+</html>
