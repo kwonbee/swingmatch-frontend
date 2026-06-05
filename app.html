@@ -223,6 +223,15 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .rblock ul{list-style:none;display:flex;flex-direction:column;gap:8px}
 .rblock li{font-size:.85rem;color:var(--text);padding-left:10px;position:relative;line-height:1.65}
 .rblock li::before{content:'—';position:absolute;left:0;color:var(--gold);font-size:.66rem}
+.rdrills{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.rdrills-title{font-size:.66rem;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+.rdrills-list{display:flex;flex-direction:column;gap:10px}
+.rdrill{background:rgba(45,74,51,.04);border:1px solid var(--border-accent);border-radius:6px;padding:13px 14px}
+.rdrill-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.rdrill-title{font-size:.92rem;font-weight:600;color:var(--accent)}
+.rdrill-focus{font-size:.7rem;color:var(--gold);letter-spacing:.02em}
+.rdrill-how{font-size:.85rem;color:var(--text);line-height:1.65}
+.rdrills-note{font-size:.7rem;color:var(--muted);line-height:1.5;margin-top:10px}
 .fg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .fi{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:2px;padding:12px}
 .fph{font-size:.66rem;color:var(--muted);letter-spacing:.06em;margin-bottom:4px}
@@ -755,6 +764,11 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
         <div class="rgrid">
           <div class="rblock"><h4>스윙 강점</h4><ul id="r-str"></ul></div>
           <div class="rblock"><h4>개선 포인트</h4><ul id="r-imp"></ul></div>
+        </div>
+        <div class="rdrills" id="r-drills-wrap" style="display:none">
+          <h4 class="rdrills-title">추천 연습 드릴</h4>
+          <div class="rdrills-list" id="r-drills"></div>
+          <div class="rdrills-note">※ 분석 결과를 바탕으로 제안하는 참고용 가이드예요. 통증이 있거나 잘 안 되면 무리하지 마세요.</div>
         </div>
       </div>
       <div class="tc" id="tc-f"><div class="fg" id="r-frames"></div></div>
@@ -1560,6 +1574,10 @@ function shareKakao() {
   const keywords = (t.keywords || []).join(' · ');
   const strengths = (t.strengths || []).map(s => '  · ' + s).join('\n');
   const improvements = (t.improvements || []).map(s => '  · ' + s).join('\n');
+  const drills = (t.practiceDrills || [])
+    .filter(d => d && (d.title || d.how))
+    .map(d => '  · ' + [d.title, d.how].filter(Boolean).join(' — '))
+    .join('\n');
 
   const shareUrl = 'https://myswingmatch.com';
   const text = [
@@ -1577,6 +1595,8 @@ function shareKakao() {
     '',
     '🎯 개선 포인트',
     improvements,
+    drills ? '\n🏌️ 추천 연습 드릴' : '',
+    drills,
     '',
     '👇 내 스윙도 분석해보세요',
     shareUrl
@@ -2665,6 +2685,29 @@ function renderResult(d, videoInfo) {
   (t.strengths||[]).forEach(s => { const li = document.createElement('li'); li.textContent = s; sl.appendChild(li); });
   const im = document.getElementById('r-imp'); im.innerHTML = '';
   (t.improvements||[]).forEach(s => { const li = document.createElement('li'); li.textContent = s; im.appendChild(li); });
+  // 추천 연습 드릴 (server.js practiceDrills). 구버전 기록엔 없으니 있을 때만 노출.
+  const drillsWrap = document.getElementById('r-drills-wrap');
+  const drillsList = document.getElementById('r-drills');
+  if (drillsWrap && drillsList) {
+    const drills = Array.isArray(t.practiceDrills) ? t.practiceDrills.filter(d => d && (d.title || d.how)) : [];
+    drillsList.innerHTML = '';
+    if (drills.length) {
+      drills.forEach(d => {
+        const card = document.createElement('div');
+        card.className = 'rdrill';
+        const head = document.createElement('div');
+        head.className = 'rdrill-head';
+        if (d.title) { const tt = document.createElement('span'); tt.className = 'rdrill-title'; tt.textContent = d.title; head.appendChild(tt); }
+        if (d.focus) { const fc = document.createElement('span'); fc.className = 'rdrill-focus'; fc.textContent = d.focus; head.appendChild(fc); }
+        card.appendChild(head);
+        if (d.how) { const hw = document.createElement('div'); hw.className = 'rdrill-how'; hw.textContent = d.how; card.appendChild(hw); }
+        drillsList.appendChild(card);
+      });
+      drillsWrap.style.display = 'block';
+    } else {
+      drillsWrap.style.display = 'none';
+    }
+  }
   const fr = document.getElementById('r-frames'); fr.innerHTML = '';
   // 화면엔 핵심 4자세만 노출 (AI는 8프레임 전부 분석하나, 중복·오해 방지 위해 표시는 4개). 매칭 실패 시 앞 4개로 폴백.
   const KEY_PHASES = ['어드레스','테이크어웨이','임팩트','피니시'];
