@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>스코어 용어 — 파, 버디, 그리고 새들의 이름 | MySwingMatch</title>
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+:root{--gr:#2D4A33;--gr-pale:#4C7857;--ink:#1c1c19;--body:#42413b;--mut:#8a887f;--paper:#fcfcf9;--line:#e8e6dd;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-text-size-adjust:100%;}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:#efeee8;color:var(--body);line-height:1.75;}
+.wrap{max-width:420px;margin:0 auto;background:var(--paper);min-height:100vh;}
+.navbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;height:52px;padding:0 16px;background:rgba(252,252,249,.92);backdrop-filter:blur(10px);border-bottom:0.5px solid var(--line);}
+.navbar a{display:flex;align-items:center;gap:6px;text-decoration:none;color:var(--ink);font-size:14px;font-weight:600;}
+.navbar .arrow{font-size:18px;line-height:1;}
+.navbar .ttl{font-size:13px;color:var(--mut);font-weight:500;margin-left:auto;}
+/* hero */
+.hero{position:relative;height:300px;overflow:hidden;}
+.hero img{width:100%;height:100%;object-fit:cover;object-position:center 18%;}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,30,22,.15) 0%,rgba(20,30,22,.55) 60%,rgba(20,30,22,.82) 100%);}
+.hero-tag{position:absolute;top:18px;left:20px;z-index:2;font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.2);backdrop-filter:blur(4px);padding:5px 12px;border-radius:30px;letter-spacing:.3px;}
+.hero-txt{position:absolute;left:20px;right:20px;bottom:22px;z-index:2;}
+.kicker{font-size:11px;font-weight:700;letter-spacing:1.5px;color:#bcd3c2;}
+.hero h1{font-size:30px;font-weight:800;color:#fff;margin-top:6px;letter-spacing:-.5px;}
+.hero .sub{font-size:14px;color:rgba(255,255,255,.82);margin-top:5px;}
+/* body */
+.content{padding:24px 22px 0;}
+.lead-quote{border-left:3px solid var(--gr);padding:4px 0 4px 14px;margin-bottom:20px;font-size:13px;color:var(--gr);font-weight:600;font-style:italic;line-height:1.6;}
+p{font-size:14.5px;color:var(--body);margin-bottom:15px;letter-spacing:-.2px;}
+p b{color:var(--ink);font-weight:700;}
+h2{font-size:16px;font-weight:600;color:var(--ink);margin:28px 0 10px;letter-spacing:-.3px;position:relative;padding-left:12px;}
+h2::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:2px;background:var(--gr);}
+.divider{height:1px;background:var(--line);margin:28px 0;}
+figure{margin:16px -2px;}
+figure img{width:100%;border-radius:12px;display:block;box-shadow:0 4px 18px rgba(40,50,35,.1);}
+figcaption{font-size:11px;color:var(--mut);margin-top:7px;padding-left:2px;}
+.swing3 img{filter:grayscale(.08) contrast(1.03);}
+.pull{background:#f2f4ee;border-radius:12px;padding:16px 18px;margin:18px 0;font-size:13.5px;color:var(--gr);line-height:1.65;}
+.pull .lbl{display:block;font-size:11px;font-weight:700;color:var(--gr-pale);margin-bottom:5px;letter-spacing:.3px;}
+/* score term table */
+.scoretbl{width:100%;border-collapse:collapse;margin:18px 0;font-size:13.5px;}
+.scoretbl th,.scoretbl td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);}
+.scoretbl th{font-size:11px;font-weight:700;color:var(--gr-pale);letter-spacing:.3px;}
+.scoretbl td:first-child{font-weight:700;color:var(--ink);white-space:nowrap;}
+.scoretbl td:last-child{color:var(--mut);}
+/* cta */
+.cta{background:linear-gradient(155deg,#34503b,#22331f);border-radius:16px;padding:22px;margin:26px 0 0;text-align:center;}
+.cta .cta-logo{height:18px;width:auto;margin:0 auto 16px;display:block;opacity:.95;}
+.cta p{font-size:13px;color:rgba(255,255,255,.88);margin:0 0 16px;line-height:1.65;}
+.cta a{display:block;background:#fff;color:var(--gr);font-size:14.5px;font-weight:800;text-decoration:none;padding:13px;border-radius:10px;}
+.foot{padding:24px 22px 36px;text-align:center;}
+.foot .foot-logo{height:18px;width:auto;opacity:.85;}
+.foot .cr{font-size:10.5px;color:var(--mut);margin-top:8px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="navbar">
+    <a href="encyclopedia.html"><span class="arrow">‹</span> 골프 스토리</a>
+    <span class="ttl">03 · 용어</span>
+  </div>
+  <div class="hero">
+    <img src="encyclopedia/term-hero.jpg" alt="파 숫자가 적힌 빈티지 골프 스코어카드">
+    <div class="hero-tag">용어</div>
+    <div class="hero-txt">
+      <div class="kicker">GOLF STORY · 03</div>
+      <h1>스코어 용어</h1>
+      <div class="sub">파, 버디, 그리고 새들의 이름</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="lead-quote">골프 중계를 보다 보면 새 이름이 자주 들립니다. 버디, 이글, 알바트로스. 왜 하필 새일까요.</div>
+
+    <p>골프를 처음 접하면 가장 먼저 부딪히는 벽이 '점수 말'입니다. 분명 한국말인데 무슨 뜻인지 모를 단어들 — 파, 보기, 버디, 이글. 오늘은 이 스코어 용어들을 하나씩, 그리고 그 속에 숨은 새들의 이야기까지 풀어봅니다.</p>
+
+    <h2>모든 것의 기준, 파(Par)</h2>
+    <figure>
+      <img src="encyclopedia/term-par.jpg" alt="도심 속 골프 코스의 홀과 깃발">
+      <figcaption>각 홀에는 '몇 타에 넣어야 한다'는 기준 타수, 파가 정해져 있다</figcaption>
+    </figure>
+    <p><b>파(Par)</b>는 '이 홀은 몇 타에 넣는 게 기준'이라는 약속된 타수입니다. 거리에 따라 보통 파 3·파 4·파 5로 나뉘죠. 18홀을 모두 기준대로 치면 대개 <b>72타</b>가 되고, 이게 한 라운드의 기준 점수가 됩니다.</p>
+    <p>실제 점수는 이 파를 기준으로 <b>'몇 타 더 쳤나, 덜 쳤나'</b>로 말합니다. 그래서 골프 점수는 숫자가 작을수록 좋습니다. 파보다 많이 치면 보기 계열, 적게 치면 새 이름이 등장합니다.</p>
+
+    <h2>파보다 더 친 쪽 — 보기 계열</h2>
+    <p>파보다 한 타 더 치면 <b>보기(Bogey)</b>, 두 타 더 치면 <b>더블 보기</b>, 세 타면 <b>트리플 보기</b>입니다. '보기'라는 말은 19세기 영국에서 '도깨비(bogey man)'에 빗댄 표현에서 왔다고 전해집니다 — 잡기 어려운 기준 타수를 유령에 비유한 거죠.</p>
+
+    <div class="divider"></div>
+
+    <h2>파보다 덜 친 쪽 — 새들의 영역</h2>
+    <p>여기서부터가 골프 용어의 묘미입니다. 파보다 적게 친 좋은 점수에는 모두 <b>새 이름</b>이 붙습니다. 더 좋은 점수일수록 더 크고 멋지게 나는 새가 등장하죠.</p>
+
+    <h2>버디(Birdie) — 한 타 덜</h2>
+    <figure>
+      <img src="encyclopedia/term-birdie.jpg" alt="나뭇가지에 앉은 파랑새">
+      <figcaption>버디 — 파보다 한 타 적은, 작지만 기분 좋은 새</figcaption>
+    </figure>
+    <p>파보다 <b>한 타 적게</b> 치면 버디입니다. 20세기 초 미국에서 '버드(bird)'가 '멋진 것'을 뜻하는 속어였는데, 한 선수가 멋진 샷을 두고 "그거 완전 버드였어!"라고 한 데서 <b>버디(birdie)</b>가 됐다고 합니다. 작은 새처럼, 골퍼에게 가장 자주 찾아오는 반가운 손님이죠.</p>
+
+    <h2>이글(Eagle) — 두 타 덜</h2>
+    <figure>
+      <img src="encyclopedia/term-eagle.jpg" alt="물고기를 낚아채는 흰꼬리수리">
+      <figcaption>이글 — 버디보다 한 단계 위, 더 크게 나는 독수리</figcaption>
+    </figure>
+    <p>파보다 <b>두 타 적게</b> 치면 이글입니다. 버디(작은 새)에서 한 단계 올라가니, 더 크고 멋진 새인 <b>독수리</b>의 이름을 붙인 것이죠. 파 5 홀에서 두 번째 샷을 그린에 올려 한 번에 넣거나, 긴 퍼트가 들어가야 나오는 귀한 점수입니다.</p>
+
+    <h2>알바트로스(Albatross) — 세 타 덜</h2>
+    <figure>
+      <img src="encyclopedia/term-albatross.jpg" alt="바다 위를 활공하는 알바트로스">
+      <figcaption>알바트로스 — 좀처럼 보기 힘든, 가장 멀리 나는 새</figcaption>
+    </figure>
+    <p>파보다 <b>세 타 적게</b> 치면 알바트로스입니다. 독수리보다 더 크고 멀리 나는 바닷새의 이름을 붙였죠. 아마추어는 평생 한 번 볼까 말까 한 점수라, 그만큼 희귀한 새의 이름이 어울립니다. 미국에서는 '더블 이글'이라고도 부릅니다.</p>
+
+    <div class="pull">
+      <span class="lbl">한눈에 보는 스코어 용어</span>
+      파를 기준(0)으로, 숫자가 작을수록 좋은 점수입니다.
+    </div>
+    <table class="scoretbl">
+      <tr><th>이름</th><th>파 대비</th><th>비고</th></tr>
+      <tr><td>알바트로스</td><td>−3</td><td>매우 희귀</td></tr>
+      <tr><td>이글</td><td>−2</td><td>훌륭한 점수</td></tr>
+      <tr><td>버디</td><td>−1</td><td>반가운 점수</td></tr>
+      <tr><td>파</td><td>0</td><td>기준 타수</td></tr>
+      <tr><td>보기</td><td>+1</td><td>한 타 초과</td></tr>
+      <tr><td>더블 보기</td><td>+2</td><td>두 타 초과</td></tr>
+    </table>
+
+    <div class="divider"></div>
+
+    <h2>모든 골퍼의 꿈, 홀인원</h2>
+    <figure>
+      <img src="encyclopedia/term-hole.jpg" alt="홀 바로 옆에 멈춘 골프공">
+      <figcaption>단 한 번의 샷으로 홀에 — 골프가 주는 가장 짜릿한 순간</figcaption>
+    </figure>
+    <p><b>홀인원(Hole in one)</b>은 티샷 한 번에 공이 홀에 들어가는 것입니다. 주로 짧은 파 3 홀에서 나오죠. 참고로 파 4 홀에서 단 한 번에 넣으면 그게 바로 알바트로스(−3)이고, 따로 '<b>앨버트로스 홀인원</b>'이라 부르기도 합니다. 확률로 따지면 아마추어 기준 수만 분의 일이라, 평생의 자랑거리가 됩니다.</p>
+
+    <h2>마치며</h2>
+    <figure class="swing3">
+      <img src="encyclopedia/term-putt.jpg" alt="옛 골프장에서 퍼팅하는 골퍼">
+      <figcaption>용어를 알면 한 타 한 타가 더 또렷하게 보인다</figcaption>
+    </figure>
+    <p>스코어 용어를 알고 나면, 골프 중계도 라운딩도 전혀 다르게 들립니다. "버디 잡았다"는 말에 함께 기뻐할 수 있고, 내 점수가 파에서 몇 타 떨어져 있는지도 또렷이 보이죠.</p>
+    <p>처음엔 파만 기억해도 충분합니다. <b>파를 기준으로, 새 이름이 나올수록 좋은 점수.</b> 이 한 문장만 손에 쥐고 시작하세요.</p>
+
+    <div class="cta">
+      <img class="cta-logo" src="encyclopedia/logo-mysm.svg" alt="MySwingMatch">
+      <p>나와 가장 닮은 프로는 어떤 점수를 만들어낼까요? 내 스윙과 가장 닮은 프로를 찾아보세요.</p>
+      <a href="app.html" class="cta-btn">내 스윙 분석하기 →</a>
+    </div>
+  </div>
+
+  <div class="foot">
+    <img class="foot-logo" src="encyclopedia/logo-mysm.svg" alt="MySwingMatch">
+    <div class="cr">사진: 스코어카드·새 외 · 퍼블릭 도메인 / Wikimedia Commons<br>© MySwingMatch · Golf Story</div>
+  </div>
+</div>
+</body>
+</html>
