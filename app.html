@@ -77,9 +77,13 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .auth-area{display:flex;align-items:center;gap:10px}
 .auth-email{font-size:.75rem;color:var(--muted);letter-spacing:.03em}
 
-.nav-right{display:flex;align-items:center;gap:10px}
-.btn-story{border-color:transparent!important;color:#2D4A33!important;font-weight:500}
-.btn-story:hover{border-color:rgba(45,74,51,0.4)!important;color:#2D4A33!important}
+.nav-right{display:flex;align-items:center;gap:18px}
+/* PC 헤더: 기본 = 그린 텍스트 링크(테두리/배경 없음) */
+.nav-right .nav-link{font-family:'Pretendard',sans-serif;font-size:.8rem;letter-spacing:.04em;color:#2D4A33;background:transparent;border:none;padding:4px 2px;cursor:pointer;text-decoration:none;transition:opacity .15s;white-space:nowrap}
+.nav-right .nav-link:hover{opacity:.6}
+/* PC 헤더: 핵심 버튼도 PC에선 그냥 그린 텍스트(박스 없음) — 모바일에서만 박스 */
+.nav-right .nav-cta{font-family:'Pretendard',sans-serif;font-size:.8rem;letter-spacing:.04em;color:#2D4A33;background:transparent;border:none;padding:4px 2px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;transition:opacity .15s;white-space:nowrap}
+.nav-right .nav-cta:hover{opacity:.6}
 
 /* Hamburger Menu */
 .hamburger-btn{display:none;background:transparent;border:1px solid var(--border);width:36px;height:32px;flex-direction:column;justify-content:center;align-items:center;gap:4px;border-radius:2px;cursor:pointer;padding:0;transition:all .2s;position:relative;z-index:1001}
@@ -104,8 +108,10 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .btn-signup:hover{background:var(--gold-light)}
 .btn-pro{background:var(--gold);border:1px solid var(--gold);color:#FFFFFF;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-width:88px;text-align:center}
 .btn-pro:hover{background:var(--gold-light)}
-.btn-mydiary{background:transparent;border:1px solid var(--gold);color:var(--gold);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;text-align:center}
-.btn-mydiary:hover{background:rgba(76,120,87,0.1)}
+.btn-mydiary{font-family:'Pretendard',sans-serif;font-size:.8rem;letter-spacing:.04em;color:#2D4A33;background:transparent;border:none;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;padding:4px 2px;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.btn-mydiary:hover{opacity:.6}
+.btn-mydiary.is-cta{color:#2D4A33;background:transparent;border:none;padding:4px 2px}
+.btn-mydiary.is-cta:hover{opacity:.6}
 .btn-logout{background:var(--gold);border:1px solid var(--gold);color:#FFFFFF}
 .btn-logout:hover{background:var(--gold-light)}
 
@@ -506,16 +512,15 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
   /* 모바일에서 햄버거 메뉴 위치 조정 (헤더+탭 한참 아래로) */
   .hamburger-menu{top:120px!important;right:12px!important}
   /* 모바일 헤더: 상태별 단일 버튼만 노출 (나머지는 햄버거로) */
-  .nav-right > button.nav-biz,
-  .nav-right > .btn-auth.btn-login:not(.btn-pro),
-  .auth-area .btn-auth.btn-login,
-  .auth-area .btn-signup,
-  .auth-area .btn-logout,
+  .nav-right .nav-link,
   .auth-area .auth-email,
-  #auth-user .btn-pro{display:none!important}
+  #auth-user #hdr-pro-btn{display:none!important}
   /* 비회원: 무료 회원가입 버튼 / 로그인 유저: My Diary 버튼만 노출 */
-  .btn-guest-signup,
+  .btn-guest-signup{display:inline-flex!important}
   .auth-area .btn-mydiary{display:inline-flex!important}
+  /* 모바일에서만 노출되는 단일 핵심 버튼은 그린 박스 + 흰 글씨로 */
+  .nav-right .nav-cta.btn-guest-signup,
+  .auth-area .btn-mydiary{color:#FFFFFF!important;background:#2D4A33!important;border:1px solid #2D4A33!important;border-radius:6px!important;padding:8px 18px!important}
   .main{padding:24px 14px 80px}
   .upload-card,.guide-card{padding:12px 14px}
   .guide-grid{grid-template-columns:1fr 1fr}
@@ -616,18 +621,18 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 </svg></a>
   <div class="nav-right">
     <div class="auth-area" id="auth-guest">
-      <a href="/encyclopedia.html" class="btn-auth btn-login btn-story">골프 이야기</a>
-      <button class="btn-auth btn-login" onclick="copyBizEmail()">비즈니스 문의</button>
-      <button class="btn-auth btn-login" onclick="openModal('login')">로그인</button>
-      <button class="btn-auth btn-pro btn-guest-signup" onclick="openModal('signup')">무료 회원가입</button>
+      <a href="/encyclopedia.html" class="nav-link">골프 이야기</a>
+      <button class="nav-link" onclick="copyBizEmail()">비즈니스 문의</button>
+      <button class="nav-link" onclick="openModal('login')">로그인</button>
+      <button class="nav-cta btn-guest-signup" onclick="openModal('signup')">무료 회원가입</button>
     </div>
     <div class="auth-area" id="auth-user" style="display:none">
-      <a href="/mypage.html" class="btn-auth btn-mydiary">📖 My Diary</a>
-      <a href="/encyclopedia.html" class="btn-auth btn-login btn-story">골프 이야기</a>
-      <button class="btn-auth btn-login btn-biz-user" onclick="copyBizEmail()">비즈니스 문의</button>
-      <a href="/subscribe.html" class="btn-auth btn-pro" id="hdr-pro-btn">Pro 구독</a>
+      <a href="/mypage.html" class="btn-mydiary" id="hdr-mydiary">My Diary</a>
+      <a href="/encyclopedia.html" class="nav-link">골프 이야기</a>
+      <button class="nav-link btn-biz-user" onclick="copyBizEmail()">비즈니스 문의</button>
+      <a href="/subscribe.html" class="nav-cta" id="hdr-pro-btn">Pro 구독</a>
       <span class="auth-email" id="auth-email-txt"></span>
-      <button class="btn-auth btn-logout" onclick="logout()">로그아웃</button>
+      <button class="nav-link" onclick="logout()">로그아웃</button>
     </div>
     <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="메뉴 열기">
       <span></span><span></span><span></span>
@@ -1320,6 +1325,9 @@ function initAuth() {
     show('hdr-pro-btn', pro ? 'none' : 'inline-flex');
     show('m-pro-btn', pro ? 'none' : 'block');
     show('m-pro-divider', pro ? 'none' : 'block');
+    // PC 헤더 핵심 버튼(그린 바탕 흰 글씨): 무료=Pro구독 / Pro=My Diary
+    const myd = document.getElementById('hdr-mydiary');
+    if (myd) { if (pro) myd.classList.add('is-cta'); else myd.classList.remove('is-cta'); }
   } else {
     show('auth-guest', 'flex');
     show('auth-user', 'none');
@@ -1330,15 +1338,23 @@ function initAuth() {
 }
 
 // ── 모바일 햄버거 메뉴 토글 ──
+function applyMenuProVisibility(pro) {
+  var pb = document.getElementById('m-pro-btn');
+  var pd = document.getElementById('m-pro-divider');
+  if (pb) pb.style.display = pro ? 'none' : 'block';
+  if (pd) pd.style.display = pro ? 'none' : 'block';
+}
 function toggleMobileMenu() {
-  try {
-    var pro = (typeof isProUser === 'function') && isProUser();
-    var pb = document.getElementById('m-pro-btn');
-    var pd = document.getElementById('m-pro-divider');
-    if (pb) pb.style.display = pro ? 'none' : 'block';
-    if (pd) pd.style.display = pro ? 'none' : 'block';
-  } catch (e) {}
+  // 1) 일단 현재 캐시값으로 즉시 반영
+  try { applyMenuProVisibility((typeof isProUser === 'function') && isProUser()); } catch (e) {}
   document.getElementById('mobile-menu').classList.toggle('open');
+  // 2) 로그인 상태면 Pro 상태를 한 번 더 비동기로 확정해서 재반영
+  //    (모바일에서 메뉴 여는 시점에 Pro 캐시가 아직 안 채워졌을 수 있어 한 박자 늦게라도 확실히 숨김)
+  if (currentUser && currentUser.id && typeof refreshProStatus === 'function') {
+    refreshProStatus().then(function (pro) {
+      try { applyMenuProVisibility(!!pro); } catch (e) {}
+    }).catch(function () {});
+  }
 }
 function closeMobileMenu() {
   document.getElementById('mobile-menu').classList.remove('open');
