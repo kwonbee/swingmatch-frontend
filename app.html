@@ -503,15 +503,17 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
   .hamburger-btn{display:flex}
   /* 모바일에서 햄버거 메뉴 위치 조정 (헤더+탭 한참 아래로) */
   .hamburger-menu{top:120px!important;right:12px!important}
-  /* 비즈니스 문의 + 로그인 + 회원가입 + 로그아웃 + My Diary 숨기기 (Pro 구독만 유지) */
+  /* 모바일 헤더: 상태별 단일 버튼만 노출 (나머지는 햄버거로) */
   .nav-right > button.nav-biz,
   .nav-right > .btn-auth.btn-login:not(.btn-pro),
   .auth-area .btn-auth.btn-login,
   .auth-area .btn-signup,
   .auth-area .btn-logout,
-  .auth-area .btn-mydiary{display:none!important}
-  /* Pro 구독은 유지 */
-  .btn-pro{display:inline-flex!important}
+  .auth-area .auth-email,
+  #auth-user .btn-pro{display:none!important}
+  /* 비회원: 무료 회원가입 버튼 / 로그인 유저: My Diary 버튼만 노출 */
+  .btn-guest-signup,
+  .auth-area .btn-mydiary{display:inline-flex!important}
   .main{padding:24px 14px 80px}
   .upload-card,.guide-card{padding:12px 14px}
   .guide-grid{grid-template-columns:1fr 1fr}
@@ -614,12 +616,11 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
     <button class="btn-auth btn-login" onclick="copyBizEmail()">비즈니스 문의</button>
     <div class="auth-area" id="auth-guest">
       <button class="btn-auth btn-login" onclick="openModal('login')">로그인</button>
-      <a href="/subscribe.html" class="btn-auth btn-pro">Pro 구독</a>
-      <button class="btn-auth btn-signup" onclick="openModal('signup')">회원가입</button>
+      <button class="btn-auth btn-pro btn-guest-signup" onclick="openModal('signup')">무료 회원가입</button>
     </div>
     <div class="auth-area" id="auth-user" style="display:none">
       <a href="/mypage.html" class="btn-auth btn-mydiary">📖 My Diary</a>
-      <a href="/subscribe.html" class="btn-auth btn-pro">Pro 구독</a>
+      <a href="/subscribe.html" class="btn-auth btn-pro" id="hdr-pro-btn">Pro 구독</a>
       <span class="auth-email" id="auth-email-txt"></span>
       <button class="btn-auth btn-logout" onclick="logout()">로그아웃</button>
     </div>
@@ -639,9 +640,8 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
     <div id="mobile-menu-user" style="display:none">
       <div class="menu-email" id="mobile-menu-email"></div>
       <div class="menu-divider"></div>
-      <a href="/mypage.html" onclick="closeMobileMenu()">📖 My Diary</a>
-      <a href="/subscribe.html" onclick="closeMobileMenu()">Pro 구독</a>
-      <div class="menu-divider"></div>
+      <a href="/subscribe.html" id="m-pro-btn" onclick="closeMobileMenu()">Pro 구독</a>
+      <div class="menu-divider" id="m-pro-divider"></div>
       <button onclick="event.stopPropagation();handleMobileLogout()">로그아웃</button>
       <div class="menu-divider"></div>
       <button onclick="copyBizEmail();closeMobileMenu()">비즈니스 문의</button>
@@ -712,7 +712,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <div class="gi"><span class="gi-ico"><svg class="gi-svg" viewBox="0 0 32 32" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M22.091,12.778l-1.477-2.3a5.475,5.475,0,0,1-.87-2.964V5.423H17V2.563H15v2.86H12.249V7.516a5.483,5.483,0,0,1-.869,2.964L9.9,12.778a7.534,7.534,0,0,0-.4,7.473,7.121,7.121,0,0,0,5.832,4c.218.018.439.026.663.026s.443-.008.663-.026a7.12,7.12,0,0,0,5.831-4A7.534,7.534,0,0,0,22.091,12.778ZM20.7,19.365a5.073,5.073,0,0,1-4.2,2.9,6.324,6.324,0,0,1-1,0,5.073,5.073,0,0,1-4.2-2.9,5.551,5.551,0,0,1,.291-5.505l1.477-2.3a7.472,7.472,0,0,0,1.187-4.045V7.423h3.495v.093a7.468,7.468,0,0,0,1.188,4.045l1.475,2.3A5.547,5.547,0,0,1,20.7,19.365Z"></path><rect width="2" height="4.825" x="14.997" y="9.318"></rect><rect width="3.357" height="2" x="25.085" y="15.994"></rect><rect width="2" height="3.357" x="22.611" y="22.927" transform="rotate(-45 23.61 24.605)"></rect><rect width="2" height="3.357" x="15" y="26.079"></rect><rect width="3.357" height="2" x="6.709" y="23.605" transform="rotate(-45 8.388 24.606)"></rect><rect width="3.356" height="2" x="3.558" y="15.994"></rect></svg></span><div class="gi-text"><strong>촬영 환경</strong><span>밝은 환경, 전신이 보이게</span></div></div>
       <div class="gi"><span class="gi-ico"><svg class="gi-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"></circle></svg></span><div class="gi-text"><strong>포함 동작</strong><span>어드레스~피니시 전체</span></div></div>
     </div>
-    <div class="guide-tip"><strong>Tip.</strong> 연습장에서 핸드폰을 삼각대나 카트에 올려두고 측면에서 촬영하면 가장 정확한 분석이 가능합니다.<br><span style="color:rgba(76,120,87,0.8);font-size:.7rem">Pro 회원은 분석한 영상을 자동 저장 (최근 30개) + 영구 보관할 영상은 하트로 즐겨찾기 (10개)</span></div>
+    <div class="guide-tip"><strong>Tip.</strong> 연습장에서 핸드폰을 삼각대나 카트에 올려두고 측면에서 촬영하면 가장 정확한 분석이 가능합니다.<br><span style="color:rgba(76,120,87,0.8);font-size:.7rem">무료 회원은 분석 영상 1개 자동 저장 · Pro 회원은 최근 30개 자동 저장 + 영구 보관할 영상은 하트로 즐겨찾기 (10개)</span></div>
   </div>
   <!-- Callaway 광고 -->
   <div class="ad-inline" id="ad-callaway" style="display:none">
@@ -1110,6 +1110,7 @@ async function applyAuthedState(user) {
     // 각 단계를 독립적으로 감싼다 — 한 단계가 실패해도 나머지(특히 광고)는 계속 실행.
     try { initAuth(); } catch (e) { console.error('[Init] initAuth 실패:', e); }            // 1) 헤더/메뉴
     try { await refreshProStatus(); } catch (e) { console.error('[Init] refreshProStatus 실패:', e); } // 2) Pro 확정
+    try { initAuth(); } catch (e) { console.error('[Init] initAuth(Pro 반영) 실패:', e); }   // 2-1) Pro 확정 후 헤더 재갱신(Pro면 구독버튼 숨김)
     try { await loadAds(); } catch (e) { console.error('[Init] loadAds 실패:', e); }          // 3) 광고 (자동 로그인 시 누락 방지)
     try { await updateCountDisplay(); } catch (e) { console.error('[Init] updateCountDisplay 실패:', e); } // 4) 카운트
     try { syncHistoryFromDB(); } catch (e) { console.error('[Init] syncHistoryFromDB 실패:', e); }  // 5) 히스토리(백그라운드)
@@ -1305,6 +1306,11 @@ function initAuth() {
     show('mobile-menu-guest', 'none');
     show('mobile-menu-user', 'block');
     text('mobile-menu-email', currentUser.email);
+    // Pro 회원이면 "Pro 구독" 버튼 숨김 (PC 헤더 + 햄버거)
+    const pro = (typeof isProUser === 'function') && isProUser();
+    show('hdr-pro-btn', pro ? 'none' : 'inline-flex');
+    show('m-pro-btn', pro ? 'none' : 'block');
+    show('m-pro-divider', pro ? 'none' : 'block');
   } else {
     show('auth-guest', 'flex');
     show('auth-user', 'none');
@@ -1960,6 +1966,10 @@ const DAILY_LIMIT_FREE = 5;     // 무료 회원
 const DAILY_LIMIT_GUEST = 3;    // 비회원
 const DAILY_LIMIT_PRO = 999;    // Pro 회원 (사실상 무제한)
 
+// ── 영상 저장 한도 (일반 영상, 즐겨찾기 제외) ──
+const VIDEO_LIMIT_FREE = 1;     // 무료 회원: 최신 1개만 보관
+const VIDEO_LIMIT_PRO = 30;     // Pro 회원: 최근 30개
+
 function getTodayKey() {
   const d = new Date();
   return 'swingCount_' + d.getFullYear() + '_' + (d.getMonth()+1) + '_' + d.getDate();
@@ -2014,11 +2024,11 @@ function isProUser() {
   return cachedProStatus;
 }
 
-// ── Pro 회원: 영상을 Supabase Storage에 업로드 ──
+// ── 로그인 회원: 영상을 Supabase Storage에 업로드 (무료 1개 / Pro 30개) ──
 async function uploadVideoToStorage(videoFile) {
-  // Pro 회원이 아니면 업로드 안 함
-  if (!isProUser() || !currentUser || !currentUser.id) {
-    console.log('[Video] Pro 회원 아님 - 영상 저장 스킵');
+  // 로그인 회원만 업로드 (비회원은 저장 안 함)
+  if (!currentUser || !currentUser.id) {
+    console.log('[Video] 비회원 - 영상 저장 스킵');
     return null;
   }
   
@@ -2075,9 +2085,11 @@ async function refreshVideoUrl(videoPath) {
   }
 }
 
-// ── Pro 회원 영상 30개 초과 시 가장 오래된 영상 삭제 ──
+// ── 영상 한도 초과 시 가장 오래된 영상 삭제 (무료 1개 / Pro 30개) ──
 async function cleanupOldVideos() {
-  if (!isProUser() || !currentUser || !currentUser.id) return;
+  if (!currentUser || !currentUser.id) return;
+  
+  const VIDEO_LIMIT = isProUser() ? VIDEO_LIMIT_PRO : VIDEO_LIMIT_FREE;
   
   try {
     // DB에서 본인의 영상 목록 조회 (즐겨찾기 여부 포함)
@@ -2092,23 +2104,23 @@ async function cleanupOldVideos() {
       return;
     }
     
-    // 즐겨찾기 / 일반 분리
+    // 즐겨찾기 / 일반 분리 (즐겨찾기는 Pro 전용이라 무료회원은 사실상 일반만)
     const favorites = logs.filter(l => l.is_favorite);
     const normals = logs.filter(l => !l.is_favorite);
     
-    console.log(`[Video] 영상 현황: 일반 ${normals.length}개 / 즐겨찾기 ${favorites.length}개`);
+    console.log(`[Video] 영상 현황: 일반 ${normals.length}개 / 즐겨찾기 ${favorites.length}개 (한도 ${VIDEO_LIMIT})`);
     
-    // 일반 영상이 30개 이하면 정리 불필요
-    if (normals.length <= 30) return;
+    // 일반 영상이 한도 이하면 정리 불필요
+    if (normals.length <= VIDEO_LIMIT) return;
     
-    // 30개 초과한 일반 영상 - 가장 오래된 것부터 삭제 (즐겨찾기는 절대 삭제 X)
-    const toDelete = normals.slice(30); // 31번째부터 끝까지
+    // 한도 초과한 일반 영상 - 가장 오래된 것부터 삭제 (즐겨찾기는 절대 삭제 X)
+    const toDelete = normals.slice(VIDEO_LIMIT); // 한도+1번째부터 끝까지
     const pathsToDelete = toDelete.map(l => l.video_path).filter(Boolean);
     const idsToUpdate = toDelete.map(l => l.id);
     
     if (pathsToDelete.length === 0) return;
     
-    console.log(`[Video] 30개 초과 - ${pathsToDelete.length}개 일반 영상 자동 삭제 (즐겨찾기 ${favorites.length}개는 보존)`);
+    console.log(`[Video] ${VIDEO_LIMIT}개 초과 - ${pathsToDelete.length}개 일반 영상 자동 삭제 (즐겨찾기 ${favorites.length}개는 보존)`);
     
     // Storage에서 영상 파일 삭제
     const { error: delError } = await sb.storage
@@ -2197,15 +2209,23 @@ async function updateCountDisplay() {
   }
   
   const remaining = Math.max(0, limit - count);
-  const upgradeBtn = ' · <a href="/subscribe.html" style="color:#4C7857;text-decoration:underline;">Pro 구독</a>';
-  
+
+  // 2줄차: 다음 단계 혜택 안내 (작은 회색 글씨) + 링크
+  // 비회원 → 무료 회원가입 / 무료회원 → Pro 구독
+  const subLine = currentUser
+    ? 'Pro 구독 시 분석·히스토리 무제한, 영상 30개 저장 · <a href="/subscribe.html" style="color:#4C7857;text-decoration:underline;">Pro 구독</a>'
+    : '무료 회원가입 시 하루 5회, 분석 기록 보관, 영상 1개 저장 · <a onclick="openModal(\'signup\')" style="color:#4C7857;text-decoration:underline;cursor:pointer;">무료 회원가입</a>';
+  const subHtml = '<div style="margin-top:6px;font-size:.72rem;color:#8A8A88;line-height:1.5">' + subLine + '</div>';
+
   if (remaining === 0) {
-    el.innerHTML = '오늘 무료 분석 횟수를 모두 사용했습니다' + upgradeBtn;
-    el.style.color = '#e27a7a';
+    const mainColor = '#e27a7a';
+    el.innerHTML = '<div style="color:' + mainColor + '">오늘 무료 분석 횟수를 모두 사용했습니다</div>' + subHtml;
+    el.style.color = '';
   } else {
     const label = currentUser ? '회원' : '비회원';
-    el.innerHTML = '오늘 남은 분석 횟수: ' + remaining + '/' + limit + '회 (' + label + ')' + upgradeBtn;
-    el.style.color = remaining <= 1 ? '#e27a7a' : '#3F3F3D';
+    const mainColor = remaining <= 1 ? '#e27a7a' : '#3F3F3D';
+    el.innerHTML = '<div style="color:' + mainColor + '">오늘 남은 분석 횟수: ' + remaining + '/' + limit + '회 (' + label + ')</div>' + subHtml;
+    el.style.color = '';
   }
 }
 
@@ -2285,8 +2305,8 @@ async function startAnalysis() {
     saveToHistory(normalized, null);
     renderResult(normalized, null);
     
-    // ★ Pro 회원: 영상을 백그라운드로 업로드 (결과는 이미 보임)
-    if (isProUser()) {
+    // ★ 로그인 회원: 영상을 백그라운드로 업로드 (무료 1개 / Pro 30개, 결과는 이미 보임)
+    if (currentUser && currentUser.id) {
       uploadVideoToStorage(file).then(async videoInfo => {
         if (!videoInfo || !videoInfo.url) {
           console.log('[Video] 업로드 실패 또는 스킵');
