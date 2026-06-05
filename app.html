@@ -78,6 +78,8 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .auth-email{font-size:.75rem;color:var(--muted);letter-spacing:.03em}
 
 .nav-right{display:flex;align-items:center;gap:10px}
+.btn-story{border-color:transparent!important;color:#2D4A33!important;font-weight:500}
+.btn-story:hover{border-color:rgba(45,74,51,0.4)!important;color:#2D4A33!important}
 
 /* Hamburger Menu */
 .hamburger-btn{display:none;background:transparent;border:1px solid var(--border);width:36px;height:32px;flex-direction:column;justify-content:center;align-items:center;gap:4px;border-radius:2px;cursor:pointer;padding:0;transition:all .2s;position:relative;z-index:1001}
@@ -613,13 +615,16 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
     </g>
 </svg></a>
   <div class="nav-right">
-    <button class="btn-auth btn-login" onclick="copyBizEmail()">비즈니스 문의</button>
     <div class="auth-area" id="auth-guest">
+      <a href="/encyclopedia.html" class="btn-auth btn-login btn-story">골프 이야기</a>
+      <button class="btn-auth btn-login" onclick="copyBizEmail()">비즈니스 문의</button>
       <button class="btn-auth btn-login" onclick="openModal('login')">로그인</button>
       <button class="btn-auth btn-pro btn-guest-signup" onclick="openModal('signup')">무료 회원가입</button>
     </div>
     <div class="auth-area" id="auth-user" style="display:none">
       <a href="/mypage.html" class="btn-auth btn-mydiary">📖 My Diary</a>
+      <a href="/encyclopedia.html" class="btn-auth btn-login btn-story">골프 이야기</a>
+      <button class="btn-auth btn-login btn-biz-user" onclick="copyBizEmail()">비즈니스 문의</button>
       <a href="/subscribe.html" class="btn-auth btn-pro" id="hdr-pro-btn">Pro 구독</a>
       <span class="auth-email" id="auth-email-txt"></span>
       <button class="btn-auth btn-logout" onclick="logout()">로그아웃</button>
@@ -2022,7 +2027,7 @@ async function refreshProStatus() {
   try {
     // sb.from 대신 REST 직접 호출 (sb 락 데드락 회피)
     const row = await SB_REST.selectOne('user_profiles', 'plan', 'id', currentUser.id);
-    cachedProStatus = (row && row.plan === 'pro');
+    cachedProStatus = !!(row && typeof row.plan === 'string' && row.plan.indexOf('pro') === 0);
     return cachedProStatus;
   } catch (e) {
     console.error('[Pro] 조회 오류:', e);
