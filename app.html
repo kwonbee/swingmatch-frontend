@@ -2421,7 +2421,8 @@ async function startAnalysis() {
             const { error: updateErr } = await sb.from('analysis_logs')
               .update({
                 video_path: videoInfo.path,
-                video_url: videoInfo.url
+                video_url: videoInfo.url,
+                pose_status: 'pending'   // ★ 포즈 추정 워커 대상 표시 (저장된 영상만 큐에 등록)
               })
               .eq('id', targetId);
 
