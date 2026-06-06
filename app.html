@@ -2024,7 +2024,7 @@ function handleFile(f) {
 // ── 하루 3회 제한 ──
 // ── 일일 분석 횟수 (Supabase 기반, 우회 불가) ──
 const DAILY_LIMIT_FREE = 5;     // 무료 회원
-const DAILY_LIMIT_GUEST = 3;    // 비회원
+const DAILY_LIMIT_GUEST = 1;    // 비회원
 const DAILY_LIMIT_PRO = 999;    // Pro 회원 (사실상 무제한)
 
 // ── 영상 저장 한도 (일반 영상, 즐겨찾기 제외) ──
@@ -2228,13 +2228,13 @@ async function checkDailyLimit() {
     }
     return true;
   } else {
-    // 비회원: localStorage 기반 (3회)
+    // 비회원: localStorage 기반 (1회)
     const count = getGuestTodayCount();
     if (count >= DAILY_LIMIT_GUEST) {
       alert(
         '⏰ 오늘의 비회원 분석 횟수(' + DAILY_LIMIT_GUEST + '회)를 모두 사용하셨어요!\n\n' +
         '🎁 회원가입하면 더 많은 혜택이 있어요:\n' +
-        '✨ 일일 5회 분석 (비회원의 약 2배)\n' +
+        '✨ 일일 5회 분석 (비회원의 5배)\n' +
         '✨ 분석 히스토리 보관\n' +
         '✨ 성장 그래프\n\n' +
         '회원가입은 무료예요!\n\n' +
