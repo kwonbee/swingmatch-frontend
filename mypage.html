@@ -878,6 +878,99 @@
     .sub-actions{flex-direction:column}
     .btn{width:100%}
   }
+
+  /* ════════════ 영상 비교 ════════════ */
+  .compare-entry-btn{
+    background:var(--gold);color:#fff;border:none;font-size:.72rem;font-weight:600;
+    padding:5px 12px;border-radius:99px;cursor:pointer;margin-left:8px;vertical-align:middle;
+  }
+  .compare-entry-btn:hover{background:var(--gold-light)}
+
+  .cmp-modal{max-width:1080px;width:96vw}
+  .cmp-dot{width:9px;height:9px;border-radius:99px;display:inline-block}
+  .cmp-dot.a{background:#5fb0d8} .cmp-dot.b{background:#d8a23a}
+
+  /* STEP1 picker */
+  .cmp-pick-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .cmp-pick-label{font-size:.82rem;font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:10px;color:var(--text)}
+  .cmp-pick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;max-height:46vh;overflow-y:auto;padding-right:4px}
+  .cmp-pick-card{border:2px solid var(--bg-card-2);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--bg-card-2);transition:border-color .15s}
+  .cmp-pick-card:hover{border-color:var(--gold-dim)}
+  .cmp-pick-card.sel{border-color:var(--gold)}
+  .cmp-pick-card .th{position:relative;width:100%;aspect-ratio:1/1;background:#000}
+  .cmp-pick-card .th video{width:100%;height:100%;object-fit:cover;display:block}
+  .cmp-pick-card .th .chk{position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:99px;
+    background:var(--gold);color:#fff;font-size:12px;display:none;align-items:center;justify-content:center;font-weight:700}
+  .cmp-pick-card.sel .th .chk{display:flex}
+  .cmp-pick-card .th .nopose{position:absolute;left:5px;bottom:5px;font-size:9px;font-weight:600;
+    background:#0008;color:#ffd;padding:2px 6px;border-radius:5px}
+  .cmp-pick-card .cap{padding:6px 7px;font-size:.66rem;color:var(--text-dim);line-height:1.3}
+  .cmp-pick-actions{display:flex;align-items:center;gap:12px;margin-top:16px;justify-content:flex-end;flex-wrap:wrap}
+  .cmp-pick-hint{font-size:.74rem;color:var(--text-faint);margin-right:auto}
+  .cmp-go-btn{background:var(--gold);color:#fff;border:none;font-size:.86rem;font-weight:600;
+    padding:10px 22px;border-radius:10px;cursor:pointer}
+  .cmp-go-btn:disabled{opacity:.4;cursor:default}
+  .cmp-go-btn:not(:disabled):hover{background:var(--gold-light)}
+
+  /* STEP2 workspace — 작업대는 영상 대비 위해 다크 */
+  .cmp-toolbar{background:#141c16;border:1px solid #26352a;border-radius:12px;
+    padding:9px 11px;margin-bottom:12px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .cmp-sep{width:1px;height:20px;background:#26352a;margin:0 2px}
+  .cmp-tbtn{background:#0e1610;border:1px solid #26352a;color:#e8f0ea;font-size:12px;font-weight:600;
+    padding:6px 12px;border-radius:8px;cursor:pointer}
+  .cmp-tbtn:hover{border-color:#3ddc84}
+  .cmp-tbtn.active{background:#ff5ea8;border-color:#ff5ea8;color:#fff}
+  .cmp-tbtn.ghost{color:#7e9485}
+  .cmp-toggle{font-size:11.5px;color:#7e9485;display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none}
+  .cmp-toggle input{accent-color:#3ddc84}
+  .cmp-hint{font-size:11px;color:#7e9485;margin-left:auto}
+
+  .cmp-stage{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;align-items:start}
+  .cmp-col{display:flex;flex-direction:column;gap:8px}
+  .cmp-canvasbox{background:#070b08;border:1px solid #26352a;border-radius:12px;
+    overflow:hidden;position:relative;aspect-ratio:9/16}
+  .cmp-canvasbox video{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:contain;background:#070b08;z-index:1}
+  .cmp-canvasbox canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .cmp-canvasbox canvas.cmp-pose{z-index:2;pointer-events:none}
+  .cmp-canvasbox canvas.cmp-draw{z-index:3;touch-action:none;cursor:crosshair}
+  .cmp-badge{position:absolute;top:8px;left:8px;z-index:5;font-size:11px;font-weight:700;color:#e8f0ea;
+    padding:3px 9px;border-radius:99px;background:#000a;backdrop-filter:blur(4px);display:flex;align-items:center;gap:6px;pointer-events:none}
+  .cmp-clr{position:absolute;top:6px;right:6px;z-index:5;font-size:11px;font-weight:600;
+    background:#000a;border:1px solid #26352a;color:#7e9485;padding:4px 9px;border-radius:8px;cursor:pointer}
+  .cmp-clr:hover{color:#ff5ea8;border-color:#ff5ea8}
+  .cmp-empty{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;
+    color:#7e9485;font-size:12.5px;text-align:center;padding:20px;pointer-events:none;line-height:1.6}
+  .cmp-empty.busy{color:#3ddc84}
+
+  .cmp-ctl{background:#141c16;border:1px solid #26352a;border-radius:12px;padding:9px 11px}
+  .cmp-scrub{display:flex;align-items:center;gap:8px}
+  .cmp-step{background:#0e1610;border:1px solid #26352a;color:#e8f0ea;font-size:14px;
+    width:32px;height:30px;border-radius:8px;cursor:pointer;flex-shrink:0}
+  .cmp-step:hover{border-color:#3ddc84}
+  .cmp-scrub input[type=range]{flex:1;min-width:0}
+  .cmp-scrub input[type=range].a{accent-color:#5fb0d8} .cmp-scrub input[type=range].b{accent-color:#d8a23a}
+  .cmp-lbl{font-size:11px;color:#7e9485;min-width:60px;text-align:right;font-variant-numeric:tabular-nums}
+  .cmp-phases{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .cmp-phases button{background:#0e1610;border:1px solid #26352a;color:#e8f0ea;
+    font-size:11px;font-weight:600;padding:5px 8px;border-radius:7px;cursor:pointer;flex:1}
+  .cmp-phases button:hover{border-color:#3ddc84}
+  .cmp-phases button:disabled{opacity:.35;cursor:default}
+
+  .cmp-notice{margin-top:4px;background:#1a140e;border:1px solid #3a2a1a;border-radius:12px;
+    padding:11px 14px;font-size:12px;line-height:1.6;color:#f0d8b8;display:flex;gap:9px}
+  .cmp-notice b{color:#ff8b6b} .cmp-ic{flex-shrink:0;font-size:15px}
+
+  .cmp-bottom{margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .cmp-bottom button{background:transparent;border:1px solid #26352a;color:#7e9485;
+    font-size:12px;padding:8px 16px;border-radius:8px;cursor:pointer}
+  .cmp-bottom button:hover{border-color:#3ddc84;color:#e8f0ea}
+  .cmp-bottom .save{border-color:#3ddc84;color:#3ddc84}
+
+  @media(max-width:680px){
+    .cmp-pick-row,.cmp-stage{grid-template-columns:1fr}
+    .cmp-pick-grid{max-height:34vh}
+    .cmp-hint{display:none}
+  }
 </style>
 </head>
 <body>
@@ -1425,8 +1518,14 @@ function renderVideoGallery(){
   // Pro 회원 — 즐겨찾기(is_favorite) 영상만 갤러리에 표시
   const favoriteVideoLogs = allLogs.filter(l => l.video_path && l.is_favorite);
 
-  // 즐겨찾기 한도 안내 + 전체 영상 보기 링크
-  meta.innerHTML = `<span>❤️ ${favoriteVideoLogs.length} / 10</span>`;
+  // 즐겨찾기 한도 안내 + (영상 2개 이상이면) 비교 버튼
+  const totalVideoCount = allLogs.filter(l => l.video_path).length;
+  meta.innerHTML = `<span>❤️ ${favoriteVideoLogs.length} / 10</span>`
+    + (totalVideoCount >= 2
+        ? ` <button id="compareEntryBtn" class="compare-entry-btn">⛳ 영상 비교</button>`
+        : '');
+  const ceb = document.getElementById('compareEntryBtn');
+  if (ceb) ceb.addEventListener('click', openComparePicker);
 
   // 즐겨찾기가 하나도 없을 때
   if (favoriteVideoLogs.length === 0) {
@@ -2086,6 +2185,334 @@ function showToast(msg){
   setTimeout(() => toast.remove(), 2200);
 }
 
+// ════════════════════════════════════════════════════════════════
+//  영상 비교 (과거의 나 vs 지금의 나) — pose_v3 오버레이
+//  기존 supabaseClient / allLogs / formatDate / refreshVideoUrl 재사용
+// ════════════════════════════════════════════════════════════════
+const POSE_BUCKET = 'pose-data';
+const poseUrlCache = new Map();
+async function refreshPoseUrl(posePath){
+  if (!posePath) return null;
+  if (poseUrlCache.has(posePath)) return poseUrlCache.get(posePath);
+  try {
+    const { data, error } = await supabaseClient.storage
+      .from(POSE_BUCKET).createSignedUrl(posePath, 60*60*24*7);
+    if (error || !data) return null;
+    poseUrlCache.set(posePath, data.signedUrl);
+    return data.signedUrl;
+  } catch(e){ console.error('[pose URL]', e); return null; }
+}
+async function fetchPoseJson(posePath){
+  const url = await refreshPoseUrl(posePath);
+  if (!url) return null;
+  try { const res = await fetch(url); if(!res.ok) return null; return await res.json(); }
+  catch(e){ console.error('[pose fetch]', e); return null; }
+}
+
+const CMP_COL={a:{j:'#5fb0d8',b:'#5fb0d8',dim:'#2a5266'},b:{j:'#d8a23a',b:'#d8a23a',dim:'#5a4a1e'}};
+const CMP_DRAW='#ff5ea8';
+const cmp={
+  a:{data:null,frame:0,fps:30,draws:[],pending:null,hover:null,videoReady:false},
+  b:{data:null,frame:0,fps:30,draws:[],pending:null,hover:null,videoReady:false},
+  tool:'line',showSkel:true,snap:true,
+  pick:{a:null,b:null}  // 선택된 log id
+};
+const cUp=s=>s.toUpperCase();
+const cVid=s=>document.getElementById('cmpVid'+cUp(s));
+
+// ── 진입: 영상 고르기 ──
+function openComparePicker(){
+  const vids = allLogs.filter(l => l.video_path);
+  if (vids.length < 2){
+    alert('내 스윙을 비교하려면 영상이 2개 이상 필요해요.\n\nPro로 업그레이드하고 최대 40개까지 저장해 보세요.');
+    return;
+  }
+  cmp.pick.a=null; cmp.pick.b=null;
+  document.getElementById('cmpPicker').style.display='';
+  document.getElementById('cmpWorkspace').style.display='none';
+  document.getElementById('cmpSub').textContent='비교할 영상 2개를 고르세요 — 과거의 나 vs 지금의 나';
+  buildPickGrid('a', vids);
+  buildPickGrid('b', vids);
+  updateGoBtn();
+  document.getElementById('compareModal').classList.add('show');
+}
+function buildPickGrid(side, vids){
+  const grid=document.getElementById('cmpGrid'+cUp(side));
+  // 최신순(allLogs는 이미 created_at desc)
+  grid.innerHTML = vids.map(l=>{
+    const poseBadge = (l.pose_status==='done') ? '' :
+      (l.pose_status==='pending'||l.pose_status==='processing')
+        ? '<span class="nopose">분석중</span>' : '<span class="nopose">관절없음</span>';
+    return `<div class="cmp-pick-card" data-id="${l.id}" data-video-path="${escapeHtml(l.video_path)}">
+      <div class="th"><video muted playsinline preload="metadata"></video><span class="chk">✓</span>${poseBadge}</div>
+      <div class="cap">${escapeHtml(l.pro_name||'분석')}<br>${formatDate(l.created_at)} · ${l.match_pct||'-'}%</div>
+    </div>`;
+  }).join('');
+  grid.querySelectorAll('.cmp-pick-card').forEach(card=>{
+    card.addEventListener('click',()=>{
+      cmp.pick[side]=card.dataset.id;
+      grid.querySelectorAll('.cmp-pick-card').forEach(c=>c.classList.remove('sel'));
+      card.classList.add('sel');
+      updateGoBtn();
+    });
+    // 썸네일 로드(기존 헬퍼 재사용)
+    const thumbEl=card.querySelector('.th'); const vp=card.dataset.videoPath;
+    if (vp && thumbEl) loadVideoThumb(thumbEl, vp);
+  });
+}
+function updateGoBtn(){
+  const btn=document.getElementById('cmpGoBtn'), hint=document.getElementById('cmpPickHint');
+  const ok = cmp.pick.a && cmp.pick.b;
+  btn.disabled=!ok;
+  if (!cmp.pick.a && !cmp.pick.b) hint.textContent='양쪽에서 영상을 하나씩 선택하세요';
+  else if (!cmp.pick.a) hint.textContent='왼쪽(과거) 영상을 선택하세요';
+  else if (!cmp.pick.b) hint.textContent='오른쪽(현재) 영상을 선택하세요';
+  else if (cmp.pick.a===cmp.pick.b) { hint.textContent='⚠️ 같은 영상이에요 — 다른 영상도 비교할 수 있어요'; }
+  else hint.textContent='준비 완료!';
+}
+document.getElementById('cmpGoBtn').addEventListener('click',()=>{
+  const logA=allLogs.find(l=>l.id===cmp.pick.a), logB=allLogs.find(l=>l.id===cmp.pick.b);
+  startCompare(logA, logB);
+});
+document.getElementById('cmpBackBtn').addEventListener('click',()=>{
+  ['a','b'].forEach(s=>{try{cVid(s).pause();cVid(s).removeAttribute('src');cVid(s).load();}catch(e){}});
+  openComparePicker();
+});
+document.getElementById('compareClose').addEventListener('click',closeCompare);
+document.getElementById('compareModal').addEventListener('click',e=>{
+  if(e.target.id==='compareModal') closeCompare();
+});
+function closeCompare(){
+  ['a','b'].forEach(s=>{try{cVid(s).pause();cVid(s).removeAttribute('src');cVid(s).load();}catch(e){}});
+  document.getElementById('compareModal').classList.remove('show');
+}
+
+// ── STEP2 시작 ──
+async function startCompare(logA, logB){
+  document.getElementById('cmpPicker').style.display='none';
+  document.getElementById('cmpWorkspace').style.display='';
+  document.getElementById('cmpSub').textContent='각 영상을 원하는 자세에서 멈추고, 직접 선·각도를 그어 비교하세요';
+  // 상태 초기화
+  ['a','b'].forEach(s=>{ cmp[s]={data:null,frame:0,fps:30,draws:[],pending:null,hover:null,videoReady:false}; cmpPatchDraws(s); });
+  cmpUndoOrder.length=0;
+  await Promise.all([ cmpLoadSide('a', logA), cmpLoadSide('b', logB) ]);
+}
+async function cmpLoadSide(side, log){
+  const S=cmp[side], empty=document.getElementById('cmpEmpty'+cUp(side));
+  const dateStr = log && log.created_at ? formatDate(log.created_at) : '';
+  document.getElementById('cmpBadge'+cUp(side)).textContent=(side==='a'?'과거':'현재')+(dateStr?' · '+dateStr:'');
+  empty.classList.add('busy'); empty.innerHTML='불러오는 중…'; empty.style.display='flex';
+
+  if(!log || !log.video_path){ empty.classList.remove('busy'); empty.innerHTML='저장된 영상이 없어요'; return; }
+
+  const ps=log.pose_status;
+  // 영상
+  const vurl=await refreshVideoUrl(log.video_path);
+  if(vurl){
+    const v=cVid(side); v.src=vurl;
+    await new Promise(res=>{const d=()=>{v.removeEventListener('loadedmetadata',d);res();};v.addEventListener('loadedmetadata',d);v.load();});
+    S.videoReady=true;
+  }
+  // 포즈
+  if(ps==='done' && log.pose_path){
+    const pose=await fetchPoseJson(log.pose_path);
+    if(pose && pose.frames && pose.skeleton) cmpApplyPose(side, pose);
+  }
+  // 안내/빈화면 정리
+  if(ps==='pending'||ps==='processing'){
+    empty.classList.add('busy'); empty.innerHTML='자세 데이터 분석 중이에요.<br>잠시 후 다시 확인해 주세요.<br>(영상 비교는 가능)'; empty.style.display='flex';
+    setTimeout(()=>{empty.style.display='none';},2600);
+  } else { empty.classList.remove('busy'); empty.style.display='none'; }
+
+  cmpSyncScrubMax(side); cmpRender(side);
+}
+function cmpApplyPose(side,data){
+  const S=cmp[side];
+  S.data=data; S.frame=0;
+  S.fps=(data.video&&data.video.fps)?data.video.fps:30;
+  S.draws=[]; S.pending=null; S.hover=null; cmpPatchDraws(side);
+  cmpSizeCanvas(side);
+}
+function cmpSyncScrubMax(side){
+  const S=cmp[side], sc=document.getElementById('cmpScrub'+cUp(side));
+  let last=0;
+  if(S.data) last=S.data.frames.length-1;
+  else if(S.videoReady){ const v=cVid(side); last=Math.max(0,Math.round((v.duration||0)*S.fps)-1); }
+  sc.max=last; sc.value=Math.min(S.frame,last);
+  const hasPhases=!!(S.data&&S.data.swing_phases);
+  document.querySelectorAll('.cmp-phases[data-ph="'+side+'"] button').forEach(btn=>{
+    const ph=btn.dataset.phase;
+    btn.disabled=!S.videoReady?true:(!hasPhases&&(ph==='top'||ph==='impact'));
+  });
+}
+function cmpSizeCanvas(side){
+  const S=cmp[side]; let W,H;
+  if(S.data&&S.data.video){W=S.data.video.width;H=S.data.video.height;}
+  else{const v=cVid(side);W=v.videoWidth||720;H=v.videoHeight||1280;}
+  ['Pose','Draw'].forEach(l=>{const cv=document.getElementById('cmp'+l+cUp(side));cv.width=W;cv.height=H;});
+}
+function cmpSeekVideo(side){
+  const S=cmp[side], v=cVid(side); if(!S.videoReady)return;
+  const t=S.frame/(S.fps||30);
+  if(Number.isFinite(t)){try{v.currentTime=Math.min(t,(v.duration||t));}catch(e){}}
+}
+function cmpDrawPose(side){
+  const S=cmp[side],cv=document.getElementById('cmpPose'+cUp(side));
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  if(!cmp.showSkel||!S.data)return;
+  const j=S.data.frames[Math.min(S.frame,S.data.frames.length-1)];if(!j)return;
+  const vt=S.data.vis_threshold??0.5,c=CMP_COL[side];
+  ctx.lineWidth=Math.max(3,W/180);ctx.lineCap='round';
+  S.data.skeleton.forEach(([p1,p2])=>{const p=j[p1],q=j[p2];if(!p||!q)return;
+    const vis=p.v>=vt&&q.v>=vt;ctx.strokeStyle=vis?c.b:c.dim;ctx.globalAlpha=vis?.9:.3;
+    ctx.beginPath();ctx.moveTo(p.x*W,p.y*H);ctx.lineTo(q.x*W,q.y*H);ctx.stroke();});
+  ctx.globalAlpha=1;const r=Math.max(5,W/95);
+  Object.values(j).forEach(p=>{if(typeof p!=='object'||p.x==null)return;const vis=p.v>=vt;
+    ctx.beginPath();ctx.arc(p.x*W,p.y*H,r,0,7);ctx.fillStyle=vis?c.j:c.dim;
+    ctx.globalAlpha=vis?1:.4;ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#06140c';ctx.stroke();});
+  ctx.globalAlpha=1;
+}
+function cmpLineLen(p,q){return Math.hypot(q.x-p.x,q.y-p.y);}
+function cmpAngle3(a,b,c){
+  const v1={x:a.x-b.x,y:a.y-b.y},v2={x:c.x-b.x,y:c.y-b.y};
+  const m1=Math.hypot(v1.x,v1.y),m2=Math.hypot(v2.x,v2.y);if(!m1||!m2)return 0;
+  return Math.acos(Math.max(-1,Math.min(1,(v1.x*v2.x+v1.y*v2.y)/(m1*m2))))*180/Math.PI;
+}
+function cmpDrawLayer(side){
+  const S=cmp[side],cv=document.getElementById('cmpDraw'+cUp(side));if(!cv.width)return;
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;ctx.clearRect(0,0,W,H);
+  const items=[...S.draws];
+  if(S.pending){const pv={type:S.pending.type,pts:[...S.pending.pts]};if(S.hover)pv.pts.push(S.hover);items.push(pv);}
+  const rr=Math.max(6,W/85);
+  items.forEach(it=>{
+    const pts=it.pts.map(p=>({x:p.x*W,y:p.y*H}));
+    ctx.strokeStyle=CMP_DRAW;ctx.lineWidth=Math.max(3,W/200);ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.stroke();
+    pts.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,rr*0.55,0,7);ctx.fillStyle=CMP_DRAW;ctx.fill();
+      ctx.lineWidth=2;ctx.strokeStyle='#06140c';ctx.stroke();});
+    let label='',lx=0,ly=0;
+    if(it.type==='line'&&it.pts.length>=2){label=(cmpLineLen(it.pts[0],it.pts[1])*100).toFixed(1)+' u';lx=(pts[0].x+pts[1].x)/2;ly=(pts[0].y+pts[1].y)/2;}
+    else if(it.type==='angle'&&it.pts.length>=3){label=cmpAngle3(it.pts[0],it.pts[1],it.pts[2]).toFixed(0)+'°';lx=pts[1].x;ly=pts[1].y;}
+    if(label){const fs=Math.max(20,W/26);ctx.font=`700 ${fs}px system-ui`;
+      const tw=ctx.measureText(label).width,pad=fs*0.35;
+      ctx.fillStyle='#000c';ctx.fillRect(lx+12,ly-fs*0.9,tw+pad*2,fs*1.3);
+      ctx.fillStyle='#ff9ed0';ctx.textBaseline='middle';ctx.fillText(label,lx+12+pad,ly-fs*0.25);}
+  });
+}
+function cmpRender(side){
+  cmpSeekVideo(side);cmpDrawPose(side);cmpDrawLayer(side);
+  const S=cmp[side];let txt='— / —';
+  if(S.data)txt=`${S.frame+1} / ${S.data.frames.length}`;
+  else if(S.videoReady){const v=cVid(side);txt=`${(S.frame/(S.fps||30)).toFixed(2)}s / ${(v.duration||0).toFixed(2)}s`;}
+  document.getElementById('cmpLbl'+cUp(side)).textContent=txt;
+}
+function cmpRenderAll(){cmpRender('a');cmpRender('b');}
+
+// 그리기 입력
+function cmpCanvasPt(cv,ev){
+  const r=cv.getBoundingClientRect();
+  const cx=(ev.touches?ev.touches[0].clientX:ev.clientX)-r.left;
+  const cy=(ev.touches?ev.touches[0].clientY:ev.clientY)-r.top;
+  return{x:Math.max(0,Math.min(1,cx/r.width)),y:Math.max(0,Math.min(1,cy/r.height))};
+}
+function cmpSnap(side,p){
+  if(!cmp.snap||!cmp[side].data)return p;
+  const d=cmp[side].data,j=d.frames[Math.min(cmp[side].frame,d.frames.length-1)];if(!j)return p;
+  const vt=d.vis_threshold??0.5;let best=null,bd=0.045;
+  Object.values(j).forEach(q=>{if(typeof q!=='object'||q.x==null||q.v<vt)return;
+    const dd=Math.hypot(q.x-p.x,q.y-p.y);if(dd<bd){bd=dd;best={x:q.x,y:q.y};}});
+  return best||p;
+}
+function cmpNeed(){return cmp.tool==='line'?2:cmp.tool==='angle'?3:0;}
+const cmpUndoOrder=[];
+function cmpPushDraw(side){cmpUndoOrder.push(side);}
+function cmpPatchDraws(side){
+  const arr=cmp[side].draws;if(arr.__patched)return;
+  const _p=arr.push.bind(arr);arr.push=function(...a){cmpPushDraw(side);return _p(...a);};arr.__patched=true;
+}
+['a','b'].forEach(cmpPatchDraws);
+function cmpHookDraw(side){
+  const cv=document.getElementById('cmpDraw'+cUp(side)),S=cmp[side];
+  const place=ev=>{
+    if(cmp.tool==='none'||!S.videoReady)return;ev.preventDefault();
+    const p=cmpSnap(side,cmpCanvasPt(cv,ev));
+    if(!S.pending)S.pending={type:cmp.tool,pts:[p]};else S.pending.pts.push(p);
+    if(S.pending.pts.length>=cmpNeed()){S.draws.push(S.pending);S.pending=null;S.hover=null;}
+    cmpDrawLayer(side);
+  };
+  const hover=ev=>{if(!S.pending||cmp.tool==='none')return;ev.preventDefault();S.hover=cmpSnap(side,cmpCanvasPt(cv,ev));cmpDrawLayer(side);};
+  cv.addEventListener('click',place);
+  cv.addEventListener('mousemove',hover);
+  cv.addEventListener('touchstart',place,{passive:false});
+}
+['a','b'].forEach(cmpHookDraw);
+
+// 도구/토글
+const CMP_HINTS={line:'직선: 두 점을 찍으세요',angle:'각도: 세 점(끝-정점-끝)을 찍으세요',none:'그리기 꺼짐 (보기 전용)'};
+document.querySelectorAll('.cmp-tbtn[data-tool]').forEach(btn=>btn.addEventListener('click',()=>{
+  cmp.tool=btn.dataset.tool;cmp.a.pending=cmp.b.pending=null;cmp.a.hover=cmp.b.hover=null;
+  document.querySelectorAll('.cmp-tbtn[data-tool]').forEach(x=>x.classList.remove('active'));
+  btn.classList.add('active');document.getElementById('cmpToolHint').textContent=CMP_HINTS[cmp.tool];cmpRenderAll();
+}));
+document.getElementById('cmpUndo').addEventListener('click',()=>{
+  for(let i=cmpUndoOrder.length-1;i>=0;i--){const s=cmpUndoOrder[i];
+    if(cmp[s].draws.length){cmp[s].draws.pop();cmpUndoOrder.splice(i,1);cmpRenderAll();return;}
+    cmpUndoOrder.splice(i,1);}
+});
+document.getElementById('cmpClearAll').addEventListener('click',()=>{
+  ['a','b'].forEach(s=>{cmp[s].draws=[];cmpPatchDraws(s);cmp[s].pending=null;cmp[s].hover=null;});
+  cmpUndoOrder.length=0;cmpRenderAll();});
+document.querySelectorAll('.cmp-clr').forEach(b=>b.addEventListener('click',()=>{
+  const s=b.dataset.clr;cmp[s].draws=[];cmpPatchDraws(s);cmp[s].pending=null;cmp[s].hover=null;
+  for(let i=cmpUndoOrder.length-1;i>=0;i--)if(cmpUndoOrder[i]===s)cmpUndoOrder.splice(i,1);
+  cmpDrawLayer(s);}));
+document.getElementById('cmpTgSkeleton').addEventListener('change',e=>{cmp.showSkel=e.target.checked;cmpRenderAll();});
+document.getElementById('cmpTgSnap').addEventListener('change',e=>{cmp.snap=e.target.checked;});
+
+// 스크럽/스텝/국면
+['a','b'].forEach(side=>{
+  document.getElementById('cmpScrub'+cUp(side)).addEventListener('input',e=>{cmp[side].frame=+e.target.value;cmpRender(side);});
+});
+document.querySelectorAll('.cmp-step').forEach(btn=>btn.addEventListener('click',()=>{
+  const side=btn.dataset.step,S=cmp[side];if(!S.videoReady)return;
+  const sc=document.getElementById('cmpScrub'+cUp(side)),last=+sc.max;
+  S.frame=Math.max(0,Math.min(last,S.frame+(+btn.dataset.d)));sc.value=S.frame;cmpRender(side);
+}));
+document.querySelectorAll('.cmp-phases').forEach(box=>{
+  const side=box.dataset.ph;
+  box.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
+    const S=cmp[side];if(!S.videoReady)return;
+    const sc=document.getElementById('cmpScrub'+cUp(side)),last=+sc.max;
+    const sp=(S.data&&S.data.swing_phases)||{},ph=btn.dataset.phase;
+    let f=ph==='address'?0:ph==='top'?(sp.top_frame??Math.round(last*0.4)):ph==='impact'?(sp.impact_frame??Math.round(last*0.6)):last;
+    S.frame=Math.min(Math.max(0,f),last);sc.value=S.frame;cmpRender(side);
+  }));
+});
+['a','b'].forEach(side=>{
+  cVid(side).addEventListener('seeked',()=>{cmpDrawPose(side);cmpDrawLayer(side);});
+  cVid(side).addEventListener('loadeddata',()=>{if(!cmp[side].data)cmpSizeCanvas(side);cmpRender(side);});
+});
+
+// 이미지 저장
+document.getElementById('cmpSaveBtn').addEventListener('click',()=>{
+  if(!cmp.a.videoReady&&!cmp.b.videoReady){alert('먼저 영상을 불러오세요');return;}
+  const gap=16,labelH=34;
+  const dims=['a','b'].map(s=>{const c=document.getElementById('cmpPose'+cUp(s));return{w:c.width||720,h:c.height||1280};});
+  const W=Math.max(dims[0].w,dims[1].w)||720,H=Math.max(dims[0].h,dims[1].h)||1280;
+  const out=document.createElement('canvas');out.width=W*2+gap;out.height=H+labelH;
+  const ctx=out.getContext('2d');ctx.fillStyle='#0d120e';ctx.fillRect(0,0,out.width,out.height);
+  ['a','b'].forEach((s,i)=>{
+    const x=i*(W+gap),v=cVid(s),pose=document.getElementById('cmpPose'+cUp(s)),draw=document.getElementById('cmpDraw'+cUp(s));
+    if(cmp[s].videoReady){try{ctx.drawImage(v,x,labelH,W,H);}catch(e){}ctx.drawImage(pose,x,labelH,W,H);ctx.drawImage(draw,x,labelH,W,H);}
+    ctx.fillStyle=i===0?'#5fb0d8':'#d8a23a';ctx.font='700 20px system-ui';ctx.textBaseline='middle';
+    ctx.fillText(document.getElementById('cmpBadge'+cUp(s)).textContent,x+10,labelH/2);
+  });
+  let dataUrl;try{dataUrl=out.toDataURL('image/png');}catch(e){alert('영상 보안 정책으로 저장이 막혔어요.');return;}
+  const a=document.createElement('a');a.download='swing_compare_'+Date.now()+'.png';a.href=dataUrl;a.click();
+});
+
 // 인증 상태 변화 감지 (다른 탭에서 로그아웃 시)
 supabaseClient.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_OUT') {
@@ -2093,6 +2520,118 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
   }
 });
 </script>
+
+<!-- ════════════ 영상 비교 모달 (과거의 나 vs 지금의 나) ════════════ -->
+<div class="modal-overlay" id="compareModal">
+  <div class="modal modal-wide cmp-modal">
+    <div class="modal-header-row">
+      <div>
+        <h3 id="cmpTitle">⛳ 내 스윙 비교</h3>
+        <p class="modal-sub" id="cmpSub">비교할 영상 2개를 고르세요 — 과거의 나 vs 지금의 나</p>
+      </div>
+      <button class="modal-close-x" id="compareClose">✕</button>
+    </div>
+
+    <!-- STEP 1: 영상 두 개 고르기 -->
+    <div id="cmpPicker">
+      <div class="cmp-pick-row">
+        <div class="cmp-pick-col">
+          <div class="cmp-pick-label"><span class="cmp-dot a"></span>과거의 나 (왼쪽)</div>
+          <div class="cmp-pick-grid" id="cmpGridA"></div>
+        </div>
+        <div class="cmp-pick-col">
+          <div class="cmp-pick-label"><span class="cmp-dot b"></span>지금의 나 (오른쪽)</div>
+          <div class="cmp-pick-grid" id="cmpGridB"></div>
+        </div>
+      </div>
+      <div class="cmp-pick-actions">
+        <span class="cmp-pick-hint" id="cmpPickHint">양쪽에서 영상을 하나씩 선택하세요</span>
+        <button class="cmp-go-btn" id="cmpGoBtn" disabled>비교 시작 →</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: 실제 비교 작업대 -->
+    <div id="cmpWorkspace" style="display:none">
+      <div class="cmp-toolbar">
+        <button class="cmp-tbtn active" data-tool="line" id="cmpToolLine">／ 직선</button>
+        <button class="cmp-tbtn" data-tool="angle" id="cmpToolAngle">∠ 각도</button>
+        <button class="cmp-tbtn ghost" data-tool="none" id="cmpToolNone">✋ 보기</button>
+        <div class="cmp-sep"></div>
+        <button class="cmp-tbtn ghost" id="cmpUndo">↩ 실행취소</button>
+        <button class="cmp-tbtn ghost" id="cmpClearAll">전체 지우기</button>
+        <div class="cmp-sep"></div>
+        <label class="cmp-toggle"><input type="checkbox" id="cmpTgSkeleton" checked> 관절·뼈대</label>
+        <label class="cmp-toggle"><input type="checkbox" id="cmpTgSnap" checked> 관절 스냅</label>
+        <span class="cmp-hint" id="cmpToolHint">직선: 두 점을 찍으세요</span>
+      </div>
+
+      <div class="cmp-stage">
+        <!-- A -->
+        <div class="cmp-col">
+          <div class="cmp-canvasbox" data-side="a">
+            <div class="cmp-badge"><span class="cmp-dot a"></span><span id="cmpBadgeA">과거</span></div>
+            <div class="cmp-clr" data-clr="a">이 영상 선 지우기</div>
+            <video id="cmpVidA" playsinline muted preload="auto"></video>
+            <canvas class="cmp-pose" id="cmpPoseA"></canvas>
+            <canvas class="cmp-draw" id="cmpDrawA"></canvas>
+            <div class="cmp-empty" id="cmpEmptyA">불러오는 중…</div>
+          </div>
+          <div class="cmp-ctl">
+            <div class="cmp-scrub">
+              <button class="cmp-step" data-step="a" data-d="-1">◀</button>
+              <input type="range" class="a" id="cmpScrubA" min="0" max="0" value="0" step="1">
+              <button class="cmp-step" data-step="a" data-d="1">▶</button>
+              <span class="cmp-lbl" id="cmpLblA">— / —</span>
+            </div>
+            <div class="cmp-phases" data-ph="a">
+              <button data-phase="address">어드레스</button>
+              <button data-phase="top">탑</button>
+              <button data-phase="impact">임팩트</button>
+              <button data-phase="finish">피니시</button>
+            </div>
+          </div>
+        </div>
+        <!-- B -->
+        <div class="cmp-col">
+          <div class="cmp-canvasbox" data-side="b">
+            <div class="cmp-badge"><span class="cmp-dot b"></span><span id="cmpBadgeB">현재</span></div>
+            <div class="cmp-clr" data-clr="b">이 영상 선 지우기</div>
+            <video id="cmpVidB" playsinline muted preload="auto"></video>
+            <canvas class="cmp-pose" id="cmpPoseB"></canvas>
+            <canvas class="cmp-draw" id="cmpDrawB"></canvas>
+            <div class="cmp-empty" id="cmpEmptyB">불러오는 중…</div>
+          </div>
+          <div class="cmp-ctl">
+            <div class="cmp-scrub">
+              <button class="cmp-step" data-step="b" data-d="-1">◀</button>
+              <input type="range" class="b" id="cmpScrubB" min="0" max="0" value="0" step="1">
+              <button class="cmp-step" data-step="b" data-d="1">▶</button>
+              <span class="cmp-lbl" id="cmpLblB">— / —</span>
+            </div>
+            <div class="cmp-phases" data-ph="b">
+              <button data-phase="address">어드레스</button>
+              <button data-phase="top">탑</button>
+              <button data-phase="impact">임팩트</button>
+              <button data-phase="finish">피니시</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cmp-notice">
+        <span class="cmp-ic">ⓘ</span>
+        <div>두 영상은 <b>각각 따로</b> 멈춥니다. 템포가 다르면 같은 시간이라도 자세가 다르니,
+          같은 국면(예: 탑)에서 각자 멈춰 비교하세요. 관절 위치는 자동 추정값이라 촬영 각도·가려짐에 따라
+          <b>오차</b>가 있을 수 있어요.</div>
+      </div>
+
+      <div class="cmp-bottom">
+        <button id="cmpBackBtn">← 영상 다시 고르기</button>
+        <button class="save" id="cmpSaveBtn">🖼 이미지로 저장</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
