@@ -2504,7 +2504,11 @@ function cmpPatchDraws(side){
 ['a','b'].forEach(cmpPatchDraws);
 function cmpHookDraw(side){
   const cv=document.getElementById('cmpDraw'+cUp(side)),S=cmp[side];
+  let lastTouch=0;   // touch 직후 발생하는 합성 click 무시용
   const place=ev=>{
+    // touch로 들어온 입력 직후의 click 이벤트는 건너뛴다 (모바일 중복 방지)
+    if(ev.type==='click' && Date.now()-lastTouch<600) return;
+    if(ev.type==='touchstart') lastTouch=Date.now();
     if(cmp.tool==='none'){            // 보기 모드: 탭하면 영상 재생/정지
       cmpToggleVideo(side); return;
     }
@@ -2635,8 +2639,11 @@ function cmpInit(){
     });
   }
 }
-if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',cmpInit);
-else cmpInit();
+// 비교 모달 등 일부 DOM은 이 스크립트 블록 "뒤"에 위치한다.
+// 따라서 즉시 실행하면 cmpDrawA / cmpToolLine 등이 아직 없어 바인딩이 모두 누락된다.
+// 전체 문서 파싱이 끝난 뒤(load) 1회 실행해 직선·각도·캔버스 핸들러가 확실히 붙도록 한다.
+if(document.readyState==='complete') cmpInit();
+else window.addEventListener('load',cmpInit,{once:true});
 
 // 인증 상태 변화 감지 (다른 탭에서 로그아웃 시)
 supabaseClient.auth.onAuthStateChange((event, session) => {
@@ -2686,7 +2693,7 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
             <span class="cmp-side-label" id="cmpBadgeA">이전</span>
           </div>
           <div class="cmp-canvasbox" data-side="a" id="cmpBoxA">
-            <video id="cmpVidA" playsinline muted webkit-playsinline preload="auto"></video>
+            <video id="cmpVidA" playsinline muted webkit-playsinline crossorigin="anonymous" preload="auto"></video>
             <canvas class="cmp-pose" id="cmpPoseA"></canvas>
             <canvas class="cmp-draw" id="cmpDrawA"></canvas>
             <div class="cmp-playicon" id="cmpPlayA"></div>
@@ -2701,7 +2708,7 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
             <span class="cmp-side-label" id="cmpBadgeB">현재</span>
           </div>
           <div class="cmp-canvasbox" data-side="b" id="cmpBoxB">
-            <video id="cmpVidB" playsinline muted webkit-playsinline preload="auto"></video>
+            <video id="cmpVidB" playsinline muted webkit-playsinline crossorigin="anonymous" preload="auto"></video>
             <canvas class="cmp-pose" id="cmpPoseB"></canvas>
             <canvas class="cmp-draw" id="cmpDrawB"></canvas>
             <div class="cmp-playicon" id="cmpPlayB"></div>
