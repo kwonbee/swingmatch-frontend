@@ -2296,6 +2296,7 @@ function openComparePicker(){
     return;
   }
   cmp.picks=[];
+  cmpBindStatic(); cmpBindWorkspace();   // 모달 표시 직전 보장 바인딩(가드로 1회만 실제 실행)
   document.getElementById('cmpPicker').style.display='';
   document.getElementById('cmpWorkspace').style.display='none';
   document.getElementById('cmpSub').textContent='비교할 영상 2개를 선택하세요';
@@ -2349,9 +2350,12 @@ function updateGoBtn(){
 }
 
 /* 정적 핸들러: 마크업이 DOM에 들어온 뒤 바인딩 */
+let _cmpStaticBound=false;
 function cmpBindStatic(){
+  if(_cmpStaticBound) return;
   const goBtn=document.getElementById('cmpGoBtn');
   if(!goBtn) return;
+  _cmpStaticBound=true;
   goBtn.addEventListener('click',()=>{
     const logA=allLogs.find(l=>l.id===cmp.picks[0]), logB=allLogs.find(l=>l.id===cmp.picks[1]);
     startCompare(logA, logB);
@@ -2538,8 +2542,11 @@ function cmpUpdatePlayIcon(side){
 }
 function cmpFmtTime(s){ if(!isFinite(s))return '0:00'; const m=Math.floor(s/60),sec=Math.floor(s%60); return m+':'+String(sec).padStart(2,'0'); }
 
+let _cmpWorkspaceBound=false;
 function cmpBindWorkspace(){
-  if(!document.getElementById('cmpDrawA')) return;
+  if(_cmpWorkspaceBound) return;          // 중복 바인딩 방지
+  if(!document.getElementById('cmpDrawA')) return;  // DOM 아직 없으면 다음 호출 때
+  _cmpWorkspaceBound=true;
   ['a','b'].forEach(cmpHookDraw);
 
   // 도구 (직선/각도/보기)
