@@ -768,6 +768,17 @@
     position:relative;
     z-index:1
   }
+  .diary-pose-canvas{
+    position:absolute;inset:0;width:100%;height:100%;
+    object-fit:contain;pointer-events:none;z-index:2;display:none
+  }
+  .diary-pose-canvas.on{display:block}
+  .diary-pose-toggle{
+    position:absolute;top:8px;right:8px;z-index:3;
+    background:#000a;border:1px solid rgba(255,255,255,.25);color:#fff;
+    font-size:.7rem;font-weight:600;padding:5px 11px;border-radius:99px;cursor:pointer;backdrop-filter:blur(4px)
+  }
+  .diary-pose-toggle.off{color:rgba(255,255,255,.55)}
   .diary-actions{
     display:flex;
     align-items:center;
@@ -890,20 +901,16 @@
   .cmp-dot{width:9px;height:9px;border-radius:99px;display:inline-block}
   .cmp-dot.a{background:#5fb0d8} .cmp-dot.b{background:#d8a23a}
 
-  /* STEP1 picker */
-  .cmp-pick-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .cmp-pick-label{font-size:.82rem;font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:10px;color:var(--text)}
-  .cmp-pick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;max-height:46vh;overflow-y:auto;padding-right:4px}
-  .cmp-pick-card{border:2px solid var(--bg-card-2);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--bg-card-2);transition:border-color .15s}
+  /* STEP1 picker — 단일 목록, 최신순 */
+  .cmp-pick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;max-height:52vh;overflow-y:auto;padding:2px 4px 2px 2px}
+  .cmp-pick-card{border:2px solid var(--bg-card-2);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--bg-card-2);transition:border-color .12s}
   .cmp-pick-card:hover{border-color:var(--gold-dim)}
   .cmp-pick-card.sel{border-color:var(--gold)}
   .cmp-pick-card .th{position:relative;width:100%;aspect-ratio:1/1;background:#000}
-  .cmp-pick-card .th video{width:100%;height:100%;object-fit:cover;display:block}
-  .cmp-pick-card .th .chk{position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:99px;
+  .cmp-pick-card .th img,.cmp-pick-card .th video{width:100%;height:100%;object-fit:cover;display:block}
+  .cmp-pick-card .th .chk{position:absolute;top:6px;right:6px;min-width:22px;height:22px;padding:0 6px;border-radius:99px;
     background:var(--gold);color:#fff;font-size:12px;display:none;align-items:center;justify-content:center;font-weight:700}
   .cmp-pick-card.sel .th .chk{display:flex}
-  .cmp-pick-card .th .nopose{position:absolute;left:5px;bottom:5px;font-size:9px;font-weight:600;
-    background:#0008;color:#ffd;padding:2px 6px;border-radius:5px}
   .cmp-pick-card .cap{padding:6px 7px;font-size:.66rem;color:var(--text-dim);line-height:1.3}
   .cmp-pick-actions{display:flex;align-items:center;gap:12px;margin-top:16px;justify-content:flex-end;flex-wrap:wrap}
   .cmp-pick-hint{font-size:.74rem;color:var(--text-faint);margin-right:auto}
@@ -967,8 +974,8 @@
   .cmp-bottom .save{border-color:#3ddc84;color:#3ddc84}
 
   @media(max-width:680px){
-    .cmp-pick-row,.cmp-stage{grid-template-columns:1fr}
-    .cmp-pick-grid{max-height:34vh}
+    .cmp-pick-grid{grid-template-columns:repeat(3,1fr);max-height:46vh}
+    .cmp-stage{grid-template-columns:1fr}
     .cmp-hint{display:none}
   }
 </style>
@@ -1205,6 +1212,8 @@
     <!-- 영상 플레이어 -->
     <div class="diary-video-wrap" id="diaryVideoWrap">
       <video id="diaryVideo" controls playsinline preload="metadata"></video>
+      <canvas id="diaryPoseCanvas" class="diary-pose-canvas"></canvas>
+      <button id="diaryPoseToggle" class="diary-pose-toggle" style="display:none">관절 ON</button>
     </div>
 
     <!-- 즐겨찾기 토글 -->
@@ -2045,12 +2054,58 @@ async function openMemoModal(logId){
     }
   }
 
+  // 관절(포즈) 오버레이 로드
+  setupDiaryPose(log);
+
   // 모바일 키보드가 textarea를 가리지 않도록, PC에서만 자동 포커스 (영상 재생 우선)
   if (window.innerWidth >= 640) {
     setTimeout(() => {
       // 영상보다 메모가 우선이면 포커스, 아니면 안 함. 일단 비활성화.
     }, 100);
   }
+}
+
+// ─── 다이어리 영상 위 관절(포즈) 오버레이 ───
+const diaryPose={data:null,fps:30,on:true};
+async function setupDiaryPose(log){
+  const canvas=document.getElementById('diaryPoseCanvas');
+  const toggle=document.getElementById('diaryPoseToggle');
+  diaryPose.data=null;
+  // 초기화
+  canvas.classList.remove('on'); toggle.style.display='none';
+  const ctx=canvas.getContext('2d'); if(canvas.width)ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if(log.pose_status!=='done' || !log.pose_path) return; // 관절 데이터 있을 때만
+  const pose=await fetchPoseJson(log.pose_path);
+  if(!pose || !pose.frames || !pose.skeleton) return;
+  diaryPose.data=pose;
+  diaryPose.fps=(pose.video&&pose.video.fps)?pose.video.fps:30;
+  canvas.width=(pose.video&&pose.video.width)||720;
+  canvas.height=(pose.video&&pose.video.height)||1280;
+  diaryPose.on=true;
+  canvas.classList.add('on');
+  toggle.style.display=''; toggle.textContent='관절 ON'; toggle.classList.remove('off');
+  drawDiaryPose();
+}
+function drawDiaryPose(){
+  const canvas=document.getElementById('diaryPoseCanvas');
+  const d=diaryPose.data; if(!d)return;
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  if(!diaryPose.on)return;
+  const video=document.getElementById('diaryVideo');
+  const frame=Math.min(d.frames.length-1,Math.max(0,Math.round((video.currentTime||0)*diaryPose.fps)));
+  const j=d.frames[frame]; if(!j)return;
+  const vt=d.vis_threshold??0.5;
+  ctx.lineWidth=Math.max(3,W/180);ctx.lineCap='round';
+  d.skeleton.forEach(([p1,p2])=>{const p=j[p1],q=j[p2];if(!p||!q)return;
+    const vis=p.v>=vt&&q.v>=vt;ctx.strokeStyle=vis?'#3ddc84':'#2a5266';ctx.globalAlpha=vis?.9:.3;
+    ctx.beginPath();ctx.moveTo(p.x*W,p.y*H);ctx.lineTo(q.x*W,q.y*H);ctx.stroke();});
+  ctx.globalAlpha=1;const r=Math.max(5,W/95);
+  Object.values(j).forEach(p=>{if(typeof p!=='object'||p.x==null)return;const vis=p.v>=vt;
+    ctx.beginPath();ctx.arc(p.x*W,p.y*H,r,0,7);ctx.fillStyle=vis?'#5fd0ff':'#2a5266';
+    ctx.globalAlpha=vis?1:.4;ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#06140c';ctx.stroke();});
+  ctx.globalAlpha=1;
 }
 
 function closeMemoModal(){
@@ -2061,6 +2116,12 @@ function closeMemoModal(){
     video.removeAttribute('src');
     video.load();
   } catch(e){}
+  // 관절 오버레이 초기화
+  try{
+    diaryPose.data=null;
+    const pc=document.getElementById('diaryPoseCanvas');
+    if(pc&&pc.width)pc.getContext('2d').clearRect(0,0,pc.width,pc.height);
+  }catch(e){}
   document.getElementById('memoModal').classList.remove('show');
   editingLogId = null;
 }
@@ -2215,7 +2276,7 @@ const cmp={
   a:{data:null,frame:0,fps:30,draws:[],pending:null,hover:null,videoReady:false},
   b:{data:null,frame:0,fps:30,draws:[],pending:null,hover:null,videoReady:false},
   tool:'line',showSkel:true,snap:true,
-  pick:{a:null,b:null}  // 선택된 log id
+  picks:[]  // 선택된 log id 순서 배열 (최대 2개; 0번=왼쪽/과거, 1번=오른쪽/현재)
 };
 const cUp=s=>s.toUpperCase();
 const cVid=s=>document.getElementById('cmpVid'+cUp(s));
@@ -2227,61 +2288,83 @@ function openComparePicker(){
     alert('내 스윙을 비교하려면 영상이 2개 이상 필요해요.\n\nPro로 업그레이드하고 최대 40개까지 저장해 보세요.');
     return;
   }
-  cmp.pick.a=null; cmp.pick.b=null;
+  cmp.picks=[];
   document.getElementById('cmpPicker').style.display='';
   document.getElementById('cmpWorkspace').style.display='none';
-  document.getElementById('cmpSub').textContent='비교할 영상 2개를 고르세요 — 과거의 나 vs 지금의 나';
-  buildPickGrid('a', vids);
-  buildPickGrid('b', vids);
+  document.getElementById('cmpSub').textContent='비교할 영상 2개를 탭하세요 (먼저 고른 게 왼쪽)';
+  buildPickGrid(vids);
   updateGoBtn();
   document.getElementById('compareModal').classList.add('show');
 }
-function buildPickGrid(side, vids){
-  const grid=document.getElementById('cmpGrid'+cUp(side));
-  // 최신순(allLogs는 이미 created_at desc)
-  grid.innerHTML = vids.map(l=>{
-    const poseBadge = (l.pose_status==='done') ? '' :
-      (l.pose_status==='pending'||l.pose_status==='processing')
-        ? '<span class="nopose">분석중</span>' : '<span class="nopose">관절없음</span>';
-    return `<div class="cmp-pick-card" data-id="${l.id}" data-video-path="${escapeHtml(l.video_path)}">
-      <div class="th"><video muted playsinline preload="metadata"></video><span class="chk">✓</span>${poseBadge}</div>
+function buildPickGrid(vids){
+  const grid=document.getElementById('cmpGrid');
+  // allLogs는 이미 created_at desc(최신순). 그대로 한 줄로 나열.
+  grid.innerHTML = vids.map(l=>(
+    `<div class="cmp-pick-card" data-id="${l.id}" data-video-path="${escapeHtml(l.video_path)}">
+      <div class="th"><span class="chk"></span></div>
       <div class="cap">${escapeHtml(l.pro_name||'분석')}<br>${formatDate(l.created_at)} · ${l.match_pct||'-'}%</div>
-    </div>`;
-  }).join('');
-  grid.querySelectorAll('.cmp-pick-card').forEach(card=>{
+    </div>`)).join('');
+
+  const cards=[...grid.querySelectorAll('.cmp-pick-card')];
+  cards.forEach(card=>{
     card.addEventListener('click',()=>{
-      cmp.pick[side]=card.dataset.id;
-      grid.querySelectorAll('.cmp-pick-card').forEach(c=>c.classList.remove('sel'));
-      card.classList.add('sel');
-      updateGoBtn();
+      const id=card.dataset.id;
+      const idx=cmp.picks.indexOf(id);
+      if(idx>=0){ cmp.picks.splice(idx,1); }            // 다시 탭 → 해제
+      else { if(cmp.picks.length>=2) cmp.picks.shift(); cmp.picks.push(id); } // 2개 넘으면 가장 오래된 선택 밀어냄
+      refreshPickUI(cards);
     });
-    // 썸네일 로드(기존 헬퍼 재사용)
-    const thumbEl=card.querySelector('.th'); const vp=card.dataset.videoPath;
-    if (vp && thumbEl) loadVideoThumb(thumbEl, vp);
   });
+  // 썸네일: 한 번에 다 띄우면 느리므로 lazy 로드(보이는 것만)
+  lazyThumbs(cards);
+}
+function refreshPickUI(cards){
+  cards.forEach(card=>{
+    const id=card.dataset.id, n=cmp.picks.indexOf(id);
+    card.classList.toggle('sel', n>=0);
+    const chk=card.querySelector('.chk');
+    chk.textContent = n>=0 ? (n===0?'1':'2') : '';
+  });
+  updateGoBtn();
+}
+function lazyThumbs(cards){
+  // IntersectionObserver로 화면에 들어온 카드만 video 썸네일 로드
+  const io=new IntersectionObserver((entries,obs)=>{
+    entries.forEach(en=>{
+      if(!en.isIntersecting) return;
+      const card=en.target, th=card.querySelector('.th'), vp=card.dataset.videoPath;
+      if(vp && th && !th.dataset.loaded){ th.dataset.loaded='1'; loadVideoThumb(th, vp); }
+      obs.unobserve(card);
+    });
+  },{root:document.getElementById('cmpGrid'),rootMargin:'120px'});
+  cards.forEach(c=>io.observe(c));
 }
 function updateGoBtn(){
   const btn=document.getElementById('cmpGoBtn'), hint=document.getElementById('cmpPickHint');
-  const ok = cmp.pick.a && cmp.pick.b;
-  btn.disabled=!ok;
-  if (!cmp.pick.a && !cmp.pick.b) hint.textContent='양쪽에서 영상을 하나씩 선택하세요';
-  else if (!cmp.pick.a) hint.textContent='왼쪽(과거) 영상을 선택하세요';
-  else if (!cmp.pick.b) hint.textContent='오른쪽(현재) 영상을 선택하세요';
-  else if (cmp.pick.a===cmp.pick.b) { hint.textContent='⚠️ 같은 영상이에요 — 다른 영상도 비교할 수 있어요'; }
-  else hint.textContent='준비 완료!';
+  const n=cmp.picks.length;
+  btn.disabled = n!==2;
+  hint.textContent = n===0 ? '비교할 영상 2개를 탭하세요'
+                  : n===1 ? '하나 더 선택하세요'
+                  : '준비 완료!';
 }
-document.getElementById('cmpGoBtn').addEventListener('click',()=>{
-  const logA=allLogs.find(l=>l.id===cmp.pick.a), logB=allLogs.find(l=>l.id===cmp.pick.b);
-  startCompare(logA, logB);
-});
-document.getElementById('cmpBackBtn').addEventListener('click',()=>{
-  ['a','b'].forEach(s=>{try{cVid(s).pause();cVid(s).removeAttribute('src');cVid(s).load();}catch(e){}});
-  openComparePicker();
-});
-document.getElementById('compareClose').addEventListener('click',closeCompare);
-document.getElementById('compareModal').addEventListener('click',e=>{
-  if(e.target.id==='compareModal') closeCompare();
-});
+
+/* 정적 핸들러: 모달 마크업이 DOM에 들어온 뒤 바인딩 (이전엔 마크업보다 먼저 실행돼 null 에러) */
+function cmpBindStatic(){
+  const goBtn=document.getElementById('cmpGoBtn');
+  if(!goBtn) return; // 모달 마크업이 아직 없으면 패스
+  goBtn.addEventListener('click',()=>{
+    const logA=allLogs.find(l=>l.id===cmp.picks[0]), logB=allLogs.find(l=>l.id===cmp.picks[1]);
+    startCompare(logA, logB);
+  });
+  document.getElementById('cmpBackBtn').addEventListener('click',()=>{
+    ['a','b'].forEach(s=>{try{cVid(s).pause();cVid(s).removeAttribute('src');cVid(s).load();}catch(e){}});
+    openComparePicker();
+  });
+  document.getElementById('compareClose').addEventListener('click',closeCompare);
+  document.getElementById('compareModal').addEventListener('click',e=>{
+    if(e.target.id==='compareModal') closeCompare();
+  });
+}
 function closeCompare(){
   ['a','b'].forEach(s=>{try{cVid(s).pause();cVid(s).removeAttribute('src');cVid(s).load();}catch(e){}});
   document.getElementById('compareModal').classList.remove('show');
@@ -2427,6 +2510,7 @@ function cmpSnap(side,p){
 }
 function cmpNeed(){return cmp.tool==='line'?2:cmp.tool==='angle'?3:0;}
 const cmpUndoOrder=[];
+const CMP_HINTS={line:'직선: 두 점을 찍으세요',angle:'각도: 세 점(끝-정점-끝)을 찍으세요',none:'그리기 꺼짐 (보기 전용)'};
 function cmpPushDraw(side){cmpUndoOrder.push(side);}
 function cmpPatchDraws(side){
   const arr=cmp[side].draws;if(arr.__patched)return;
@@ -2447,71 +2531,94 @@ function cmpHookDraw(side){
   cv.addEventListener('mousemove',hover);
   cv.addEventListener('touchstart',place,{passive:false});
 }
-['a','b'].forEach(cmpHookDraw);
+function cmpBindWorkspace(){
+  if(!document.getElementById('cmpDrawA')) return;
+  ['a','b'].forEach(cmpHookDraw);
 
-// 도구/토글
-const CMP_HINTS={line:'직선: 두 점을 찍으세요',angle:'각도: 세 점(끝-정점-끝)을 찍으세요',none:'그리기 꺼짐 (보기 전용)'};
-document.querySelectorAll('.cmp-tbtn[data-tool]').forEach(btn=>btn.addEventListener('click',()=>{
-  cmp.tool=btn.dataset.tool;cmp.a.pending=cmp.b.pending=null;cmp.a.hover=cmp.b.hover=null;
-  document.querySelectorAll('.cmp-tbtn[data-tool]').forEach(x=>x.classList.remove('active'));
-  btn.classList.add('active');document.getElementById('cmpToolHint').textContent=CMP_HINTS[cmp.tool];cmpRenderAll();
-}));
-document.getElementById('cmpUndo').addEventListener('click',()=>{
-  for(let i=cmpUndoOrder.length-1;i>=0;i--){const s=cmpUndoOrder[i];
-    if(cmp[s].draws.length){cmp[s].draws.pop();cmpUndoOrder.splice(i,1);cmpRenderAll();return;}
-    cmpUndoOrder.splice(i,1);}
-});
-document.getElementById('cmpClearAll').addEventListener('click',()=>{
-  ['a','b'].forEach(s=>{cmp[s].draws=[];cmpPatchDraws(s);cmp[s].pending=null;cmp[s].hover=null;});
-  cmpUndoOrder.length=0;cmpRenderAll();});
-document.querySelectorAll('.cmp-clr').forEach(b=>b.addEventListener('click',()=>{
-  const s=b.dataset.clr;cmp[s].draws=[];cmpPatchDraws(s);cmp[s].pending=null;cmp[s].hover=null;
-  for(let i=cmpUndoOrder.length-1;i>=0;i--)if(cmpUndoOrder[i]===s)cmpUndoOrder.splice(i,1);
-  cmpDrawLayer(s);}));
-document.getElementById('cmpTgSkeleton').addEventListener('change',e=>{cmp.showSkel=e.target.checked;cmpRenderAll();});
-document.getElementById('cmpTgSnap').addEventListener('change',e=>{cmp.snap=e.target.checked;});
-
-// 스크럽/스텝/국면
-['a','b'].forEach(side=>{
-  document.getElementById('cmpScrub'+cUp(side)).addEventListener('input',e=>{cmp[side].frame=+e.target.value;cmpRender(side);});
-});
-document.querySelectorAll('.cmp-step').forEach(btn=>btn.addEventListener('click',()=>{
-  const side=btn.dataset.step,S=cmp[side];if(!S.videoReady)return;
-  const sc=document.getElementById('cmpScrub'+cUp(side)),last=+sc.max;
-  S.frame=Math.max(0,Math.min(last,S.frame+(+btn.dataset.d)));sc.value=S.frame;cmpRender(side);
-}));
-document.querySelectorAll('.cmp-phases').forEach(box=>{
-  const side=box.dataset.ph;
-  box.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
-    const S=cmp[side];if(!S.videoReady)return;
-    const sc=document.getElementById('cmpScrub'+cUp(side)),last=+sc.max;
-    const sp=(S.data&&S.data.swing_phases)||{},ph=btn.dataset.phase;
-    let f=ph==='address'?0:ph==='top'?(sp.top_frame??Math.round(last*0.4)):ph==='impact'?(sp.impact_frame??Math.round(last*0.6)):last;
-    S.frame=Math.min(Math.max(0,f),last);sc.value=S.frame;cmpRender(side);
+  // 도구/토글
+  document.querySelectorAll('.cmp-tbtn[data-tool]').forEach(btn=>btn.addEventListener('click',()=>{
+    cmp.tool=btn.dataset.tool;cmp.a.pending=cmp.b.pending=null;cmp.a.hover=cmp.b.hover=null;
+    document.querySelectorAll('.cmp-tbtn[data-tool]').forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active');document.getElementById('cmpToolHint').textContent=CMP_HINTS[cmp.tool];cmpRenderAll();
   }));
-});
-['a','b'].forEach(side=>{
-  cVid(side).addEventListener('seeked',()=>{cmpDrawPose(side);cmpDrawLayer(side);});
-  cVid(side).addEventListener('loadeddata',()=>{if(!cmp[side].data)cmpSizeCanvas(side);cmpRender(side);});
-});
-
-// 이미지 저장
-document.getElementById('cmpSaveBtn').addEventListener('click',()=>{
-  if(!cmp.a.videoReady&&!cmp.b.videoReady){alert('먼저 영상을 불러오세요');return;}
-  const gap=16,labelH=34;
-  const dims=['a','b'].map(s=>{const c=document.getElementById('cmpPose'+cUp(s));return{w:c.width||720,h:c.height||1280};});
-  const W=Math.max(dims[0].w,dims[1].w)||720,H=Math.max(dims[0].h,dims[1].h)||1280;
-  const out=document.createElement('canvas');out.width=W*2+gap;out.height=H+labelH;
-  const ctx=out.getContext('2d');ctx.fillStyle='#0d120e';ctx.fillRect(0,0,out.width,out.height);
-  ['a','b'].forEach((s,i)=>{
-    const x=i*(W+gap),v=cVid(s),pose=document.getElementById('cmpPose'+cUp(s)),draw=document.getElementById('cmpDraw'+cUp(s));
-    if(cmp[s].videoReady){try{ctx.drawImage(v,x,labelH,W,H);}catch(e){}ctx.drawImage(pose,x,labelH,W,H);ctx.drawImage(draw,x,labelH,W,H);}
-    ctx.fillStyle=i===0?'#5fb0d8':'#d8a23a';ctx.font='700 20px system-ui';ctx.textBaseline='middle';
-    ctx.fillText(document.getElementById('cmpBadge'+cUp(s)).textContent,x+10,labelH/2);
+  document.getElementById('cmpUndo').addEventListener('click',()=>{
+    for(let i=cmpUndoOrder.length-1;i>=0;i--){const s=cmpUndoOrder[i];
+      if(cmp[s].draws.length){cmp[s].draws.pop();cmpUndoOrder.splice(i,1);cmpRenderAll();return;}
+      cmpUndoOrder.splice(i,1);}
   });
-  let dataUrl;try{dataUrl=out.toDataURL('image/png');}catch(e){alert('영상 보안 정책으로 저장이 막혔어요.');return;}
-  const a=document.createElement('a');a.download='swing_compare_'+Date.now()+'.png';a.href=dataUrl;a.click();
-});
+  document.getElementById('cmpClearAll').addEventListener('click',()=>{
+    ['a','b'].forEach(s=>{cmp[s].draws=[];cmpPatchDraws(s);cmp[s].pending=null;cmp[s].hover=null;});
+    cmpUndoOrder.length=0;cmpRenderAll();});
+  document.querySelectorAll('.cmp-clr').forEach(b=>b.addEventListener('click',()=>{
+    const s=b.dataset.clr;cmp[s].draws=[];cmpPatchDraws(s);cmp[s].pending=null;cmp[s].hover=null;
+    for(let i=cmpUndoOrder.length-1;i>=0;i--)if(cmpUndoOrder[i]===s)cmpUndoOrder.splice(i,1);
+    cmpDrawLayer(s);}));
+  document.getElementById('cmpTgSkeleton').addEventListener('change',e=>{cmp.showSkel=e.target.checked;cmpRenderAll();});
+  document.getElementById('cmpTgSnap').addEventListener('change',e=>{cmp.snap=e.target.checked;});
+
+  // 스크럽/스텝/국면
+  ['a','b'].forEach(side=>{
+    document.getElementById('cmpScrub'+cUp(side)).addEventListener('input',e=>{cmp[side].frame=+e.target.value;cmpRender(side);});
+  });
+  document.querySelectorAll('.cmp-step').forEach(btn=>btn.addEventListener('click',()=>{
+    const side=btn.dataset.step,S=cmp[side];if(!S.videoReady)return;
+    const sc=document.getElementById('cmpScrub'+cUp(side)),last=+sc.max;
+    S.frame=Math.max(0,Math.min(last,S.frame+(+btn.dataset.d)));sc.value=S.frame;cmpRender(side);
+  }));
+  document.querySelectorAll('.cmp-phases').forEach(box=>{
+    const side=box.dataset.ph;
+    box.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
+      const S=cmp[side];if(!S.videoReady)return;
+      const sc=document.getElementById('cmpScrub'+cUp(side)),last=+sc.max;
+      const sp=(S.data&&S.data.swing_phases)||{},ph=btn.dataset.phase;
+      let f=ph==='address'?0:ph==='top'?(sp.top_frame??Math.round(last*0.4)):ph==='impact'?(sp.impact_frame??Math.round(last*0.6)):last;
+      S.frame=Math.min(Math.max(0,f),last);sc.value=S.frame;cmpRender(side);
+    }));
+  });
+  ['a','b'].forEach(side=>{
+    cVid(side).addEventListener('seeked',()=>{cmpDrawPose(side);cmpDrawLayer(side);});
+    cVid(side).addEventListener('loadeddata',()=>{if(!cmp[side].data)cmpSizeCanvas(side);cmpRender(side);});
+  });
+
+  // 이미지 저장
+  document.getElementById('cmpSaveBtn').addEventListener('click',()=>{
+    if(!cmp.a.videoReady&&!cmp.b.videoReady){alert('먼저 영상을 불러오세요');return;}
+    const gap=16,labelH=34;
+    const dims=['a','b'].map(s=>{const c=document.getElementById('cmpPose'+cUp(s));return{w:c.width||720,h:c.height||1280};});
+    const W=Math.max(dims[0].w,dims[1].w)||720,H=Math.max(dims[0].h,dims[1].h)||1280;
+    const out=document.createElement('canvas');out.width=W*2+gap;out.height=H+labelH;
+    const ctx=out.getContext('2d');ctx.fillStyle='#0d120e';ctx.fillRect(0,0,out.width,out.height);
+    ['a','b'].forEach((s,i)=>{
+      const x=i*(W+gap),v=cVid(s),pose=document.getElementById('cmpPose'+cUp(s)),draw=document.getElementById('cmpDraw'+cUp(s));
+      if(cmp[s].videoReady){try{ctx.drawImage(v,x,labelH,W,H);}catch(e){}ctx.drawImage(pose,x,labelH,W,H);ctx.drawImage(draw,x,labelH,W,H);}
+      ctx.fillStyle=i===0?'#5fb0d8':'#d8a23a';ctx.font='700 20px system-ui';ctx.textBaseline='middle';
+      ctx.fillText(document.getElementById('cmpBadge'+cUp(s)).textContent,x+10,labelH/2);
+    });
+    let dataUrl;try{dataUrl=out.toDataURL('image/png');}catch(e){alert('영상 보안 정책으로 저장이 막혔어요.');return;}
+    const a=document.createElement('a');a.download='swing_compare_'+Date.now()+'.png';a.href=dataUrl;a.click();
+  });
+}
+
+// 비교 모달 핸들러는 마크업이 DOM에 들어온 뒤 바인딩
+function cmpInit(){
+  cmpBindStatic(); cmpBindWorkspace();
+  // 다이어리 영상 관절 오버레이
+  const dv=document.getElementById('diaryVideo'), dt=document.getElementById('diaryPoseToggle');
+  if(dv){
+    ['timeupdate','seeked','seeking','loadeddata'].forEach(ev=>dv.addEventListener(ev,()=>{ if(diaryPose.data) drawDiaryPose(); }));
+  }
+  if(dt){
+    dt.addEventListener('click',()=>{
+      diaryPose.on=!diaryPose.on;
+      document.getElementById('diaryPoseCanvas').classList.toggle('on',diaryPose.on);
+      dt.textContent=diaryPose.on?'관절 ON':'관절 OFF';
+      dt.classList.toggle('off',!diaryPose.on);
+      drawDiaryPose();
+    });
+  }
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',cmpInit);
+else cmpInit();
 
 // 인증 상태 변화 감지 (다른 탭에서 로그아웃 시)
 supabaseClient.auth.onAuthStateChange((event, session) => {
@@ -2532,20 +2639,11 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
       <button class="modal-close-x" id="compareClose">✕</button>
     </div>
 
-    <!-- STEP 1: 영상 두 개 고르기 -->
+    <!-- STEP 1: 영상 두 개 고르기 (단일 목록, 최신순, 아무거나 2개 탭) -->
     <div id="cmpPicker">
-      <div class="cmp-pick-row">
-        <div class="cmp-pick-col">
-          <div class="cmp-pick-label"><span class="cmp-dot a"></span>과거의 나 (왼쪽)</div>
-          <div class="cmp-pick-grid" id="cmpGridA"></div>
-        </div>
-        <div class="cmp-pick-col">
-          <div class="cmp-pick-label"><span class="cmp-dot b"></span>지금의 나 (오른쪽)</div>
-          <div class="cmp-pick-grid" id="cmpGridB"></div>
-        </div>
-      </div>
+      <div class="cmp-pick-grid" id="cmpGrid"></div>
       <div class="cmp-pick-actions">
-        <span class="cmp-pick-hint" id="cmpPickHint">양쪽에서 영상을 하나씩 선택하세요</span>
+        <span class="cmp-pick-hint" id="cmpPickHint">비교할 영상 2개를 탭하세요</span>
         <button class="cmp-go-btn" id="cmpGoBtn" disabled>비교 시작 →</button>
       </div>
     </div>
