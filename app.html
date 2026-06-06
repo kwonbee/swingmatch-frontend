@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-563HSGZTS1"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-563HSGZTS1');
+  </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Meta Pixel Code -->
@@ -1275,6 +1283,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
       const firedKey = 'msm_fbq_cr_' + (u ? u.id : '');
       if (isFresh && typeof fbq === 'function' && !sessionStorage.getItem(firedKey)) {
         fbq('track', 'CompleteRegistration');
+        try { if (typeof gtag === 'function') gtag('event', 'sign_up'); } catch (e) {}
         try { sessionStorage.setItem(firedKey, '1'); } catch (e) {}
       }
     } catch (e) { console.warn('[Pixel] CompleteRegistration skip:', e); }

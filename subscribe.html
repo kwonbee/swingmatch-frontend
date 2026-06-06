@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-563HSGZTS1"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-563HSGZTS1');
+  </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Meta Pixel Code -->
@@ -22,6 +30,7 @@ window.fbqPurchase = function(orderId){
     var key = 'msm_fbq_purchase_' + (orderId || '');
     if (typeof fbq === 'function' && !sessionStorage.getItem(key)) {
       fbq('track', 'Purchase', { value: 4900, currency: 'KRW' });
+      try { if (typeof gtag === 'function') gtag('event', 'purchase', { value: 4900, currency: 'KRW', transaction_id: (orderId || '') }); } catch(e){}
       try { sessionStorage.setItem(key, '1'); } catch(e){}
     }
   } catch(e){ console.warn('[Pixel] Purchase skip:', e); }
@@ -956,6 +965,7 @@ async function proceedToPayment() {
     if (typeof fbq === 'function') {
       fbq('track', 'InitiateCheckout', { value: 4900, currency: 'KRW' });
     }
+    if (typeof gtag === 'function') gtag('event', 'begin_checkout', { value: 4900, currency: 'KRW' });
   } catch (e) { console.warn('[Pixel] InitiateCheckout skip:', e); }
 
   try {
