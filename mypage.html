@@ -2259,16 +2259,21 @@ async function refreshPoseUrl(posePath){
   try {
     const { data, error } = await supabaseClient.storage
       .from(POSE_BUCKET).createSignedUrl(posePath, 60*60*24*7);
-    if (error || !data) return null;
+    if (error){ console.error('[pose signedUrl 실패]', POSE_BUCKET, posePath, error); return null; }
+    if (!data){ console.error('[pose signedUrl 데이터없음]', posePath); return null; }
     poseUrlCache.set(posePath, data.signedUrl);
     return data.signedUrl;
-  } catch(e){ console.error('[pose URL]', e); return null; }
+  } catch(e){ console.error('[pose URL 예외]', e); return null; }
 }
 async function fetchPoseJson(posePath){
   const url = await refreshPoseUrl(posePath);
   if (!url) return null;
-  try { const res = await fetch(url); if(!res.ok) return null; return await res.json(); }
-  catch(e){ console.error('[pose fetch]', e); return null; }
+  try {
+    const res = await fetch(url);
+    if(!res.ok){ console.error('[pose fetch HTTP]', res.status, posePath); return null; }
+    return await res.json();
+  }
+  catch(e){ console.error('[pose fetch 예외]', e); return null; }
 }
 
 const CMP_DRAW='#ff3b9a';        // 그리기 선 색 (핑크)
@@ -2302,7 +2307,7 @@ function buildPickGrid(vids){
   const grid=document.getElementById('cmpGrid');
   grid.innerHTML = vids.map(l=>(
     `<div class="cmp-pick-card" data-id="${l.id}" data-video-path="${escapeHtml(l.video_path)}">
-      <div class="th"><span class="chk"></span></div>
+      <div class="th"><video muted playsinline preload="metadata"></video><span class="chk"></span></div>
       <div class="cap">${escapeHtml(l.pro_name||'분석')}<br>${formatDate(l.created_at)} · ${l.match_pct||'-'}%</div>
     </div>`)).join('');
   const cards=[...grid.querySelectorAll('.cmp-pick-card')];
@@ -2387,9 +2392,15 @@ async function cmpLoadSide(side, log){
   const vurl=await refreshVideoUrl(log.video_path);
   if(vurl){
     const v=cVid(side); v.src=vurl;
-    await new Promise(res=>{const d=()=>{v.removeEventListener('loadedmetadata',d);res();};v.addEventListener('loadedmetadata',d);v.load();});
-    S.videoReady=true;
-    try{ v.currentTime=0.01; }catch(e){}  // 첫 프레임 표시
+    await new Promise(res=>{
+      let done=false; const fin=()=>{if(done)return;done=true;v.removeEventListener('loadedmetadata',fin);v.removeEventListener('error',fin);res();};
+      v.addEventListener('loadedmetadata',fin);
+      v.addEventListener('error',fin);
+      setTimeout(fin,4000);   // 안전장치: 4초 내 메타데이터 못 받아도 진행
+      v.load();
+    });
+    if(v.videoWidth) S.videoReady=true;
+    try{ v.currentTime=0.01; }catch(e){}
   }
   if(ps==='done' && log.pose_path){
     const pose=await fetchPoseJson(log.pose_path);
