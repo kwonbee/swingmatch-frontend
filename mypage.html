@@ -2296,7 +2296,6 @@ function openComparePicker(){
     return;
   }
   cmp.picks=[];
-  cmpBindStatic(); cmpBindWorkspace();   // 모달 표시 직전 보장 바인딩(가드로 1회만 실제 실행)
   document.getElementById('cmpPicker').style.display='';
   document.getElementById('cmpWorkspace').style.display='none';
   document.getElementById('cmpSub').textContent='비교할 영상 2개를 선택하세요';
@@ -2350,12 +2349,9 @@ function updateGoBtn(){
 }
 
 /* 정적 핸들러: 마크업이 DOM에 들어온 뒤 바인딩 */
-let _cmpStaticBound=false;
 function cmpBindStatic(){
-  if(_cmpStaticBound) return;
   const goBtn=document.getElementById('cmpGoBtn');
   if(!goBtn) return;
-  _cmpStaticBound=true;
   goBtn.addEventListener('click',()=>{
     const logA=allLogs.find(l=>l.id===cmp.picks[0]), logB=allLogs.find(l=>l.id===cmp.picks[1]);
     startCompare(logA, logB);
@@ -2387,7 +2383,7 @@ async function startCompare(logA, logB){
 async function cmpLoadSide(side, log){
   const S=cmp[side], empty=document.getElementById('cmpEmpty'+cUp(side));
   document.getElementById('cmpBadge'+cUp(side)).textContent =
-    (side==='a'?'이전':'현재') + (log&&log.created_at ? ' · '+formatDate(log.created_at) : '');
+    (side==='a'?'VIDEO CLIP 1':'VIDEO CLIP 2');
   empty.innerHTML='불러오는 중…'; empty.style.display='flex';
 
   if(!log || !log.video_path){ empty.innerHTML='저장된 영상이 없어요'; return; }
@@ -2480,8 +2476,7 @@ function cmpDrawLayer(side){
     pts.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,rr*0.5,0,7);ctx.fillStyle=CMP_DRAW;ctx.fill();
       ctx.lineWidth=2;ctx.strokeStyle='rgba(0,0,0,.5)';ctx.stroke();});
     let label='',lx=0,ly=0;
-    if(it.type==='line'&&it.pts.length>=2){label=(cmpLineLen(it.pts[0],it.pts[1])*100).toFixed(1);lx=(pts[0].x+pts[1].x)/2;ly=(pts[0].y+pts[1].y)/2;}
-    else if(it.type==='angle'&&it.pts.length>=3){label=cmpAngle3(it.pts[0],it.pts[1],it.pts[2]).toFixed(0)+'°';lx=pts[1].x;ly=pts[1].y;}
+    if(it.type==='angle'&&it.pts.length>=3){label=cmpAngle3(it.pts[0],it.pts[1],it.pts[2]).toFixed(0)+'°';lx=pts[1].x;ly=pts[1].y;}
     if(label){const fs=Math.max(16,W/22);ctx.font=`700 ${fs}px system-ui`;
       const tw=ctx.measureText(label).width,pad=fs*0.35;
       ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(lx+10,ly-fs*0.85,tw+pad*2,fs*1.25);
@@ -2507,13 +2502,9 @@ function cmpPatchDraws(side){
 }
 ['a','b'].forEach(cmpPatchDraws);
 function cmpHookDraw(side){
-  const cv=document.getElementById('cmpDraw'+cUp(side));
-  // 주의: cmp[side]는 모달을 열 때마다 새 객체로 교체된다.
-  // 따라서 S를 캡처하지 말고 매 이벤트마다 cmp[side]를 새로 읽어야
-  // 그리기 데이터(draws/pending)가 화면 렌더(cmpDrawLayer)와 같은 객체를 가리킨다.
+  const cv=document.getElementById('cmpDraw'+cUp(side)),S=cmp[side];
   let lastTouch=0;   // touch 직후 발생하는 합성 click 무시용
   const place=ev=>{
-    const S=cmp[side];
     // touch로 들어온 입력 직후의 click 이벤트는 건너뛴다 (모바일 중복 방지)
     if(ev.type==='click' && Date.now()-lastTouch<600) return;
     if(ev.type==='touchstart') lastTouch=Date.now();
@@ -2526,7 +2517,7 @@ function cmpHookDraw(side){
     if(S.pending.pts.length>=cmpNeed()){S.draws.push(S.pending);S.pending=null;S.hover=null;}
     cmpDrawLayer(side);
   };
-  const hover=ev=>{const S=cmp[side];if(!S.pending||cmp.tool==='none')return;S.hover=cmpCanvasPt(cv,ev);cmpDrawLayer(side);};
+  const hover=ev=>{if(!S.pending||cmp.tool==='none')return;S.hover=cmpCanvasPt(cv,ev);cmpDrawLayer(side);};
   cv.addEventListener('click',place);
   cv.addEventListener('mousemove',hover);
   cv.addEventListener('touchstart',place,{passive:false});
@@ -2546,11 +2537,8 @@ function cmpUpdatePlayIcon(side){
 }
 function cmpFmtTime(s){ if(!isFinite(s))return '0:00'; const m=Math.floor(s/60),sec=Math.floor(s%60); return m+':'+String(sec).padStart(2,'0'); }
 
-let _cmpWorkspaceBound=false;
 function cmpBindWorkspace(){
-  if(_cmpWorkspaceBound) return;          // 중복 바인딩 방지
-  if(!document.getElementById('cmpDrawA')) return;  // DOM 아직 없으면 다음 호출 때
-  _cmpWorkspaceBound=true;
+  if(!document.getElementById('cmpDrawA')) return;
   ['a','b'].forEach(cmpHookDraw);
 
   // 도구 (직선/각도/보기)
