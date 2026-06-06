@@ -368,10 +368,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         <table>
           <thead>
             <tr>
-              <th>이름</th><th>이메일</th><th>플랜</th><th>총 분석 횟수</th><th>마지막 분석</th><th>가입일</th>
+              <th>이름</th><th>이메일</th><th>플랜</th><th>총 분석 횟수</th><th>마지막 분석</th><th>가입일</th><th>관리</th>
             </tr>
           </thead>
-          <tbody id="user-table"><tr><td colspan="6" class="loading">로딩 중...</td></tr></tbody>
+          <tbody id="user-table"><tr><td colspan="7" class="loading">로딩 중...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -468,6 +468,28 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="modal-btns">
       <button class="btn-cancel-sub" onclick="confirmCancel()">환불 처리 확인</button>
       <button class="btn-close-modal" onclick="closeModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 회원 삭제 모달 -->
+<div class="modal-bg" id="delete-user-modal">
+  <div class="modal">
+    <h3 style="color:var(--red)">⚠️ 회원 삭제 (복구 불가)</h3>
+    <input type="hidden" id="del-user-id" />
+    <input type="hidden" id="del-user-plan" />
+    <p style="font-size:.8rem;color:var(--muted);line-height:1.6;margin:8px 0">
+      이 회원의 <strong>계정·분석기록·저장영상</strong>이 영구 삭제됩니다.<br>
+      ⚠️ <strong>활성 Pro 구독</strong>이 있으면 삭제 전에 먼저 <strong>환불(구독 해지)</strong>을 처리하세요. 안 그러면 자동결제가 계속됩니다.<br>
+      ※ 법령상 보존 의무가 있는 결제·거래 기록은 백엔드에서 자동 보존됩니다.
+    </p>
+    <label>삭제할 회원 이메일</label>
+    <input type="text" id="del-user-email-show" readonly />
+    <label>확인을 위해 위 이메일을 그대로 입력하세요</label>
+    <input type="text" id="del-user-email-confirm" placeholder="이메일 재입력" autocomplete="off" />
+    <div class="modal-btns">
+      <button class="btn-cancel-sub" onclick="confirmDeleteUser()">회원 삭제 확인</button>
+      <button class="btn-close-modal" onclick="closeDeleteUserModal()">닫기</button>
     </div>
   </div>
 </div>
@@ -816,12 +838,12 @@ async function loadUsers() {
   const tbody = document.getElementById('user-table');
   
   if (!users || !users.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="loading">데이터 없음</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">데이터 없음</td></tr>';
     return;
   }
   
   // 각 유저의 실제 분석 횟수와 최근 분석일을 analysis_logs에서 직접 조회
-  tbody.innerHTML = '<tr><td colspan="6" class="loading">분석 횟수 집계 중...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" class="loading">분석 횟수 집계 중...</td></tr>';
   
   const userIds = users.map(u => u.id).filter(Boolean);
   
@@ -846,6 +868,8 @@ async function loadUsers() {
     const stats = userStats[u.id] || { count: 0, lastDate: null };
     // 이름 표시: display_name → 이메일 @ 앞부분 → '—'
     const name = u.display_name || (u.email ? u.email.split('@')[0] : '—');
+    const safeName = (name || '').replace(/'/g, "\\'");
+    const safeEmail = (u.email || '').replace(/'/g, "\\'");
     return `<tr>
       <td style="font-weight:500">${name}</td>
       <td style="color:var(--muted)">${u.email || '—'}</td>
@@ -853,6 +877,8 @@ async function loadUsers() {
       <td>${stats.count}</td>
       <td>${fmtDate(stats.lastDate)}</td>
       <td>${fmtDate(u.created_at)}</td>
+      <td><button onclick="openDeleteUserModal('${u.id}','${safeEmail}','${safeName}','${u.plan || 'free'}')"
+            style="padding:4px 10px;background:rgba(248,113,113,0.1);color:var(--red);border:1px solid rgba(248,113,113,0.3);font-size:.65rem;cursor:pointer;border-radius:4px">삭제</button></td>
     </tr>`;
   }).join('');
 }
@@ -1010,6 +1036,56 @@ async function confirmCancel() {
   alert(json.message || '환불이 완료되었습니다.');
   closeModal();
   loadSubscriptions();
+}
+
+// ── 회원 삭제 ──
+function openDeleteUserModal(userId, email, name, plan) {
+  document.getElementById('del-user-id').value = userId;
+  document.getElementById('del-user-plan').value = plan || '';
+  document.getElementById('del-user-email-show').value = email || '(이메일 없음)';
+  document.getElementById('del-user-email-confirm').value = '';
+  document.getElementById('delete-user-modal').classList.add('open');
+}
+function closeDeleteUserModal() {
+  document.getElementById('delete-user-modal').classList.remove('open');
+}
+
+async function confirmDeleteUser() {
+  const userId = document.getElementById('del-user-id').value;
+  const email = document.getElementById('del-user-email-show').value;
+  const typed = document.getElementById('del-user-email-confirm').value.trim();
+
+  // 이메일 재입력 검증 (오삭제 방지)
+  if (email && email !== '(이메일 없음)' && typed !== email) {
+    alert('입력한 이메일이 일치하지 않습니다. 삭제를 취소합니다.');
+    return;
+  }
+  if (!confirm('정말 이 회원을 영구 삭제하시겠습니까?\n계정·분석기록·저장영상이 복구 불가능하게 삭제됩니다.')) return;
+
+  const { data: sess } = await sb.auth.getSession();
+  const token = sess?.session?.access_token;
+  if (!token) { alert('세션이 만료되었습니다. 다시 로그인해주세요.'); return; }
+
+  let json;
+  try {
+    const resp = await fetch(BACKEND_URL + '/api/admin/user/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ userId })
+    });
+    json = await resp.json();
+    if (!resp.ok || !json.success) {
+      alert('삭제 실패: ' + (json.error || resp.status));
+      return;
+    }
+  } catch (e) {
+    alert('삭제 통신 실패: ' + e.message);
+    return;
+  }
+
+  alert(json.message || '회원이 삭제되었습니다.');
+  closeDeleteUserModal();
+  loadUsers();
 }
 
 // ────────────────────────────────────
