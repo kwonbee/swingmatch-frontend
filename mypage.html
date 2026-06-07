@@ -195,9 +195,13 @@
     color:var(--gold-dim)
   }
   .stat-icon{
-    font-size:1.1rem;
-    margin-bottom:8px;
-    opacity:.85
+    font-size:.66rem;
+    font-weight:600;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:10px;
+    opacity:.9
   }
   .stat-label{
     font-size:.78rem;
@@ -772,6 +776,20 @@
     position:absolute;pointer-events:none;z-index:2;display:none
   }
   .diary-pose-canvas.on{display:block}
+  .diary-draw-canvas{
+    position:absolute;z-index:3;display:none;touch-action:none;cursor:crosshair
+  }
+  .diary-draw-canvas.on{display:block}
+  .diary-tools{
+    display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:-2px 0 12px
+  }
+  .dia-sep{width:1px;height:18px;background:rgba(76,120,87,.2);margin:0 2px}
+  .dia-tbtn{
+    background:transparent;border:1px solid rgba(76,120,87,.3);color:var(--gold);
+    font-size:.76rem;font-weight:500;padding:6px 12px;border-radius:7px;cursor:pointer;font-family:inherit;transition:all .12s
+  }
+  .dia-tbtn:hover{background:rgba(76,120,87,.08)}
+  .dia-tbtn.active{background:var(--gold);border-color:var(--gold);color:#fff}
   .diary-pose-toggle{
     position:absolute;top:8px;right:8px;z-index:3;
     background:#000a;border:1px solid rgba(255,255,255,.25);color:#fff;
@@ -891,10 +909,12 @@
 
   /* ════════════ 영상 비교 ════════════ */
   .compare-entry-btn{
-    background:var(--gold);color:#fff;border:none;font-size:.72rem;font-weight:600;
-    padding:5px 12px;border-radius:99px;cursor:pointer;margin-left:8px;vertical-align:middle;
+    background:var(--gold);color:#fff;border:none;font-size:.8rem;font-weight:600;
+    padding:7px 16px;border-radius:8px;cursor:pointer;margin-left:12px;vertical-align:middle;
+    letter-spacing:.02em;box-shadow:0 1px 4px rgba(45,74,51,.25);transition:background .15s,transform .1s;
   }
-  .compare-entry-btn:hover{background:var(--gold-light)}
+  .compare-entry-btn:hover{background:var(--gold-light);transform:translateY(-1px)}
+  .compare-entry-btn::before{content:'⚖ ';font-size:.85em}
 
   .cmp-modal{max-width:1100px;width:96vw}
 
@@ -1135,7 +1155,7 @@
   <!-- 내 영상 갤러리 (즐겨찾기만) -->
   <div class="section">
     <div class="section-header">
-      <h2 class="section-title"><span class="gold-bar"></span>❤️ 즐겨찾기 영상</h2>
+      <h2 class="section-title"><span class="gold-bar"></span>❤️ 즐겨찾기 영상<span id="compareBtnSlot"></span></h2>
       <span class="section-meta" id="videoMeta"></span>
     </div>
     <div id="videoSection">
@@ -1201,7 +1221,18 @@
     <div class="diary-video-wrap" id="diaryVideoWrap">
       <video id="diaryVideo" controls playsinline preload="metadata"></video>
       <canvas id="diaryPoseCanvas" class="diary-pose-canvas"></canvas>
+      <canvas id="diaryDrawCanvas" class="diary-draw-canvas"></canvas>
       <button id="diaryPoseToggle" class="diary-pose-toggle" style="display:none">관절 ON</button>
+    </div>
+
+    <!-- 그리기 도구바 (pose 데이터 있을 때만 표시) -->
+    <div class="diary-tools" id="diaryTools" style="display:none">
+      <button class="dia-tbtn active" data-dtool="none" id="diaToolNone">보기</button>
+      <button class="dia-tbtn" data-dtool="line" id="diaToolLine">직선</button>
+      <button class="dia-tbtn" data-dtool="angle" id="diaToolAngle">각도</button>
+      <div class="dia-sep"></div>
+      <button class="dia-tbtn" id="diaUndo">실행취소</button>
+      <button class="dia-tbtn" id="diaClear">지우기</button>
     </div>
 
     <!-- 즐겨찾기 토글 -->
@@ -1306,7 +1337,7 @@ async function loadUserProfile(){
     .maybeSingle();
   if (error) console.error('[profile]', error);
   userProfile = data || {};
-  isPro = userProfile.plan === 'pro';
+  isPro = !!(userProfile.plan && typeof userProfile.plan === 'string' && userProfile.plan.indexOf('pro') === 0);
 }
 
 async function loadSubscription(){
@@ -1421,48 +1452,47 @@ function renderStats(){
 
   const cards = [
     {
-      icon: '🌱',
+      icon: 'DAYS',
       label: '함께한 날',
       value: daysSinceJoin,
       unit: '일',
       sub: userProfile.created_at ? new Date(userProfile.created_at).toLocaleDateString('ko-KR') + ' 시작' : ''
     },
     {
-      icon: '⛳',
+      icon: 'SWINGS',
       label: '총 분석 횟수',
       value: totalAnalysis,
       unit: '회',
       gold: true
     },
     {
-      icon: '📊',
+      icon: 'MATCH',
       label: '평균 매칭률',
       value: avgMatch || '—',
       unit: avgMatch ? '%' : '',
       sub: matchPcts.length > 0 ? `${matchPcts.length}회 기준` : '분석 시작 전'
     },
     {
-      icon: '🏆',
+      icon: 'TOP PRO',
       label: '가장 닮은 프로',
       value: topPro ? topPro[0] : '—',
       sub: topPro ? `${topPro[1]}회 매칭` : '분석 시작 전',
       small: true
     },
     {
-      icon: '🏌️',
+      icon: 'CLUB',
       label: '주력 클럽',
       value: topClub ? (clubLabels[topClub[0]] || topClub[0]) : '—',
       sub: topClub ? `${topClub[1]}회 사용` : '분석 시작 전',
       small: true
     },
     {
-      icon: '🎬',
+      icon: 'VIDEOS',
       label: '영상 저장',
-      value: isPro ? allLogs.filter(l => l.video_path).length : '—',
-      unit: isPro ? '/ 30' : '',
-      sub: isPro ? '탭하면 전체 보기 →' : 'Pro 전용',
-      locked: !isPro,
-      clickable: isPro,
+      value: allLogs.filter(l => l.video_path).length,
+      unit: isPro ? '/ 30' : '/ 1',
+      sub: '탭하면 전체 보기 →',
+      clickable: true,
       action: 'allVideos'
     }
   ];
@@ -1497,32 +1527,76 @@ function renderVideoGallery(){
   const section = document.getElementById('videoSection');
   const meta = document.getElementById('videoMeta');
 
-  // 무료 회원: 영상 저장 자체가 Pro 전용
+  // 무료 회원: 저장된 영상 1개를 보여주고, 관절·각도 맛보기로 Pro 유압
   if (!isPro) {
-    meta.textContent = '';
+    const ftitle = document.querySelector('#videoSection')?.closest('.section')?.querySelector('.section-title');
+    if (ftitle) ftitle.innerHTML = `<span class="gold-bar"></span>🎬 내 스윙 영상`;
+    const freeVideoLogs = allLogs.filter(l => l.video_path);
+    meta.innerHTML = `<span>${freeVideoLogs.length} / 1</span>`;
+    // 무료회원은 비교 불가(영상 1개) → 제목 옆 비교 버튼 숨김
+    const fslot = document.getElementById('compareBtnSlot');
+    if (fslot) fslot.innerHTML = '';
+
+    if (freeVideoLogs.length === 0) {
+      section.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">🎬</div>
+          <strong style="color:var(--text);font-size:.95rem">아직 저장된 스윙 영상이 없어요</strong><br><br>
+          무료 회원도 <strong style="color:var(--gold)">최신 분석 영상 1개</strong>가 자동 보관돼요.<br>
+          영상을 분석하면 여기에서 <strong style="color:var(--gold)">관절·각도</strong>까지 확인할 수 있어요.<br><br>
+          <a href="/app.html" style="color:var(--gold)">분석하러 가기 →</a>
+        </div>`;
+      return;
+    }
+
     section.innerHTML = `
-      <div class="locked-section">
-        <div class="lock-large">🎬</div>
-        <h3>Pro 회원의 스윙 다이어리</h3>
-        <p>분석한 스윙은 <strong style="color:var(--gold-light)">자동으로 30개까지 보관</strong>되고,<br>
-        그 중 아끼는 스윙은 <strong style="color:var(--gold-light)">즐겨찾기 ❤️ 10개</strong>로 영구 보관 + 메모를 남길 수 있어요.<br><br>
-        한 달 뒤, 1년 뒤<br>다시 보면 내 성장이 한눈에 보입니다.</p>
-        <a href="/subscribe.html" class="unlock-btn">월 4,900원으로 시작하기</a>
+      <div class="video-grid">
+        ${freeVideoLogs.map(l => {
+          return `
+            <div class="video-card" data-id="${l.id}" data-video-path="${escapeHtml(l.video_path)}">
+              <div class="video-thumb">
+                <video muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block"></video>
+              </div>
+              <div class="video-info">
+                <div class="video-pro">${escapeHtml(l.pro_name || '분석 결과')}</div>
+                <div class="video-date">${formatDate(l.created_at)} · ${l.match_pct || '-'}%</div>
+                <div class="video-memo-hint">관절·각도 보기 →</div>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:18px;padding:16px 18px;background:#2D4A33;border-radius:12px;text-align:center">
+        <div style="font-size:.9rem;color:#fff;font-weight:600;margin-bottom:6px">✨ Pro로 더 깊이 기록하세요</div>
+        <p style="font-size:.78rem;color:rgba(255,255,255,.75);line-height:1.7;margin-bottom:12px">
+          무료는 최신 1개만 보관돼요. Pro는 <strong style="color:#fff">30개 저장 + 즐겨찾기 10개</strong>,<br>
+          그리고 두 스윙을 나란히 놓고 <strong style="color:#fff">영상 비교</strong>까지.
+        </p>
+        <a href="/subscribe.html" style="background:#fff;color:#2D4A33;font-size:.82rem;font-weight:600;padding:9px 20px;border-radius:8px;text-decoration:none;white-space:nowrap">월 4,900원으로 시작하기</a>
       </div>`;
+
+    section.querySelectorAll('.video-card').forEach(card => {
+      card.addEventListener('click', () => openMemoModal(card.dataset.id));
+      const thumbEl = card.querySelector('.video-thumb');
+      const videoPath = card.dataset.videoPath;
+      if (videoPath && thumbEl) loadVideoThumb(thumbEl, videoPath);
+    });
     return;
   }
 
   // Pro 회원 — 즐겨찾기(is_favorite) 영상만 갤러리에 표시
   const favoriteVideoLogs = allLogs.filter(l => l.video_path && l.is_favorite);
 
-  // 즐겨찾기 한도 안내 + (영상 2개 이상이면) 비교 버튼
+  // 즐겨찾기 한도 안내(우측 메타) + 제목 옆 비교 버튼
   const totalVideoCount = allLogs.filter(l => l.video_path).length;
-  meta.innerHTML = `<span>❤️ ${favoriteVideoLogs.length} / 10</span>`
-    + (totalVideoCount >= 2
-        ? ` <button id="compareEntryBtn" class="compare-entry-btn">⛳ 영상 비교</button>`
-        : '');
-  const ceb = document.getElementById('compareEntryBtn');
-  if (ceb) ceb.addEventListener('click', openComparePicker);
+  meta.innerHTML = `<span>❤️ ${favoriteVideoLogs.length} / 10</span>`;
+  const slot = document.getElementById('compareBtnSlot');
+  if (slot) {
+    slot.innerHTML = (totalVideoCount >= 2)
+      ? `<button id="compareEntryBtn" class="compare-entry-btn">영상 비교</button>`
+      : '';
+    const ceb = document.getElementById('compareEntryBtn');
+    if (ceb) ceb.addEventListener('click', openComparePicker);
+  }
 
   // 즐겨찾기가 하나도 없을 때
   if (favoriteVideoLogs.length === 0) {
@@ -1579,11 +1653,6 @@ function renderVideoGallery(){
 
 // ─── 전체 영상 모달 (영상 저장 카드 클릭 시 열림) ───
 function openAllVideosModal(){
-  if (!isPro) {
-    window.location.href = '/subscribe.html';
-    return;
-  }
-
   const allVideoLogs = allLogs.filter(l => l.video_path);
 
   if (allVideoLogs.length === 0) {
@@ -1986,14 +2055,8 @@ async function handleCancelSubscription(){
   }
 }
 
-// ─── 영상 + 메모 통합 다이어리 모달 (Pro 전용) ───
+// ─── 영상 + 메모 통합 다이어리 모달 (무료=영상·관절·각도 / Pro=메모·즐겨찾기 추가) ───
 async function openMemoModal(logId){
-  if (!isPro) {
-    alert('영상 메모는 Pro 회원 전용 기능이에요. Pro로 업그레이드 후 이용해주세요.');
-    window.location.href = '/subscribe.html';
-    return;
-  }
-
   const log = allLogs.find(l => l.id === logId);
   if (!log) return;
 
@@ -2005,27 +2068,44 @@ async function openMemoModal(logId){
   document.getElementById('memoModalSub').textContent =
     `${formatDate(log.created_at)} · 매칭률 ${log.match_pct || '-'}%${log.pro_tour ? ' · ' + log.pro_tour : ''}`;
 
-  // 즐겨찾기 버튼 상태
+  // 즐겨찾기·메모는 Pro 전용 — 무료회원에겐 잠금 표시
   const favBtn = document.getElementById('favToggleBtn');
   const favIcon = favBtn.querySelector('.fav-toggle-icon');
   const favText = favBtn.querySelector('.fav-toggle-text');
   const favHint = document.getElementById('favHint');
-  if (log.is_favorite) {
-    favBtn.classList.add('active');
-    favIcon.textContent = '❤️';
-    favText.textContent = '즐겨찾기 해제';
-    favHint.textContent = '갤러리에 영구 보관 중';
-  } else {
-    favBtn.classList.remove('active');
-    favIcon.textContent = '🤍';
-    favText.textContent = '즐겨찾기에 추가';
-    const favCount = allLogs.filter(l => l.is_favorite).length;
-    favHint.textContent = `현재 ${favCount} / 10`;
-  }
+  const memoText = document.getElementById('memoText');
 
-  // 메모 채우기
-  document.getElementById('memoText').value = existingMemo;
-  document.getElementById('memoCharCount').textContent = existingMemo.length;
+  if (!isPro) {
+    // 즐겨찾기 버튼 → Pro 유도
+    favBtn.classList.remove('active');
+    favIcon.textContent = '🔒';
+    favText.textContent = '즐겨찾기 (Pro)';
+    favHint.textContent = 'Pro 전용';
+    // 메모 영역 잠금
+    memoText.value = '';
+    memoText.setAttribute('readonly', 'readonly');
+    memoText.placeholder = '✎ 메모는 Pro 회원 전용이에요.\nPro로 업그레이드하면 스윙마다 메모를 남기고 영구 보관할 수 있어요.';
+    document.getElementById('memoCharCount').textContent = '0';
+  } else {
+    memoText.removeAttribute('readonly');
+    memoText.placeholder = '이 스윙에 대한 생각을 자유롭게 적어보세요.';
+    // 즐겨찾기 버튼 상태
+    if (log.is_favorite) {
+      favBtn.classList.add('active');
+      favIcon.textContent = '❤️';
+      favText.textContent = '즐겨찾기 해제';
+      favHint.textContent = '갤러리에 영구 보관 중';
+    } else {
+      favBtn.classList.remove('active');
+      favIcon.textContent = '🤍';
+      favText.textContent = '즐겨찾기에 추가';
+      const favCount = allLogs.filter(l => l.is_favorite).length;
+      favHint.textContent = `현재 ${favCount} / 10`;
+    }
+    // 메모 채우기
+    memoText.value = existingMemo;
+    document.getElementById('memoCharCount').textContent = existingMemo.length;
+  }
 
   // 모달 열기
   document.getElementById('memoModal').classList.add('show');
@@ -2054,12 +2134,18 @@ async function openMemoModal(logId){
 }
 
 // ─── 다이어리 영상 위 관절(포즈) 오버레이 ───
-const diaryPose={data:null,fps:30,on:true};
+const diaryPose={data:null,fps:30,on:true,draws:[],tool:'none',pending:null,hover:null,drag:null,seq:0};
 async function setupDiaryPose(log){
   const canvas=document.getElementById('diaryPoseCanvas');
   const toggle=document.getElementById('diaryPoseToggle');
+  const tools=document.getElementById('diaryTools');
+  const dcv=document.getElementById('diaryDrawCanvas');
   diaryPose.data=null;
+  // 그리기 상태 초기화
+  diaryPose.draws=[]; diaryPose.tool='none'; diaryPose.pending=null; diaryPose.hover=null; diaryPose.drag=null; diaryPose.seq=0;
   canvas.classList.remove('on'); toggle.style.display='none';
+  if(tools)tools.style.display='none';
+  if(dcv){dcv.classList.remove('on'); const dx=dcv.getContext('2d'); if(dcv.width)dx.clearRect(0,0,dcv.width,dcv.height);}
   const ctx=canvas.getContext('2d'); if(canvas.width)ctx.clearRect(0,0,canvas.width,canvas.height);
 
   if(log.pose_status!=='done' || !log.pose_path) return; // 관절 데이터 있을 때만
@@ -2070,13 +2156,17 @@ async function setupDiaryPose(log){
   diaryPose.on=true;
   canvas.classList.add('on');
   toggle.style.display=''; toggle.textContent='관절 ON'; toggle.classList.remove('off');
+  if(tools)tools.style.display='flex';   // 그리기 도구 노출
+  // 기본 '보기' 모드 → draw 캔버스는 입력만 받도록(보기 땐 표시 off로 영상 컨트롤 통과)
+  diaryPose.tool='none';
   fitDiaryPoseCanvas();
-  drawDiaryPose();
+  diaRender();
 }
 // 영상의 실제 표시 영역(레터박스 제외)에 캔버스를 정확히 겹치기
 function fitDiaryPoseCanvas(){
   const d=diaryPose.data; if(!d)return;
   const canvas=document.getElementById('diaryPoseCanvas');
+  const dcv=document.getElementById('diaryDrawCanvas');
   const wrap=document.getElementById('diaryVideoWrap');
   const v=document.getElementById('diaryVideo');
   const vw=(d.video&&d.video.width)||v.videoWidth||9;
@@ -2084,9 +2174,12 @@ function fitDiaryPoseCanvas(){
   const bw=wrap.clientWidth, bh=wrap.clientHeight;
   if(!bw||!bh)return;
   const sc=Math.min(bw/vw,bh/vh), dw=vw*sc, dh=vh*sc;
-  canvas.width=Math.round(dw); canvas.height=Math.round(dh);
-  canvas.style.left=((bw-dw)/2)+'px'; canvas.style.top=((bh-dh)/2)+'px';
-  canvas.style.width=dw+'px'; canvas.style.height=dh+'px'; canvas.style.inset='auto';
+  const left=(bw-dw)/2, top=(bh-dh)/2;
+  [canvas,dcv].forEach(c=>{ if(!c)return;
+    c.width=Math.round(dw); c.height=Math.round(dh);
+    c.style.left=left+'px'; c.style.top=top+'px';
+    c.style.width=dw+'px'; c.style.height=dh+'px'; c.style.inset='auto';
+  });
 }
 function drawDiaryPose(){
   const canvas=document.getElementById('diaryPoseCanvas');
@@ -2109,6 +2202,91 @@ function drawDiaryPose(){
     ctx.lineWidth=2;ctx.strokeStyle='rgba(0,0,0,.55)';ctx.stroke();});
 }
 
+// ── 다이어리 그리기 레이어 (직선 각도 / 3점 각도, 비교 모달과 동일 규칙) ──
+function diaDrawLayer(){
+  const dcv=document.getElementById('diaryDrawCanvas'); if(!dcv||!dcv.width)return;
+  const ctx=dcv.getContext('2d'),W=dcv.width,H=dcv.height;ctx.clearRect(0,0,W,H);
+  const items=[...diaryPose.draws];
+  if(diaryPose.pending){const pv={type:diaryPose.pending.type,pts:[...diaryPose.pending.pts]};if(diaryPose.hover)pv.pts.push(diaryPose.hover);items.push(pv);}
+  const rr=Math.max(5,W/80);
+  items.forEach((it,idx)=>{
+    const committed = idx < diaryPose.draws.length;
+    const isEditing = (diaryPose.drag && diaryPose.drag.index===idx);
+    const pts=it.pts.map(p=>({x:p.x*W,y:p.y*H}));
+    ctx.strokeStyle='#ff3b9a';ctx.lineWidth=Math.max(2.5,W/150);ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.stroke();
+    pts.forEach(p=>{const hr=committed?rr*0.62:rr*0.5;
+      ctx.beginPath();ctx.arc(p.x,p.y,hr,0,7);ctx.fillStyle='#ff3b9a';ctx.fill();
+      ctx.lineWidth=committed?2.5:2;ctx.strokeStyle=isEditing?'#ffffff':'rgba(0,0,0,.5)';ctx.stroke();});
+    let label='',lx=0,ly=0;
+    if(it.type==='line'&&it.pts.length>=2){label=cmpLineAngle(it.pts[0],it.pts[1],W,H).toFixed(0)+'°';lx=(pts[0].x+pts[1].x)/2;ly=(pts[0].y+pts[1].y)/2;}
+    if(it.type==='angle'&&it.pts.length>=3){label=cmpAngle3(it.pts[0],it.pts[1],it.pts[2]).toFixed(0)+'°';lx=pts[1].x;ly=pts[1].y;}
+    if(label){const fs=Math.max(16,W/22);ctx.font=`700 ${fs}px system-ui`;
+      const tw=ctx.measureText(label).width,pad=fs*0.35;
+      ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(lx+10,ly-fs*0.85,tw+pad*2,fs*1.25);
+      ctx.fillStyle='#ffd0e8';ctx.textBaseline='middle';ctx.fillText(label,lx+10+pad,ly-fs*0.22);}
+  });
+}
+function diaRender(){ drawDiaryPose(); diaDrawLayer(); }
+function diaNeed(){return diaryPose.tool==='line'?2:diaryPose.tool==='angle'?3:0;}
+function diaCanvasNorm(dcv,ev){
+  const r=dcv.getBoundingClientRect();
+  const cx=(ev.clientX)-r.left, cy=(ev.clientY)-r.top;
+  return{x:Math.max(0,Math.min(1,cx/r.width)),y:Math.max(0,Math.min(1,cy/r.height))};
+}
+function diaHitHandle(np){
+  const dcv=document.getElementById('diaryDrawCanvas');
+  const dispW=parseFloat(dcv.style.width)||dcv.width;
+  const tol=Math.max(14,dispW/22)/dispW;
+  for(let i=diaryPose.draws.length-1;i>=0;i--){const it=diaryPose.draws[i];
+    for(let pi=0;pi<it.pts.length;pi++){const p=it.pts[pi];
+      if(Math.hypot(p.x-np.x,p.y-np.y)<=tol)return{index:i,ptIndex:pi};}}
+  return null;
+}
+function diaHookDraw(){
+  const dcv=document.getElementById('diaryDrawCanvas'); if(!dcv)return;
+  const onDown=ev=>{
+    if(diaryPose.tool==='none')return;     // 보기 모드: 캔버스 비활성(영상 컨트롤로 통과)
+    ev.preventDefault();
+    const np=diaCanvasNorm(dcv,ev);
+    const h=diaHitHandle(np);
+    if(h){diaryPose.drag={index:h.index,ptIndex:h.ptIndex};try{dcv.setPointerCapture(ev.pointerId);}catch(e){} diaDrawLayer(); return;}
+    diaryPose.drag={place:true};
+    try{dcv.setPointerCapture(ev.pointerId);}catch(e){}
+  };
+  const onMove=ev=>{
+    if(diaryPose.tool==='none'||!diaryPose.drag)return;
+    const np=diaCanvasNorm(dcv,ev);
+    if(diaryPose.drag.index!=null){const it=diaryPose.draws[diaryPose.drag.index];if(it){it.pts[diaryPose.drag.ptIndex]={x:np.x,y:np.y};diaDrawLayer();}return;}
+    if(diaryPose.pending){diaryPose.hover=np;diaDrawLayer();}
+  };
+  const onUp=ev=>{
+    try{dcv.releasePointerCapture(ev.pointerId);}catch(e){}
+    if(diaryPose.tool==='none'){diaryPose.drag=null;return;}
+    const drag=diaryPose.drag; diaryPose.drag=null;
+    if(!drag)return;
+    if(drag.index!=null){diaDrawLayer();return;}
+    // 점 찍기
+    const p=diaCanvasNorm(dcv,ev);
+    if(!diaryPose.pending)diaryPose.pending={type:diaryPose.tool,pts:[p]};else diaryPose.pending.pts.push(p);
+    if(diaryPose.pending.pts.length>=diaNeed()){diaryPose.pending.seq=(++diaryPose.seq);diaryPose.draws.push(diaryPose.pending);diaryPose.pending=null;diaryPose.hover=null;}
+    diaDrawLayer();
+  };
+  dcv.addEventListener('pointerdown',onDown);
+  dcv.addEventListener('pointermove',onMove);
+  dcv.addEventListener('pointerup',onUp);
+  dcv.addEventListener('pointercancel',onUp);
+}
+// 도구 모드 전환: 보기 모드면 draw 캔버스 숨겨 영상 컨트롤이 동작하게, 그리기 모드면 캔버스 활성
+function diaSetTool(t){
+  diaryPose.tool=t; diaryPose.pending=null; diaryPose.hover=null;
+  document.querySelectorAll('.dia-tbtn[data-dtool]').forEach(b=>b.classList.toggle('active',b.dataset.dtool===t));
+  const dcv=document.getElementById('diaryDrawCanvas');
+  if(dcv)dcv.classList.toggle('on', t!=='none');
+  diaRender();
+}
+
 function closeMemoModal(){
   // 영상 일시정지 + src 비우기 (메모리/네트워크 절약)
   const video = document.getElementById('diaryVideo');
@@ -2117,11 +2295,14 @@ function closeMemoModal(){
     video.removeAttribute('src');
     video.load();
   } catch(e){}
-  // 관절 오버레이 초기화
+  // 관절 오버레이 + 그리기 초기화
   try{
-    diaryPose.data=null;
+    diaryPose.data=null; diaryPose.draws=[]; diaryPose.pending=null; diaryPose.hover=null; diaryPose.drag=null;
     const pc=document.getElementById('diaryPoseCanvas');
     if(pc&&pc.width)pc.getContext('2d').clearRect(0,0,pc.width,pc.height);
+    const dc=document.getElementById('diaryDrawCanvas');
+    if(dc){dc.classList.remove('on'); if(dc.width)dc.getContext('2d').clearRect(0,0,dc.width,dc.height);}
+    const dt2=document.getElementById('diaryTools'); if(dt2)dt2.style.display='none';
   }catch(e){}
   document.getElementById('memoModal').classList.remove('show');
   editingLogId = null;
@@ -2129,6 +2310,12 @@ function closeMemoModal(){
 
 // ─── 즐겨찾기 토글 (모달 내부) ───
 async function toggleFavoriteFromModal(){
+  if (!isPro) {
+    if (confirm('즐겨찾기는 Pro 회원 전용이에요.\n\nPro로 업그레이드하면 아끼는 스윙을 10개까지 영구 보관할 수 있어요.\n\n지금 알아보시겠어요?')) {
+      window.location.href = '/subscribe.html';
+    }
+    return;
+  }
   if (!editingLogId) return;
   const log = allLogs.find(l => l.id === editingLogId);
   if (!log) return;
@@ -2187,6 +2374,12 @@ async function toggleFavoriteFromModal(){
 }
 
 async function saveMemo(){
+  if (!isPro) {
+    if (confirm('메모는 Pro 회원 전용이에요.\n\nPro로 업그레이드하면 스윙마다 메모를 남기고 영구 보관할 수 있어요.\n\n지금 알아보시겠어요?')) {
+      window.location.href = '/subscribe.html';
+    }
+    return;
+  }
   if (!editingLogId) return;
   const memoText = document.getElementById('memoText').value.trim();
 
@@ -2372,8 +2565,8 @@ async function startCompare(logA, logB){
   document.getElementById('cmpPicker').style.display='none';
   document.getElementById('cmpWorkspace').style.display='';
   document.getElementById('cmpSub').textContent='같은 자세에서 멈춰 선·각도를 그어 비교하세요';
-  ['a','b'].forEach(s=>{ cmp[s]={data:null,fps:30,draws:[],pending:null,hover:null,videoReady:false,view:{scale:1,tx:0,ty:0},drag:null}; cmpPatchDraws(s); });
-  cmpUndoOrder.length=0;
+  ['a','b'].forEach(s=>{ cmp[s]={data:null,fps:30,draws:[],pending:null,hover:null,videoReady:false,view:{scale:1,tx:0,ty:0},drag:null}; });
+  cmpDrawSeq=0;
   cmp.tool='none'; cmp.showSkel=true;
   await Promise.all([ cmpLoadSide('a', prev), cmpLoadSide('b', curr) ]);
   ['a','b'].forEach(s=>{ document.getElementById('cmpDraw'+cUp(s)).style.cursor='pointer'; cmpUpdatePlayIcon(s); });
@@ -2535,7 +2728,8 @@ function cmpClampView(side){
   if(vw.scale<=1){vw.tx=0;vw.ty=0;}
 }
 function cmpResetView(side){ cmp[side].view={scale:1,tx:0,ty:0}; cmpApplyView(side); }
-
+function cmpRender(side){ cmpDrawPose(side); cmpDrawLayer(side); }
+function cmpRenderAll(){cmpRender('a');cmpRender('b');}
 
 // 그리기 입력 (정규화 좌표)
 function cmpCanvasPt(cv,ev){
@@ -2545,13 +2739,9 @@ function cmpCanvasPt(cv,ev){
   return{x:Math.max(0,Math.min(1,cx/r.width)),y:Math.max(0,Math.min(1,cy/r.height))};
 }
 function cmpNeed(){return cmp.tool==='line'?2:cmp.tool==='angle'?3:0;}
-const cmpUndoOrder=[];
-function cmpPushDraw(side){cmpUndoOrder.push(side);}
-function cmpPatchDraws(side){
-  const arr=cmp[side].draws;if(arr.__patched)return;
-  const _p=arr.push.bind(arr);arr.push=function(...a){cmpPushDraw(side);return _p(...a);};arr.__patched=true;
-}
-['a','b'].forEach(cmpPatchDraws);
+// 그린 순서 추적용 전역 순번. undo는 양쪽(a,b) 통틀어 seq가 가장 큰(=가장 최근) 도형을 지운다.
+let cmpDrawSeq=0;
+function cmpPatchDraws(side){}  // (구버전 호환용 빈 함수 — 호출부 안전)
 function cmpHookDraw(side){
   const cv=document.getElementById('cmpDraw'+cUp(side));
   // pointer 이벤트로 통합 처리. cmp[side]는 모달 열 때마다 새 객체로 교체되므로 매번 새로 읽는다.
@@ -2670,7 +2860,7 @@ function cmpHookDraw(side){
       if(cmp.tool==='none')return;
       const p=toNorm(ev);
       if(!S.pending)S.pending={type:cmp.tool,pts:[p]};else S.pending.pts.push(p);
-      if(S.pending.pts.length>=cmpNeed()){S.draws.push(S.pending);S.pending=null;S.hover=null;}
+      if(S.pending.pts.length>=cmpNeed()){S.pending.seq=(++cmpDrawSeq);S.draws.push(S.pending);S.pending=null;S.hover=null;}
       cmpDrawLayer(side);
     }
   };
@@ -2714,16 +2904,17 @@ function cmpBindWorkspace(){
     cmpRenderAll();
   }));
   document.getElementById('cmpUndo').addEventListener('click',()=>{
-    for(let i=cmpUndoOrder.length-1;i>=0;i--){const s=cmpUndoOrder[i];
-      if(cmp[s].draws.length){cmp[s].draws.pop();cmpUndoOrder.splice(i,1);cmpRenderAll();return;}
-      cmpUndoOrder.splice(i,1);}
+    // a,b 양쪽의 마지막 도형 중 seq가 가장 큰 것 하나만 제거
+    let best=null;
+    ['a','b'].forEach(s=>{const arr=cmp[s].draws;if(arr.length){const d=arr[arr.length-1];
+      if(!best||(d.seq||0)>best.seq){best={side:s,seq:d.seq||0};}}});
+    if(best){cmp[best.side].draws.pop();cmpRenderAll();}
   });
   document.getElementById('cmpClearAll').addEventListener('click',()=>{
-    ['a','b'].forEach(s=>{cmp[s].draws=[];cmpPatchDraws(s);cmp[s].pending=null;cmp[s].hover=null;});
-    cmpUndoOrder.length=0;cmpRenderAll();});
+    ['a','b'].forEach(s=>{cmp[s].draws=[];cmp[s].pending=null;cmp[s].hover=null;});
+    cmpRenderAll();});
   document.querySelectorAll('.cmp-clr').forEach(b=>b.addEventListener('click',()=>{
-    const s=b.dataset.clr;cmp[s].draws=[];cmpPatchDraws(s);cmp[s].pending=null;cmp[s].hover=null;
-    for(let i=cmpUndoOrder.length-1;i>=0;i--)if(cmpUndoOrder[i]===s)cmpUndoOrder.splice(i,1);
+    const s=b.dataset.clr;cmp[s].draws=[];cmp[s].pending=null;cmp[s].hover=null;
     cmpDrawLayer(s);}));
   document.getElementById('cmpTgSkeleton').addEventListener('change',e=>{cmp.showSkel=e.target.checked;cmpRenderAll();});
 
@@ -2799,9 +2990,10 @@ function cmpInit(){
   cmpBindStatic(); cmpBindWorkspace();
   const dv=document.getElementById('diaryVideo'), dt=document.getElementById('diaryPoseToggle');
   if(dv){
-    ['timeupdate','seeked','seeking','loadeddata','play','pause'].forEach(ev=>dv.addEventListener(ev,()=>{ if(diaryPose.data) drawDiaryPose(); }));
-    dv.addEventListener('loadeddata',fitDiaryPoseCanvas);
-    window.addEventListener('resize',()=>{ if(diaryPose.data){ fitDiaryPoseCanvas(); drawDiaryPose(); } });
+    ['timeupdate','seeked','seeking','loadeddata','play','pause'].forEach(ev=>dv.addEventListener(ev,()=>{ if(diaryPose.data) diaRender(); }));
+    dv.addEventListener('loadeddata',()=>{ fitDiaryPoseCanvas(); diaRender(); });
+    window.addEventListener('resize',()=>{ if(diaryPose.data){ fitDiaryPoseCanvas(); diaRender(); } });
+    diaHookDraw();   // 그리기 입력 핸들러
   }
   if(dt){
     dt.addEventListener('click',()=>{
@@ -2809,9 +3001,15 @@ function cmpInit(){
       document.getElementById('diaryPoseCanvas').classList.toggle('on',diaryPose.on);
       dt.textContent=diaryPose.on?'관절 ON':'관절 OFF';
       dt.classList.toggle('off',!diaryPose.on);
-      drawDiaryPose();
+      diaRender();
     });
   }
+  // 다이어리 그리기 도구바
+  document.querySelectorAll('.dia-tbtn[data-dtool]').forEach(b=>b.addEventListener('click',()=>diaSetTool(b.dataset.dtool)));
+  const dUndo=document.getElementById('diaUndo');
+  if(dUndo)dUndo.addEventListener('click',()=>{ if(diaryPose.draws.length){diaryPose.draws.pop();diaRender();} });
+  const dClear=document.getElementById('diaClear');
+  if(dClear)dClear.addEventListener('click',()=>{ diaryPose.draws=[];diaryPose.pending=null;diaryPose.hover=null;diaRender(); });
 }
 // 비교 모달 등 일부 DOM은 이 스크립트 블록 "뒤"에 위치한다.
 // 따라서 즉시 실행하면 cmpDrawA / cmpToolLine 등이 아직 없어 바인딩이 모두 누락된다.
