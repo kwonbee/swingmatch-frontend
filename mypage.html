@@ -788,6 +788,19 @@
   .diary-zoombar{
     display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:0 0 12px;padding-top:8px;border-top:1px solid rgba(76,120,87,.1)
   }
+  .diary-playbar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 12px}
+  .dia-pbtn{background:transparent;border:1px solid rgba(76,120,87,.3);color:var(--gold);
+    font-size:.82rem;font-weight:500;padding:9px 18px;border-radius:8px;cursor:pointer;font-family:inherit;transition:all .12s}
+  .dia-pbtn:hover{background:rgba(76,120,87,.08)}
+  .dia-pbtn-primary{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:600}
+  .dia-pbtn-primary:hover{background:var(--gold-light)}
+  .dia-time{position:absolute;bottom:6px;left:8px;z-index:5;font-size:.7rem;color:#fff;
+    background:rgba(0,0,0,.5);padding:2px 7px;border-radius:4px;font-variant-numeric:tabular-nums;pointer-events:none}
+  .dia-playicon{position:absolute;inset:0;z-index:4;display:none;align-items:center;justify-content:center;pointer-events:none}
+  .dia-playicon::after{content:'';width:56px;height:56px;border-radius:50%;background:rgba(0,0,0,0.5);
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M8 5v14l11-7z'/></svg>");
+    background-repeat:no-repeat;background-position:center;background-size:24px}
+  .diary-video-wrap.dia-paused .dia-playicon{display:flex}
   .dia-zoom-label{font-size:.7rem;color:var(--text-faint);font-weight:600;letter-spacing:.04em;margin-right:2px}
   .dia-sep{width:1px;height:18px;background:rgba(76,120,87,.2);margin:0 2px}
   .dia-tbtn{
@@ -1227,10 +1240,19 @@
 
     <!-- 영상 플레이어 -->
     <div class="diary-video-wrap" id="diaryVideoWrap">
-      <video id="diaryVideo" controls playsinline preload="metadata"></video>
+      <video id="diaryVideo" playsinline muted webkit-playsinline preload="metadata"></video>
       <canvas id="diaryPoseCanvas" class="diary-pose-canvas"></canvas>
       <canvas id="diaryDrawCanvas" class="diary-draw-canvas"></canvas>
+      <div class="dia-playicon" id="diaryPlayIcon"></div>
+      <div class="dia-time" id="diaryTime">0:00</div>
       <button id="diaryPoseToggle" class="diary-pose-toggle" style="display:none">관절 ON</button>
+    </div>
+
+    <!-- 재생 컨트롤 (pose 데이터 유무와 무관하게 항상) -->
+    <div class="diary-playbar" id="diaryPlaybar" style="display:none">
+      <button class="dia-pbtn dia-pbtn-primary" id="diaryPlay">▶ 재생</button>
+      <button class="dia-pbtn" id="diaryRestart">⏮ 처음부터</button>
+      <button class="dia-pbtn" id="diarySpeed">0.5x</button>
     </div>
 
     <!-- 그리기 도구바 (pose 데이터 있을 때만 표시) -->
@@ -2126,6 +2148,7 @@ async function openMemoModal(logId){
 
   // 영상 로드 (signed URL 생성 후 src 설정)
   const video = document.getElementById('diaryVideo');
+  const playbar = document.getElementById('diaryPlaybar');
   video.removeAttribute('src');
   video.load();
   if (log.video_path) {
@@ -2134,6 +2157,11 @@ async function openMemoModal(logId){
       video.src = url;
       video.load();
     }
+    if (playbar) playbar.style.display = 'flex';   // 재생 컨트롤 노출
+    document.getElementById('diaryVideoWrap').classList.add('dia-paused');
+    const sp=document.getElementById('diarySpeed'); if(sp)sp.textContent='0.5x';
+  } else {
+    if (playbar) playbar.style.display = 'none';
   }
 
   // 관절(포즈) 오버레이 로드
@@ -2280,6 +2308,19 @@ function diaCanvasNorm(dcv,ev){
   const cx=(ev.clientX)-r.left, cy=(ev.clientY)-r.top;
   return{x:Math.max(0,Math.min(1,cx/r.width)),y:Math.max(0,Math.min(1,cy/r.height))};
 }
+// 영상 재생/정지 (native 컨트롤 대신)
+function diaryTogglePlay(){
+  const v=document.getElementById('diaryVideo'); if(!v||!v.src)return;
+  if(v.paused) v.play().catch(()=>{}); else v.pause();
+}
+function diaFmtTime(s){ if(!isFinite(s))return '0:00'; const m=Math.floor(s/60),sec=Math.floor(s%60); return m+':'+String(sec).padStart(2,'0'); }
+function diaUpdatePlayUI(){
+  const v=document.getElementById('diaryVideo');
+  const wrap=document.getElementById('diaryVideoWrap');
+  const btn=document.getElementById('diaryPlay');
+  if(wrap)wrap.classList.toggle('dia-paused', v.paused);   // 정지 시 ▶ 오버레이
+  if(btn)btn.textContent = v.paused ? '▶ 재생' : '⏸ 일시정지';
+}
 function diaHitHandle(np){
   const dcv=document.getElementById('diaryDrawCanvas');
   const dispW=parseFloat(dcv.style.width)||dcv.width;
@@ -2292,10 +2333,7 @@ function diaHitHandle(np){
 function diaHookDraw(){
   const dcv=document.getElementById('diaryDrawCanvas'); if(!dcv)return;
   const pointers=new Map();
-  const isZoomed=()=>diaryPose.view.scale>1.001;
   const onDown=ev=>{
-    // 보기 모드 + 원본 크기면 캔버스는 입력 안 받음(영상 컨트롤로 통과)
-    if(diaryPose.tool==='none' && !isZoomed())return;
     pointers.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
     if(pointers.size===2){                 // 핀치 시작
       diaryPose.pending=null; diaryPose.hover=null; diaryPose.drag=null;
@@ -2305,9 +2343,9 @@ function diaHookDraw(){
       ev.preventDefault(); return;
     }
     ev.preventDefault();
-    // 보기 모드(그리기 도구 아님): 확대 상태이므로 팬(화면 이동)
+    // 보기 모드: 안 움직이면 탭=재생토글, 움직이면(확대 시) 팬
     if(diaryPose.tool==='none'){
-      diaryPose.drag={kind:'pan',sx:ev.clientX,sy:ev.clientY,tx:diaryPose.view.tx,ty:diaryPose.view.ty};
+      diaryPose.drag={kind:'pan',sx:ev.clientX,sy:ev.clientY,tx:diaryPose.view.tx,ty:diaryPose.view.ty,moved:false};
       try{dcv.setPointerCapture(ev.pointerId);}catch(e){}
       return;
     }
@@ -2332,10 +2370,14 @@ function diaHookDraw(){
       diaClampView(); diaApplyView(); diaUpdateCanvasActive(); ev.preventDefault(); return;
     }
     if(!diaryPose.drag)return;
-    if(diaryPose.drag.kind==='pan'){            // 확대 화면 끌어 이동
+    if(diaryPose.drag.kind==='pan'){            // 보기 모드 드래그
       const dx=ev.clientX-diaryPose.drag.sx, dy=ev.clientY-diaryPose.drag.sy;
-      diaryPose.view.tx=diaryPose.drag.tx+dx; diaryPose.view.ty=diaryPose.drag.ty+dy;
-      diaClampView(); diaApplyView(); ev.preventDefault(); return;
+      if(Math.abs(dx)+Math.abs(dy)>4)diaryPose.drag.moved=true;
+      if(diaryPose.view.scale>1.001){           // 확대 상태일 때만 화면 이동(팬)
+        diaryPose.view.tx=diaryPose.drag.tx+dx; diaryPose.view.ty=diaryPose.drag.ty+dy;
+        diaClampView(); diaApplyView();
+      }
+      ev.preventDefault(); return;
     }
     const np=diaCanvasNorm(dcv,ev);
     if(diaryPose.drag.index!=null){const it=diaryPose.draws[diaryPose.drag.index];if(it){it.pts[diaryPose.drag.ptIndex]={x:np.x,y:np.y};diaDrawLayer();}return;}
@@ -2348,7 +2390,7 @@ function diaHookDraw(){
     if(wasPinch){ diaryPose._pinch=null; if(pointers.size<2)diaryPose.drag=null; return; }
     const drag=diaryPose.drag; diaryPose.drag=null;
     if(!drag)return;
-    if(drag.kind==='pan')return;               // 팬 종료
+    if(drag.kind==='pan'){ if(!drag.moved)diaryTogglePlay(); return; }  // 탭=재생토글
     if(diaryPose.tool==='none')return;
     if(drag.index!=null){diaDrawLayer();return;}
     // 점 찍기
@@ -2362,15 +2404,12 @@ function diaHookDraw(){
   dcv.addEventListener('pointerup',onUp);
   dcv.addEventListener('pointercancel',onUp);
 }
-// 도구 모드 전환: 보기 모드면 draw 캔버스 숨겨 영상 컨트롤이 동작하게, 그리기 모드면 캔버스 활성
-// draw 캔버스 활성 여부: 그리기 모드이거나 확대 상태면 캔버스가 입력(그리기/팬)을 받고,
-// 보기 모드 + 원본 크기일 때만 캔버스를 통과시켜 영상 native 컨트롤이 동작하게 한다.
+// 영상 native 컨트롤을 없애고 아래 재생바로 옮겼으므로,
+// draw 캔버스는 항상 입력을 받아도 됨: 보기 모드=탭(재생토글)/확대시 팬, 그리기 모드=그리기.
 function diaUpdateCanvasActive(){
   const dcv=document.getElementById('diaryDrawCanvas');
   if(!dcv)return;
-  // 캔버스는 항상 보임(그린 선 유지). 입력만 토글: 그리기 모드이거나 확대 상태면 입력 받음.
-  const interactive = (diaryPose.tool!=='none') || (diaryPose.view.scale>1.001);
-  dcv.classList.toggle('interactive', interactive);
+  dcv.classList.add('interactive');
 }
 function diaSetTool(t){
   diaryPose.tool=t; diaryPose.pending=null; diaryPose.hover=null;
@@ -2396,6 +2435,8 @@ function closeMemoModal(){
     if(dc){dc.classList.remove('ready');dc.classList.remove('interactive'); if(dc.width)dc.getContext('2d').clearRect(0,0,dc.width,dc.height);}
     const dt2=document.getElementById('diaryTools'); if(dt2)dt2.style.display='none';
     const zb2=document.getElementById('diaryZoombar'); if(zb2)zb2.style.display='none';
+    const pb2=document.getElementById('diaryPlaybar'); if(pb2)pb2.style.display='none';
+    const wrap2=document.getElementById('diaryVideoWrap'); if(wrap2)wrap2.classList.remove('dia-paused');
     diaryPose.view={scale:1,tx:0,ty:0};
     ['diaryVideo','diaryPoseCanvas','diaryDrawCanvas'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.transform='';});
   }catch(e){}
@@ -3085,11 +3126,24 @@ function cmpInit(){
   cmpBindStatic(); cmpBindWorkspace();
   const dv=document.getElementById('diaryVideo'), dt=document.getElementById('diaryPoseToggle');
   if(dv){
+    const timeEl=document.getElementById('diaryTime');
     ['timeupdate','seeked','seeking','loadeddata','play','pause'].forEach(ev=>dv.addEventListener(ev,()=>{ if(diaryPose.data) diaRender(); }));
-    dv.addEventListener('loadeddata',()=>{ fitDiaryPoseCanvas(); diaRender(); });
+    dv.addEventListener('loadeddata',()=>{ fitDiaryPoseCanvas(); diaRender(); if(timeEl)timeEl.textContent='0:00 / '+diaFmtTime(dv.duration); diaUpdatePlayUI(); });
+    dv.addEventListener('timeupdate',()=>{ if(timeEl)timeEl.textContent=diaFmtTime(dv.currentTime)+' / '+diaFmtTime(dv.duration); });
+    dv.addEventListener('play',diaUpdatePlayUI);
+    dv.addEventListener('pause',diaUpdatePlayUI);
+    dv.addEventListener('ended',diaUpdatePlayUI);
     window.addEventListener('resize',()=>{ if(diaryPose.data){ fitDiaryPoseCanvas(); diaRender(); } });
     diaHookDraw();   // 그리기 입력 핸들러
   }
+  // 다이어리 재생 컨트롤
+  const dPlay=document.getElementById('diaryPlay');
+  if(dPlay)dPlay.addEventListener('click',diaryTogglePlay);
+  const dRestart=document.getElementById('diaryRestart');
+  if(dRestart)dRestart.addEventListener('click',()=>{ const v=document.getElementById('diaryVideo'); v.pause(); try{v.currentTime=0;}catch(e){} });
+  let diaRate=1;
+  const dSpeed=document.getElementById('diarySpeed');
+  if(dSpeed)dSpeed.addEventListener('click',()=>{ diaRate=diaRate===1?0.5:diaRate===0.5?0.25:1; document.getElementById('diaryVideo').playbackRate=diaRate; dSpeed.textContent=diaRate+'x'; });
   if(dt){
     dt.addEventListener('click',()=>{
       diaryPose.on=!diaryPose.on;
