@@ -701,6 +701,13 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
           <div class="rblock"><h4>스윙 강점</h4><ul id="r-str"></ul></div>
           <div class="rblock"><h4>개선 포인트</h4><ul id="r-imp"></ul></div>
         </div>
+        <div class="rdrills" id="r-motion-notice" style="display:none;background:rgba(45,74,51,.06);border:1px solid var(--border-accent)">
+          <div class="rdrill-head" style="margin-bottom:4px">
+            <span class="rdrill-title">📊 모션 트래킹 분석 진행 중</span>
+          </div>
+          <div class="rdrill-how">AI가 이 영상에서 13개 관절을 추적해 어깨·골반 회전, 상하체 분리 등 자세 측정값을 계산하고 있어요. 잠시 후 <strong style="color:var(--accent)">MY DIARY</strong>에서 영상 위 모션 트래킹과 측정값을 확인할 수 있습니다.</div>
+          <div class="rdrills-note" style="margin-top:8px">※ 촬영 환경(각도·거리)에 따라 값이 미세하게 조정될 수 있습니다.</div>
+        </div>
         <div class="rdrills" id="r-drills-wrap" style="display:none">
           <h4 class="rdrills-title">추천 연습 드릴</h4>
           <div class="rdrills-list" id="r-drills"></div>
@@ -2329,6 +2336,11 @@ async function startAnalysis() {
             } else {
               dbId = targetId;
               console.log('[Video] ✅ DB에 영상 정보 저장 완료 (dbId:', dbId, ')');
+              // 포즈 워커 대상으로 등록 성공 → 결과 화면 드릴 위에 "MY DIARY에서 확인" 안내 표시
+              try {
+                const mn = document.getElementById('r-motion-notice');
+                if (mn) mn.style.display = '';
+              } catch (e) {}
             }
           }
         } catch (e) {
@@ -2552,6 +2564,8 @@ function applyRyuFilter(d){
 function renderResult(d, videoInfo) {
   // 류소연 스위치는 이제 백엔드(server.js)에서 본문까지 함께 교체해 처리한다.
   // 프론트에서 한 번 더 덮어쓰면 화면과 DB(히스토리)가 어긋나므로 여기선 적용하지 않는다.
+  // 모션 트래킹 안내는 매 분석마다 숨김으로 초기화 → 영상 저장 성공 시에만 다시 표시.
+  try { const mn = document.getElementById('r-motion-notice'); if (mn) mn.style.display = 'none'; } catch (e) {}
   const t = d.topMatch;
   document.getElementById('r-emoji').textContent = t.emoji || '🏌️';
   document.getElementById('r-name').textContent = t.name;
