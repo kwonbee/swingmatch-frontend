@@ -2182,30 +2182,41 @@ function poseFeaturesToText(pose){
   if(!pose || !pose.features) return '';
   const f = pose.features;
   const lines = [];
-  // 1) 스윙 템포 (백스윙:다운스윙)
-  if(f.tempo){
-    if(f.tempo.measurable){
-      lines.push(`• 스윙 템포 — 백스윙:다운스윙 = ${f.tempo.ratio} (${f.tempo.desc} 편)`);
-    } else if(f.tempo.reason){
-      lines.push(`• 스윙 템포 — 측정 안 됨: ${f.tempo.reason}`);
-    }
+  // 1) 스윙 템포 — 측정될 때만 표시(대부분 영상이 백스윙 도중부터라 측정 불가 → 측정 안 됨 줄은 생략)
+  if(f.tempo && f.tempo.measurable){
+    lines.push(`• 스윙 템포 — 백스윙:다운스윙 = ${f.tempo.ratio} (${f.tempo.desc} 편)`);
   }
   // 2) 전체 스윙 시간
   if(f.total_swing_sec && f.total_swing_sec.measurable){
     lines.push(`• 전체 스윙 시간 — ${f.total_swing_sec.value}초`);
   }
-  // 3) 척추 기울기 (촬영각 의존 → 참고용 명시)
-  if(f.spine_tilt_deg && f.spine_tilt_deg.measurable){
-    const ref = f.spine_tilt_deg.angle_dependent ? ' (촬영 각도 영향, 참고용)' : '';
-    lines.push(`• 척추 기울기 — ${f.spine_tilt_deg.value}°${ref}`);
+  // 3) 어깨선 기울기 (B-1)
+  if(f.shoulder_tilt_deg && f.shoulder_tilt_deg.measurable){
+    lines.push(`• 어깨선 기울기 — ${f.shoulder_tilt_deg.value}°`);
   }
-  // 4) 머리 안정성
+  // 4) 골반선 기울기 (B-1)
+  if(f.hip_tilt_deg && f.hip_tilt_deg.measurable){
+    lines.push(`• 골반선 기울기 — ${f.hip_tilt_deg.value}°`);
+  }
+  // 5) 상하체 분리 (B-1, X-factor 2D 버전)
+  if(f.body_separation_deg && f.body_separation_deg.measurable){
+    lines.push(`• 상하체 분리 — ${f.body_separation_deg.value}° (상체와 하체의 회전 차이)`);
+  }
+  // 6) 어깨 회전량 (B-1, 수축률)
+  if(f.shoulder_turn_pct && f.shoulder_turn_pct.measurable){
+    lines.push(`• 어깨 회전량 — 정면 대비 ${f.shoulder_turn_pct.value}% 회전`);
+  }
+  // 7) 척추 기울기
+  if(f.spine_tilt_deg && f.spine_tilt_deg.measurable){
+    lines.push(`• 척추 기울기 — ${f.spine_tilt_deg.value}°`);
+  }
+  // 8) 머리 움직임
   if(f.head_stability && f.head_stability.measurable){
     lines.push(`• 머리 움직임 — ${f.head_stability.desc}`);
   }
   if(!lines.length) return '';
   const dr = (typeof pose.detection_rate==='number') ? ` (관절 추적률 ${Math.round(pose.detection_rate*100)}%)` : '';
-  return `📊 모션 트래킹 측정값${dr}\n${lines.join('\n')}\n\n— 아래에 자유롭게 메모를 남겨보세요 —\n`;
+  return `📊 모션 트래킹 측정값${dr}\n${lines.join('\n')}\n※ 촬영 환경(각도·거리)에 따라 값이 미세하게 조정될 수 있습니다.\n\n— 아래에 자유롭게 메모를 남겨보세요 —\n`;
 }
 
 const diaryPose={data:null,fps:30,on:true,draws:[],tool:'none',pending:null,hover:null,drag:null,seq:0,view:{scale:1,tx:0,ty:0}};
