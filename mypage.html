@@ -2220,9 +2220,9 @@ function diaZoomStep(factor){
   const bw=wrap.clientWidth, bh=wrap.clientHeight, cx=bw/2, cy=bh/2;
   const ns=Math.min(4,Math.max(1,vw.scale*factor));
   vw.tx=cx-(cx-vw.tx)*(ns/vw.scale); vw.ty=cy-(cy-vw.ty)*(ns/vw.scale);
-  vw.scale=ns; diaClampView(); diaApplyView();
+  vw.scale=ns; diaClampView(); diaApplyView(); diaUpdateCanvasActive();
 }
-function diaResetView(){ diaryPose.view={scale:1,tx:0,ty:0}; diaApplyView(); }
+function diaResetView(){ diaryPose.view={scale:1,tx:0,ty:0}; diaApplyView(); diaUpdateCanvasActive(); }
 function drawDiaryPose(){
   const canvas=document.getElementById('diaryPoseCanvas');
   const d=diaryPose.data; if(!d)return;
@@ -2289,8 +2289,10 @@ function diaHitHandle(np){
 function diaHookDraw(){
   const dcv=document.getElementById('diaryDrawCanvas'); if(!dcv)return;
   const pointers=new Map();
+  const isZoomed=()=>diaryPose.view.scale>1.001;
   const onDown=ev=>{
-    if(diaryPose.tool==='none')return;     // 보기 모드: 캔버스 비활성(영상 컨트롤로 통과)
+    // 보기 모드 + 원본 크기면 캔버스는 입력 안 받음(영상 컨트롤로 통과)
+    if(diaryPose.tool==='none' && !isZoomed())return;
     pointers.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
     if(pointers.size===2){                 // 핀치 시작
       diaryPose.pending=null; diaryPose.hover=null; diaryPose.drag=null;
@@ -2300,6 +2302,13 @@ function diaHookDraw(){
       ev.preventDefault(); return;
     }
     ev.preventDefault();
+    // 보기 모드(그리기 도구 아님): 확대 상태이므로 팬(화면 이동)
+    if(diaryPose.tool==='none'){
+      diaryPose.drag={kind:'pan',sx:ev.clientX,sy:ev.clientY,tx:diaryPose.view.tx,ty:diaryPose.view.ty};
+      try{dcv.setPointerCapture(ev.pointerId);}catch(e){}
+      return;
+    }
+    // 그리기 모드: 기존 꼭지점 잡았으면 편집, 아니면 새 점
     const np=diaCanvasNorm(dcv,ev);
     const h=diaHitHandle(np);
     if(h){diaryPose.drag={index:h.index,ptIndex:h.ptIndex};try{dcv.setPointerCapture(ev.pointerId);}catch(e){} diaDrawLayer(); return;}
@@ -2307,7 +2316,6 @@ function diaHookDraw(){
     try{dcv.setPointerCapture(ev.pointerId);}catch(e){}
   };
   const onMove=ev=>{
-    if(diaryPose.tool==='none')return;
     if(pointers.has(ev.pointerId))pointers.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
     if(pointers.size>=2 && diaryPose._pinch){   // 핀치 줌
       const p=[...pointers.values()];
@@ -2318,9 +2326,14 @@ function diaHookDraw(){
       diaryPose.view.scale=ns;
       diaryPose.view.tx=ocx-(ocx-diaryPose._pinch.tx)*(ns/diaryPose._pinch.scale);
       diaryPose.view.ty=ocy-(ocy-diaryPose._pinch.ty)*(ns/diaryPose._pinch.scale);
-      diaClampView(); diaApplyView(); ev.preventDefault(); return;
+      diaClampView(); diaApplyView(); diaUpdateCanvasActive(); ev.preventDefault(); return;
     }
     if(!diaryPose.drag)return;
+    if(diaryPose.drag.kind==='pan'){            // 확대 화면 끌어 이동
+      const dx=ev.clientX-diaryPose.drag.sx, dy=ev.clientY-diaryPose.drag.sy;
+      diaryPose.view.tx=diaryPose.drag.tx+dx; diaryPose.view.ty=diaryPose.drag.ty+dy;
+      diaClampView(); diaApplyView(); ev.preventDefault(); return;
+    }
     const np=diaCanvasNorm(dcv,ev);
     if(diaryPose.drag.index!=null){const it=diaryPose.draws[diaryPose.drag.index];if(it){it.pts[diaryPose.drag.ptIndex]={x:np.x,y:np.y};diaDrawLayer();}return;}
     if(diaryPose.pending){diaryPose.hover=np;diaDrawLayer();}
@@ -2330,9 +2343,10 @@ function diaHookDraw(){
     pointers.delete(ev.pointerId);
     try{dcv.releasePointerCapture(ev.pointerId);}catch(e){}
     if(wasPinch){ diaryPose._pinch=null; if(pointers.size<2)diaryPose.drag=null; return; }
-    if(diaryPose.tool==='none'){diaryPose.drag=null;return;}
     const drag=diaryPose.drag; diaryPose.drag=null;
     if(!drag)return;
+    if(drag.kind==='pan')return;               // 팬 종료
+    if(diaryPose.tool==='none')return;
     if(drag.index!=null){diaDrawLayer();return;}
     // 점 찍기
     const p=diaCanvasNorm(dcv,ev);
@@ -2346,11 +2360,18 @@ function diaHookDraw(){
   dcv.addEventListener('pointercancel',onUp);
 }
 // 도구 모드 전환: 보기 모드면 draw 캔버스 숨겨 영상 컨트롤이 동작하게, 그리기 모드면 캔버스 활성
+// draw 캔버스 활성 여부: 그리기 모드이거나 확대 상태면 캔버스가 입력(그리기/팬)을 받고,
+// 보기 모드 + 원본 크기일 때만 캔버스를 통과시켜 영상 native 컨트롤이 동작하게 한다.
+function diaUpdateCanvasActive(){
+  const dcv=document.getElementById('diaryDrawCanvas');
+  if(!dcv)return;
+  const active = (diaryPose.tool!=='none') || (diaryPose.view.scale>1.001);
+  dcv.classList.toggle('on', active);
+}
 function diaSetTool(t){
   diaryPose.tool=t; diaryPose.pending=null; diaryPose.hover=null;
   document.querySelectorAll('.dia-tbtn[data-dtool]').forEach(b=>b.classList.toggle('active',b.dataset.dtool===t));
-  const dcv=document.getElementById('diaryDrawCanvas');
-  if(dcv)dcv.classList.toggle('on', t!=='none');
+  diaUpdateCanvasActive();
   diaRender();
 }
 
