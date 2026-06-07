@@ -778,9 +778,10 @@
   }
   .diary-pose-canvas.on{display:block}
   .diary-draw-canvas{
-    position:absolute;z-index:3;display:none;touch-action:none;cursor:crosshair
+    position:absolute;z-index:3;display:none;touch-action:none;cursor:crosshair;pointer-events:none
   }
-  .diary-draw-canvas.on{display:block}
+  .diary-draw-canvas.ready{display:block}
+  .diary-draw-canvas.interactive{pointer-events:auto}
   .diary-tools{
     display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:-2px 0 8px
   }
@@ -2159,7 +2160,7 @@ async function setupDiaryPose(log){
   canvas.classList.remove('on'); toggle.style.display='none';
   if(tools)tools.style.display='none';
   const zbar0=document.getElementById('diaryZoombar'); if(zbar0)zbar0.style.display='none';
-  if(dcv){dcv.classList.remove('on'); const dx=dcv.getContext('2d'); if(dcv.width)dx.clearRect(0,0,dcv.width,dcv.height);}
+  if(dcv){dcv.classList.remove('ready');dcv.classList.remove('interactive'); const dx=dcv.getContext('2d'); if(dcv.width)dx.clearRect(0,0,dcv.width,dcv.height);}
   const ctx=canvas.getContext('2d'); if(canvas.width)ctx.clearRect(0,0,canvas.width,canvas.height);
 
   if(log.pose_status!=='done' || !log.pose_path) return; // 관절 데이터 있을 때만
@@ -2172,9 +2173,11 @@ async function setupDiaryPose(log){
   toggle.style.display=''; toggle.textContent='관절 ON'; toggle.classList.remove('off');
   if(tools)tools.style.display='flex';   // 그리기 도구 노출
   const zbar1=document.getElementById('diaryZoombar'); if(zbar1)zbar1.style.display='flex';
-  // 기본 '보기' 모드 → draw 캔버스는 입력만 받도록(보기 땐 표시 off로 영상 컨트롤 통과)
+  if(dcv)dcv.classList.add('ready');   // 캔버스 항상 표시(그린 선 유지), 입력은 모드에 따라
+  // 기본 '보기' 모드 → 보기+원본크기면 입력 통과(영상 컨트롤 동작), 그리기/확대면 입력 받음
   diaryPose.tool='none';
   fitDiaryPoseCanvas();
+  diaUpdateCanvasActive();
   diaRender();
 }
 // 영상의 실제 표시 영역(레터박스 제외)에 캔버스를 정확히 겹치기
@@ -2365,8 +2368,9 @@ function diaHookDraw(){
 function diaUpdateCanvasActive(){
   const dcv=document.getElementById('diaryDrawCanvas');
   if(!dcv)return;
-  const active = (diaryPose.tool!=='none') || (diaryPose.view.scale>1.001);
-  dcv.classList.toggle('on', active);
+  // 캔버스는 항상 보임(그린 선 유지). 입력만 토글: 그리기 모드이거나 확대 상태면 입력 받음.
+  const interactive = (diaryPose.tool!=='none') || (diaryPose.view.scale>1.001);
+  dcv.classList.toggle('interactive', interactive);
 }
 function diaSetTool(t){
   diaryPose.tool=t; diaryPose.pending=null; diaryPose.hover=null;
@@ -2389,7 +2393,7 @@ function closeMemoModal(){
     const pc=document.getElementById('diaryPoseCanvas');
     if(pc&&pc.width)pc.getContext('2d').clearRect(0,0,pc.width,pc.height);
     const dc=document.getElementById('diaryDrawCanvas');
-    if(dc){dc.classList.remove('on'); if(dc.width)dc.getContext('2d').clearRect(0,0,dc.width,dc.height);}
+    if(dc){dc.classList.remove('ready');dc.classList.remove('interactive'); if(dc.width)dc.getContext('2d').clearRect(0,0,dc.width,dc.height);}
     const dt2=document.getElementById('diaryTools'); if(dt2)dt2.style.display='none';
     const zb2=document.getElementById('diaryZoombar'); if(zb2)zb2.style.display='none';
     diaryPose.view={scale:1,tx:0,ty:0};
