@@ -2280,8 +2280,8 @@ const CMP_DRAW='#ff3b9a';        // 그리기 선 색 (핑크)
 const CMP_SKEL='#ffffff';         // 관절 뼈대 색 (흰색)
 const CMP_JOINT='#ffffff';        // 관절 점 색 (흰색)
 const cmp={
-  a:{data:null,fps:30,draws:[],pending:null,hover:null,videoReady:false},
-  b:{data:null,fps:30,draws:[],pending:null,hover:null,videoReady:false},
+  a:{data:null,fps:30,draws:[],pending:null,hover:null,videoReady:false,view:{scale:1,tx:0,ty:0},drag:null},
+  b:{data:null,fps:30,draws:[],pending:null,hover:null,videoReady:false,view:{scale:1,tx:0,ty:0},drag:null},
   tool:'none',showSkel:true,
   picks:[]  // 선택된 log id 순서 배열 (최대 2개)
 };
@@ -2372,7 +2372,7 @@ async function startCompare(logA, logB){
   document.getElementById('cmpPicker').style.display='none';
   document.getElementById('cmpWorkspace').style.display='';
   document.getElementById('cmpSub').textContent='같은 자세에서 멈춰 선·각도를 그어 비교하세요';
-  ['a','b'].forEach(s=>{ cmp[s]={data:null,fps:30,draws:[],pending:null,hover:null,videoReady:false}; cmpPatchDraws(s); });
+  ['a','b'].forEach(s=>{ cmp[s]={data:null,fps:30,draws:[],pending:null,hover:null,videoReady:false,view:{scale:1,tx:0,ty:0},drag:null}; cmpPatchDraws(s); });
   cmpUndoOrder.length=0;
   cmp.tool='none'; cmp.showSkel=true;
   await Promise.all([ cmpLoadSide('a', prev), cmpLoadSide('b', curr) ]);
@@ -2432,6 +2432,11 @@ function cmpFitCanvas(side){
     cv.style.width=dw+'px'; cv.style.height=dh+'px';
     cv.style.right='auto'; cv.style.bottom='auto'; cv.style.inset='auto';
   });
+  // 비디오도 동일 content rect 로 맞춰두면(transform-origin 0 0 기준) 세 레이어 줌이 일치
+  v.style.left=left+'px'; v.style.top=top+'px';
+  v.style.width=dw+'px'; v.style.height=dh+'px';
+  v.style.right='auto'; v.style.bottom='auto'; v.style.inset='auto';
+  cmpApplyView(side);   // 현재 줌/팬 유지(없으면 scale 1)
 }
 
 function cmpDrawPose(side){
@@ -2457,6 +2462,16 @@ function cmpDrawPose(side){
     ctx.lineWidth=2;ctx.strokeStyle='rgba(0,0,0,.55)';ctx.stroke();});
 }
 function cmpLineLen(p,q){return Math.hypot(q.x-p.x,q.y-p.y);}
+// 두 점이 이루는 직선의 '수평 기준 기울기'를 0~90°로 반환.
+// 화면 비율(9:16 등)을 곱해 실제 표시 픽셀 기준 각도로 계산해야
+// 비교 영상끼리 눈으로 본 기울기와 숫자가 일치한다.
+function cmpLineAngle(p,q,W,H){
+  const dx=(q.x-p.x)*W, dy=(q.y-p.y)*H;
+  if(!dx&&!dy)return 0;
+  let deg=Math.abs(Math.atan2(dy,dx)*180/Math.PI); // 0~180
+  if(deg>90)deg=180-deg;                           // 0~90 (수평 0, 수직 90)
+  return deg;
+}
 function cmpAngle3(a,b,c){
   const v1={x:a.x-b.x,y:a.y-b.y},v2={x:c.x-b.x,y:c.y-b.y};
   const m1=Math.hypot(v1.x,v1.y),m2=Math.hypot(v2.x,v2.y);if(!m1||!m2)return 0;
@@ -2468,14 +2483,27 @@ function cmpDrawLayer(side){
   const items=[...S.draws];
   if(S.pending){const pv={type:S.pending.type,pts:[...S.pending.pts]};if(S.hover)pv.pts.push(S.hover);items.push(pv);}
   const rr=Math.max(5,W/80);
-  items.forEach(it=>{
+  items.forEach((it,idx)=>{
+    const isEditing = (S.drag && S.drag.kind==='draw' && S.drag.index===idx);
     const pts=it.pts.map(p=>({x:p.x*W,y:p.y*H}));
     ctx.strokeStyle=CMP_DRAW;ctx.lineWidth=Math.max(2.5,W/150);ctx.lineCap='round';ctx.lineJoin='round';
     ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);
     for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.stroke();
-    pts.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,rr*0.5,0,7);ctx.fillStyle=CMP_DRAW;ctx.fill();
-      ctx.lineWidth=2;ctx.strokeStyle='rgba(0,0,0,.5)';ctx.stroke();});
+    // 꼭지점 핸들 — 확정된 도형은 잡아서 옮길 수 있으므로 좀 더 크게/흰 테두리로 표시
+    const committed = idx < S.draws.length;
+    pts.forEach((p,pi)=>{
+      const hr = committed ? rr*0.62 : rr*0.5;
+      ctx.beginPath();ctx.arc(p.x,p.y,hr,0,7);ctx.fillStyle=CMP_DRAW;ctx.fill();
+      ctx.lineWidth=committed?2.5:2;
+      ctx.strokeStyle = (isEditing) ? '#ffffff' : 'rgba(0,0,0,.5)';ctx.stroke();
+    });
+    // 라벨: 직선=수평 기준 기울기, 각도=세 점 사잇각
     let label='',lx=0,ly=0;
+    if(it.type==='line'&&it.pts.length>=2){
+      label=cmpLineAngle(it.pts[0],it.pts[1],W,H).toFixed(0)+'°';
+      // 라벨은 선의 중점 근처에
+      lx=(pts[0].x+pts[1].x)/2; ly=(pts[0].y+pts[1].y)/2;
+    }
     if(it.type==='angle'&&it.pts.length>=3){label=cmpAngle3(it.pts[0],it.pts[1],it.pts[2]).toFixed(0)+'°';lx=pts[1].x;ly=pts[1].y;}
     if(label){const fs=Math.max(16,W/22);ctx.font=`700 ${fs}px system-ui`;
       const tw=ctx.measureText(label).width,pad=fs*0.35;
@@ -2483,8 +2511,31 @@ function cmpDrawLayer(side){
       ctx.fillStyle='#ffd0e8';ctx.textBaseline='middle';ctx.fillText(label,lx+10+pad,ly-fs*0.22);}
   });
 }
-function cmpRender(side){ cmpDrawPose(side); cmpDrawLayer(side); }
-function cmpRenderAll(){cmpRender('a');cmpRender('b');}
+/* 줌/팬: video·pose·draw 세 레이어에 동일 transform 적용 (항상 함께 움직임).
+   좌표 정합(cmpFitCanvas)은 건드리지 않고, 그 위에 시각적 확대만 얹는다. */
+function cmpApplyView(side){
+  const S=cmp[side], vw=S.view;
+  const tf=`translate(${vw.tx}px,${vw.ty}px) scale(${vw.scale})`;
+  const v=cVid(side);
+  const pose=document.getElementById('cmpPose'+cUp(side));
+  const draw=document.getElementById('cmpDraw'+cUp(side));
+  [v,pose,draw].forEach(el=>{ if(el){ el.style.transformOrigin='0 0'; el.style.transform=tf; } });
+}
+function cmpClampView(side){
+  const S=cmp[side], vw=S.view, box=document.getElementById('cmpBox'+cUp(side));
+  if(!box)return;
+  if(vw.scale<1)vw.scale=1;
+  if(vw.scale>4)vw.scale=4;
+  const bw=box.clientWidth, bh=box.clientHeight;
+  // scale 1이면 팬 불가(원위치), 확대 시엔 박스 밖이 비지 않게 제한
+  const maxX=0, minX=bw-bw*vw.scale;
+  const maxY=0, minY=bh-bh*vw.scale;
+  vw.tx=Math.min(maxX,Math.max(minX,vw.tx));
+  vw.ty=Math.min(maxY,Math.max(minY,vw.ty));
+  if(vw.scale<=1){vw.tx=0;vw.ty=0;}
+}
+function cmpResetView(side){ cmp[side].view={scale:1,tx:0,ty:0}; cmpApplyView(side); }
+
 
 // 그리기 입력 (정규화 좌표)
 function cmpCanvasPt(cv,ev){
@@ -2503,25 +2554,133 @@ function cmpPatchDraws(side){
 ['a','b'].forEach(cmpPatchDraws);
 function cmpHookDraw(side){
   const cv=document.getElementById('cmpDraw'+cUp(side));
-  // pointer 이벤트로 통합 처리 → 마우스/터치/펜 동일 동작, 모바일 합성 click 문제 없음.
-  // cmp[side]는 모달 열 때마다 새 객체로 교체되므로 매 이벤트마다 새로 읽는다.
-  const place=ev=>{
+  // pointer 이벤트로 통합 처리. cmp[side]는 모달 열 때마다 새 객체로 교체되므로 매번 새로 읽는다.
+  // 활성 포인터들을 추적해서: 1개=그리기/편집/팬, 2개=핀치 줌.
+  const pointers=new Map();
+
+  // 캔버스 좌표(정규화)는 transform(줌/팬)을 역으로 풀어서 계산해야
+  // 확대 상태에서도 정확한 위치에 점이 찍힌다.
+  const toNorm=(ev)=>{
+    const S=cmp[side], vw=S.view, r=cv.getBoundingClientRect();
+    // r 은 transform 적용된 사각형. style 크기(=cmpFitCanvas가 잡은 표시 크기) 기준으로 환산.
+    const dispW=parseFloat(cv.style.width)||r.width, dispH=parseFloat(cv.style.height)||r.height;
+    let px=ev.clientX-r.left, py=ev.clientY-r.top;   // transform된 박스 내 픽셀
+    px/=vw.scale; py/=vw.scale;                       // 스케일 역적용
+    return {x:Math.max(0,Math.min(1,px/dispW)), y:Math.max(0,Math.min(1,py/dispH))};
+  };
+  // 확정된 도형 꼭지점 히트테스트 → {index, ptIndex} 또는 null
+  const hitHandle=(np)=>{
     const S=cmp[side];
-    if(cmp.tool==='none'){            // 보기 모드: 탭하면 영상 재생/정지
-      cmpToggleVideo(side); return;
+    const dispW=parseFloat(cv.style.width)||cv.width;
+    const tol=(Math.max(14, dispW/22))/dispW/S.view.scale; // 손가락 고려한 넉넉한 반경(정규화)
+    for(let i=S.draws.length-1;i>=0;i--){
+      const it=S.draws[i];
+      for(let pi=0;pi<it.pts.length;pi++){
+        const p=it.pts[pi];
+        if(Math.hypot(p.x-np.x,p.y-np.y)<=tol) return {index:i,ptIndex:pi};
+      }
+    }
+    return null;
+  };
+
+  const onDown=ev=>{
+    const S=cmp[side];
+    pointers.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+    try{cv.setPointerCapture(ev.pointerId);}catch(e){}
+
+    if(pointers.size===2){           // 핀치 시작 → 진행 중인 점찍기/드래그 취소
+      S.pending=null; S.hover=null; S.drag=null;
+      const pts=[...pointers.values()];
+      S._pinch={d:Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y),scale:S.view.scale,
+                cx:(pts[0].x+pts[1].x)/2,cy:(pts[0].y+pts[1].y)/2,tx:S.view.tx,ty:S.view.ty};
+      ev.preventDefault();
+      return;
+    }
+
+    const np=toNorm(ev);
+    if(cmp.tool==='none'){
+      // 보기 모드: 확대 상태면 팬 준비, 아니면 탭=재생토글 판정용
+      S.drag={kind:'pan', sx:ev.clientX, sy:ev.clientY, tx:S.view.tx, ty:S.view.ty, moved:false};
+      return;
     }
     ev.preventDefault();
-    const p=cmpCanvasPt(cv,ev);
-    if(!S.pending)S.pending={type:cmp.tool,pts:[p]};else S.pending.pts.push(p);
-    if(S.pending.pts.length>=cmpNeed()){S.draws.push(S.pending);S.pending=null;S.hover=null;}
-    cmpDrawLayer(side);
+    // 그리기 모드: 먼저 기존 꼭지점을 잡았는지 확인 → 잡았으면 편집
+    const h=hitHandle(np);
+    if(h){ S.drag={kind:'draw', index:h.index, ptIndex:h.ptIndex}; cmpDrawLayer(side); return; }
+    // 아니면 새 점 찍기 준비 (실제 확정은 up에서)
+    S.drag={kind:'place', np};
   };
-  const hover=ev=>{const S=cmp[side];if(!S.pending||cmp.tool==='none')return;S.hover=cmpCanvasPt(cv,ev);cmpDrawLayer(side);};
-  // pointerup 기준(탭 완료 시점)으로 점 찍기 — 스크롤/드래그와 충돌 없음
-  cv.addEventListener('pointerup',place);
-  cv.addEventListener('pointermove',hover);
-  // 그리기 모드에서 캔버스 위 기본 제스처(스크롤/줌) 차단
-  cv.addEventListener('pointerdown',ev=>{ if(cmp.tool!=='none') ev.preventDefault(); });
+
+  const onMove=ev=>{
+    const S=cmp[side];
+    if(pointers.has(ev.pointerId)) pointers.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+
+    if(pointers.size>=2 && S._pinch){     // 핀치 줌 + 두 손가락 팬
+      const pts=[...pointers.values()];
+      const d=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
+      const box=document.getElementById('cmpBox'+cUp(side)), br=box.getBoundingClientRect();
+      const ns=S._pinch.scale*(d/(S._pinch.d||1));
+      const ocx=S._pinch.cx-br.left, ocy=S._pinch.cy-br.top;   // 핀치 중심(박스 좌표)
+      S.view.scale=ns;
+      // 핀치 중심이 화면상 같은 지점을 가리키도록 tx/ty 보정
+      S.view.tx=ocx-(ocx-S._pinch.tx)*(ns/S._pinch.scale);
+      S.view.ty=ocy-(ocy-S._pinch.ty)*(ns/S._pinch.scale);
+      cmpClampView(side); cmpApplyView(side);
+      ev.preventDefault(); return;
+    }
+
+    if(!S.drag) return;
+    if(S.drag.kind==='pan'){
+      const dx=ev.clientX-S.drag.sx, dy=ev.clientY-S.drag.sy;
+      if(Math.abs(dx)+Math.abs(dy)>4)S.drag.moved=true;
+      if(S.view.scale>1){
+        S.view.tx=S.drag.tx+dx; S.view.ty=S.drag.ty+dy;
+        cmpClampView(side); cmpApplyView(side);
+      }
+      return;
+    }
+    if(S.drag.kind==='draw'){            // 꼭지점 이동 편집
+      ev.preventDefault();
+      const np=toNorm(ev);
+      const it=S.draws[S.drag.index]; if(it){ it.pts[S.drag.ptIndex]={x:np.x,y:np.y}; cmpDrawLayer(side); }
+      return;
+    }
+    if(S.drag.kind==='place'){           // 점찍기 중 미리보기(hover)
+      if(cmp.tool!=='none'){ S.hover=toNorm(ev); if(S.pending)cmpDrawLayer(side); }
+    }
+  };
+
+  const onUp=ev=>{
+    const S=cmp[side];
+    const wasPinch=pointers.size>=2;
+    pointers.delete(ev.pointerId);
+    try{cv.releasePointerCapture(ev.pointerId);}catch(e){}
+    if(wasPinch){ S._pinch=null; if(pointers.size<2)S.drag=null; return; }
+
+    if(!S.drag){ return; }
+    const drag=S.drag; S.drag=null;
+
+    if(drag.kind==='pan'){
+      if(!drag.moved && S.view.scale<=1.02){ cmpToggleVideo(side); }  // 안 움직였으면 탭=재생토글
+      cmpDrawLayer(side);
+      return;
+    }
+    if(drag.kind==='draw'){ cmpDrawLayer(side); return; }   // 편집 완료
+    if(drag.kind==='place'){
+      if(cmp.tool==='none')return;
+      const p=toNorm(ev);
+      if(!S.pending)S.pending={type:cmp.tool,pts:[p]};else S.pending.pts.push(p);
+      if(S.pending.pts.length>=cmpNeed()){S.draws.push(S.pending);S.pending=null;S.hover=null;}
+      cmpDrawLayer(side);
+    }
+  };
+
+  cv.addEventListener('pointerdown',onDown);
+  cv.addEventListener('pointermove',onMove);
+  cv.addEventListener('pointerup',onUp);
+  cv.addEventListener('pointercancel',onUp);
+  // 그리기/확대 모드에서 캔버스 위 기본 제스처(스크롤/줌) 차단
+  cv.addEventListener('pointerdown',ev=>{ if(cmp.tool!=='none'||cmp[side].view.scale>1) ev.preventDefault(); });
 }
 
 // 개별 영상 재생/정지
@@ -2567,6 +2726,21 @@ function cmpBindWorkspace(){
     for(let i=cmpUndoOrder.length-1;i>=0;i--)if(cmpUndoOrder[i]===s)cmpUndoOrder.splice(i,1);
     cmpDrawLayer(s);}));
   document.getElementById('cmpTgSkeleton').addEventListener('change',e=>{cmp.showSkel=e.target.checked;cmpRenderAll();});
+
+  // 줌 버튼 — 양쪽 영상 동시에 박스 중심 기준으로 확대/축소
+  function cmpZoomStep(factor){
+    ['a','b'].forEach(s=>{
+      const S=cmp[s], box=document.getElementById('cmpBox'+cUp(s)); if(!box)return;
+      const bw=box.clientWidth, bh=box.clientHeight, cx=bw/2, cy=bh/2;
+      const ns=Math.min(4,Math.max(1,S.view.scale*factor));
+      S.view.tx=cx-(cx-S.view.tx)*(ns/S.view.scale);
+      S.view.ty=cy-(cy-S.view.ty)*(ns/S.view.scale);
+      S.view.scale=ns; cmpClampView(s); cmpApplyView(s);
+    });
+  }
+  document.getElementById('cmpZoomIn').addEventListener('click',()=>cmpZoomStep(1.4));
+  document.getElementById('cmpZoomOut').addEventListener('click',()=>cmpZoomStep(1/1.4));
+  document.getElementById('cmpZoomReset').addEventListener('click',()=>{ ['a','b'].forEach(cmpResetView); });
 
   // 영상 이벤트: 재생 중 관절/선이 따라오도록 + 시간 표시
   ['a','b'].forEach(side=>{
@@ -2683,6 +2857,10 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
         <button class="cmp-tbtn" id="cmpUndo">실행취소</button>
         <button class="cmp-tbtn" id="cmpClearAll">전체 지우기</button>
         <div class="cmp-sep"></div>
+        <button class="cmp-tbtn" id="cmpZoomOut" title="축소">−</button>
+        <button class="cmp-tbtn" id="cmpZoomIn" title="확대">＋</button>
+        <button class="cmp-tbtn" id="cmpZoomReset" title="원래대로">100%</button>
+        <div class="cmp-sep"></div>
         <label class="cmp-toggle"><input type="checkbox" id="cmpTgSkeleton" checked> 관절</label>
       </div>
 
@@ -2725,7 +2903,7 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
         <button id="cmpResetBoth">처음부터</button>
         <button id="cmpSpeed">0.5x</button>
       </div>
-      <p class="cmp-tip">영상을 탭하면 각각 따로 재생·정지됩니다. 같은 자세에서 멈춰 선·각도를 그어 비교하세요.</p>
+      <p class="cmp-tip">영상을 탭하면 각각 따로 재생·정지됩니다. 선·각도를 그은 뒤 <strong style="color:var(--gold)">꼭지점을 끌어 방향을 맞출 수 있어요</strong>.<br>모바일은 두 손가락으로 확대, 확대 상태에서 끌어 이동할 수 있어요.</p>
 
       <div class="cmp-bottom">
         <button id="cmpBackBtn">영상 다시 고르기</button>
