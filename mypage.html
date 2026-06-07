@@ -864,16 +864,36 @@
     color:var(--text-faint);
     font-weight:400
   }
-  /* 모바일 다이어리 모달 */
+  /* 모바일 다이어리 모달 — 영상 키우고 전체 재배치 */
   @media (max-width:640px){
     .modal-diary{
-      max-height:96vh;
-      padding:18px !important
+      max-height:94vh;
+      padding:16px 14px !important;
+      border-radius:16px
     }
+    .modal-diary .modal-header{margin-bottom:2px}
+    #memoModalTitle{font-size:1.15rem}
+    .modal-diary .modal-sub{font-size:.78rem}
+    /* 영상: 세로 영상이 메인 → 높이를 크게(60vh) 키워 답답함 해소 */
     .diary-video-wrap{
-      max-height:40vh;
-      margin:10px 0
+      max-height:60vh;
+      margin:10px 0;
+      border-radius:12px
     }
+    /* 컨트롤 간격 조여 한 화면에 더 담기 */
+    .diary-playbar{margin:0 0 8px;gap:6px}
+    .dia-pbtn{padding:8px 14px;font-size:.8rem}
+    .diary-tools{margin:-2px 0 6px;gap:6px}
+    .dia-tbtn{padding:6px 10px;font-size:.74rem}
+    .diary-zoombar{margin:0 0 8px;padding-top:6px}
+    .diary-actions{gap:8px;margin-bottom:10px;flex-wrap:wrap}
+    .diary-memo-label{margin-bottom:4px}
+    /* 메모는 적당히(영상이 메인이므로 메모창은 컴팩트) */
+    #memoText{min-height:90px}
+  }
+  /* 아주 작은 폰(SE 등): 영상 약간 낮춰 컨트롤 확보 */
+  @media (max-width:380px){
+    .diary-video-wrap{max-height:52vh}
   }
   /* 히스토리 더보기/접기 */
   .history-toggle-btn{
