@@ -1245,7 +1245,7 @@
       <canvas id="diaryDrawCanvas" class="diary-draw-canvas"></canvas>
       <div class="dia-playicon" id="diaryPlayIcon"></div>
       <div class="dia-time" id="diaryTime">0:00</div>
-      <button id="diaryPoseToggle" class="diary-pose-toggle" style="display:none">관절 ON</button>
+      <button id="diaryPoseToggle" class="diary-pose-toggle" style="display:none">모션 트래킹 ON</button>
     </div>
 
     <!-- 재생 컨트롤 (pose 데이터 유무와 무관하게 항상) -->
@@ -2176,6 +2176,38 @@ async function openMemoModal(logId){
 }
 
 // ─── 다이어리 영상 위 관절(포즈) 오버레이 ───
+// pose features(워커 산출 측정값) → 사람이 읽는 메모 시드 텍스트.
+// 점수가 아니라 '측정값'을 정직하게 표시(채점 아님). measurable:false 는 reason 으로 대체.
+function poseFeaturesToText(pose){
+  if(!pose || !pose.features) return '';
+  const f = pose.features;
+  const lines = [];
+  // 1) 스윙 템포 (백스윙:다운스윙)
+  if(f.tempo){
+    if(f.tempo.measurable){
+      lines.push(`• 스윙 템포 — 백스윙:다운스윙 = ${f.tempo.ratio} (${f.tempo.desc} 편)`);
+    } else if(f.tempo.reason){
+      lines.push(`• 스윙 템포 — 측정 안 됨: ${f.tempo.reason}`);
+    }
+  }
+  // 2) 전체 스윙 시간
+  if(f.total_swing_sec && f.total_swing_sec.measurable){
+    lines.push(`• 전체 스윙 시간 — ${f.total_swing_sec.value}초`);
+  }
+  // 3) 척추 기울기 (촬영각 의존 → 참고용 명시)
+  if(f.spine_tilt_deg && f.spine_tilt_deg.measurable){
+    const ref = f.spine_tilt_deg.angle_dependent ? ' (촬영 각도 영향, 참고용)' : '';
+    lines.push(`• 척추 기울기 — ${f.spine_tilt_deg.value}°${ref}`);
+  }
+  // 4) 머리 안정성
+  if(f.head_stability && f.head_stability.measurable){
+    lines.push(`• 머리 움직임 — ${f.head_stability.desc}`);
+  }
+  if(!lines.length) return '';
+  const dr = (typeof pose.detection_rate==='number') ? ` (관절 추적률 ${Math.round(pose.detection_rate*100)}%)` : '';
+  return `📊 모션 트래킹 측정값${dr}\n${lines.join('\n')}\n\n— 아래에 자유롭게 메모를 남겨보세요 —\n`;
+}
+
 const diaryPose={data:null,fps:30,on:true,draws:[],tool:'none',pending:null,hover:null,drag:null,seq:0,view:{scale:1,tx:0,ty:0}};
 async function setupDiaryPose(log){
   const canvas=document.getElementById('diaryPoseCanvas');
@@ -2196,9 +2228,22 @@ async function setupDiaryPose(log){
   if(!pose || !pose.frames || !pose.skeleton) return;
   diaryPose.data=pose;
   diaryPose.fps=(pose.video&&pose.video.fps)?pose.video.fps:30;
+  // ── 메모 시드: Pro + 기존 메모가 비어있을 때만, 측정값을 textarea에 미리 채움 ──
+  // 한 번 사용자가 저장한 메모는 건드리지 않음(중복 누적 방지). 전부 사용자가 편집/삭제 자유.
+  try{
+    const mt=document.getElementById('memoText');
+    const savedMemo=(log.result_json&&log.result_json.memo)||'';
+    if(isPro && mt && !mt.hasAttribute('readonly') && savedMemo.trim()===''){
+      const seed=poseFeaturesToText(pose);
+      if(seed){
+        mt.value=seed;
+        const cc=document.getElementById('memoCharCount'); if(cc)cc.textContent=String(seed.length);
+      }
+    }
+  }catch(e){console.warn('memo seed 실패(무시):',e);}
   diaryPose.on=true;
   canvas.classList.add('on');
-  toggle.style.display=''; toggle.textContent='관절 ON'; toggle.classList.remove('off');
+  toggle.style.display=''; toggle.textContent='모션 트래킹 ON'; toggle.classList.remove('off');
   if(tools)tools.style.display='flex';   // 그리기 도구 노출
   const zbar1=document.getElementById('diaryZoombar'); if(zbar1)zbar1.style.display='flex';
   if(dcv)dcv.classList.add('ready');   // 캔버스 항상 표시(그린 선 유지), 입력은 모드에 따라
@@ -3148,7 +3193,7 @@ function cmpInit(){
     dt.addEventListener('click',()=>{
       diaryPose.on=!diaryPose.on;
       document.getElementById('diaryPoseCanvas').classList.toggle('on',diaryPose.on);
-      dt.textContent=diaryPose.on?'관절 ON':'관절 OFF';
+      dt.textContent=diaryPose.on?'모션 트래킹 ON':'모션 트래킹 OFF';
       dt.classList.toggle('off',!diaryPose.on);
       diaRender();
     });
