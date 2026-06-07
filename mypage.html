@@ -769,7 +769,8 @@
     height:100%;
     object-fit:contain;
     background:#000;
-    position:relative;
+    position:absolute;
+    left:0;top:0;
     z-index:1
   }
   .diary-pose-canvas{
@@ -781,8 +782,12 @@
   }
   .diary-draw-canvas.on{display:block}
   .diary-tools{
-    display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:-2px 0 12px
+    display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:-2px 0 8px
   }
+  .diary-zoombar{
+    display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:0 0 12px;padding-top:8px;border-top:1px solid rgba(76,120,87,.1)
+  }
+  .dia-zoom-label{font-size:.7rem;color:var(--text-faint);font-weight:600;letter-spacing:.04em;margin-right:2px}
   .dia-sep{width:1px;height:18px;background:rgba(76,120,87,.2);margin:0 2px}
   .dia-tbtn{
     background:transparent;border:1px solid rgba(76,120,87,.3);color:var(--gold);
@@ -937,7 +942,9 @@
   .cmp-go-btn:not(:disabled):hover{background:var(--gold-light)}
 
   /* STEP2 workspace — app.html 비교 모달과 동일한 라이트 톤 */
-  .cmp-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .cmp-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .cmp-zoombar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding-top:8px;border-top:1px solid rgba(76,120,87,.1)}
+  .cmp-zoom-label{font-size:.72rem;color:var(--text-faint);font-weight:600;letter-spacing:.04em;margin-right:2px}
   .cmp-sep{width:1px;height:20px;background:rgba(76,120,87,.2);margin:0 2px}
   .cmp-tbtn{background:transparent;border:1px solid rgba(76,120,87,.3);color:var(--gold);
     font-size:.78rem;font-weight:500;padding:7px 14px;border-radius:4px;cursor:pointer;font-family:inherit;transition:all .15s}
@@ -1233,6 +1240,12 @@
       <div class="dia-sep"></div>
       <button class="dia-tbtn" id="diaUndo">실행취소</button>
       <button class="dia-tbtn" id="diaClear">지우기</button>
+    </div>
+    <div class="diary-zoombar" id="diaryZoombar" style="display:none">
+      <span class="dia-zoom-label">화면</span>
+      <button class="dia-tbtn" id="diaZoomOut" title="축소">−</button>
+      <button class="dia-tbtn" id="diaZoomIn" title="확대">＋</button>
+      <button class="dia-tbtn" id="diaZoomReset" title="원래대로">100%</button>
     </div>
 
     <!-- 즐겨찾기 토글 -->
@@ -2134,7 +2147,7 @@ async function openMemoModal(logId){
 }
 
 // ─── 다이어리 영상 위 관절(포즈) 오버레이 ───
-const diaryPose={data:null,fps:30,on:true,draws:[],tool:'none',pending:null,hover:null,drag:null,seq:0};
+const diaryPose={data:null,fps:30,on:true,draws:[],tool:'none',pending:null,hover:null,drag:null,seq:0,view:{scale:1,tx:0,ty:0}};
 async function setupDiaryPose(log){
   const canvas=document.getElementById('diaryPoseCanvas');
   const toggle=document.getElementById('diaryPoseToggle');
@@ -2142,9 +2155,10 @@ async function setupDiaryPose(log){
   const dcv=document.getElementById('diaryDrawCanvas');
   diaryPose.data=null;
   // 그리기 상태 초기화
-  diaryPose.draws=[]; diaryPose.tool='none'; diaryPose.pending=null; diaryPose.hover=null; diaryPose.drag=null; diaryPose.seq=0;
+  diaryPose.draws=[]; diaryPose.tool='none'; diaryPose.pending=null; diaryPose.hover=null; diaryPose.drag=null; diaryPose.seq=0; diaryPose.view={scale:1,tx:0,ty:0};
   canvas.classList.remove('on'); toggle.style.display='none';
   if(tools)tools.style.display='none';
+  const zbar0=document.getElementById('diaryZoombar'); if(zbar0)zbar0.style.display='none';
   if(dcv){dcv.classList.remove('on'); const dx=dcv.getContext('2d'); if(dcv.width)dx.clearRect(0,0,dcv.width,dcv.height);}
   const ctx=canvas.getContext('2d'); if(canvas.width)ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -2157,6 +2171,7 @@ async function setupDiaryPose(log){
   canvas.classList.add('on');
   toggle.style.display=''; toggle.textContent='관절 ON'; toggle.classList.remove('off');
   if(tools)tools.style.display='flex';   // 그리기 도구 노출
+  const zbar1=document.getElementById('diaryZoombar'); if(zbar1)zbar1.style.display='flex';
   // 기본 '보기' 모드 → draw 캔버스는 입력만 받도록(보기 땐 표시 off로 영상 컨트롤 통과)
   diaryPose.tool='none';
   fitDiaryPoseCanvas();
@@ -2180,7 +2195,34 @@ function fitDiaryPoseCanvas(){
     c.style.left=left+'px'; c.style.top=top+'px';
     c.style.width=dw+'px'; c.style.height=dh+'px'; c.style.inset='auto';
   });
+  // 영상도 동일 content rect 로 배치(transform-origin 0 0 기준 줌 일치)
+  v.style.left=left+'px'; v.style.top=top+'px';
+  v.style.width=dw+'px'; v.style.height=dh+'px'; v.style.inset='auto';
+  diaApplyView();
 }
+// ── 다이어리 줌/팬: 영상·관절·그리기 세 레이어에 동일 transform ──
+function diaApplyView(){
+  const vw=diaryPose.view, tf=`translate(${vw.tx}px,${vw.ty}px) scale(${vw.scale})`;
+  ['diaryVideo','diaryPoseCanvas','diaryDrawCanvas'].forEach(id=>{
+    const el=document.getElementById(id); if(el){el.style.transformOrigin='0 0';el.style.transform=tf;}
+  });
+}
+function diaClampView(){
+  const vw=diaryPose.view, wrap=document.getElementById('diaryVideoWrap'); if(!wrap)return;
+  if(vw.scale<1)vw.scale=1; if(vw.scale>4)vw.scale=4;
+  const bw=wrap.clientWidth, bh=wrap.clientHeight;
+  vw.tx=Math.min(0,Math.max(bw-bw*vw.scale,vw.tx));
+  vw.ty=Math.min(0,Math.max(bh-bh*vw.scale,vw.ty));
+  if(vw.scale<=1){vw.tx=0;vw.ty=0;}
+}
+function diaZoomStep(factor){
+  const vw=diaryPose.view, wrap=document.getElementById('diaryVideoWrap'); if(!wrap)return;
+  const bw=wrap.clientWidth, bh=wrap.clientHeight, cx=bw/2, cy=bh/2;
+  const ns=Math.min(4,Math.max(1,vw.scale*factor));
+  vw.tx=cx-(cx-vw.tx)*(ns/vw.scale); vw.ty=cy-(cy-vw.ty)*(ns/vw.scale);
+  vw.scale=ns; diaClampView(); diaApplyView();
+}
+function diaResetView(){ diaryPose.view={scale:1,tx:0,ty:0}; diaApplyView(); }
 function drawDiaryPose(){
   const canvas=document.getElementById('diaryPoseCanvas');
   const d=diaryPose.data; if(!d)return;
@@ -2246,8 +2288,17 @@ function diaHitHandle(np){
 }
 function diaHookDraw(){
   const dcv=document.getElementById('diaryDrawCanvas'); if(!dcv)return;
+  const pointers=new Map();
   const onDown=ev=>{
     if(diaryPose.tool==='none')return;     // 보기 모드: 캔버스 비활성(영상 컨트롤로 통과)
+    pointers.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+    if(pointers.size===2){                 // 핀치 시작
+      diaryPose.pending=null; diaryPose.hover=null; diaryPose.drag=null;
+      const p=[...pointers.values()];
+      diaryPose._pinch={d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),scale:diaryPose.view.scale,
+                        cx:(p[0].x+p[1].x)/2,cy:(p[0].y+p[1].y)/2,tx:diaryPose.view.tx,ty:diaryPose.view.ty};
+      ev.preventDefault(); return;
+    }
     ev.preventDefault();
     const np=diaCanvasNorm(dcv,ev);
     const h=diaHitHandle(np);
@@ -2256,13 +2307,29 @@ function diaHookDraw(){
     try{dcv.setPointerCapture(ev.pointerId);}catch(e){}
   };
   const onMove=ev=>{
-    if(diaryPose.tool==='none'||!diaryPose.drag)return;
+    if(diaryPose.tool==='none')return;
+    if(pointers.has(ev.pointerId))pointers.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+    if(pointers.size>=2 && diaryPose._pinch){   // 핀치 줌
+      const p=[...pointers.values()];
+      const d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
+      const wrap=document.getElementById('diaryVideoWrap'), br=wrap.getBoundingClientRect();
+      const ns=diaryPose._pinch.scale*(d/(diaryPose._pinch.d||1));
+      const ocx=diaryPose._pinch.cx-br.left, ocy=diaryPose._pinch.cy-br.top;
+      diaryPose.view.scale=ns;
+      diaryPose.view.tx=ocx-(ocx-diaryPose._pinch.tx)*(ns/diaryPose._pinch.scale);
+      diaryPose.view.ty=ocy-(ocy-diaryPose._pinch.ty)*(ns/diaryPose._pinch.scale);
+      diaClampView(); diaApplyView(); ev.preventDefault(); return;
+    }
+    if(!diaryPose.drag)return;
     const np=diaCanvasNorm(dcv,ev);
     if(diaryPose.drag.index!=null){const it=diaryPose.draws[diaryPose.drag.index];if(it){it.pts[diaryPose.drag.ptIndex]={x:np.x,y:np.y};diaDrawLayer();}return;}
     if(diaryPose.pending){diaryPose.hover=np;diaDrawLayer();}
   };
   const onUp=ev=>{
+    const wasPinch=pointers.size>=2;
+    pointers.delete(ev.pointerId);
     try{dcv.releasePointerCapture(ev.pointerId);}catch(e){}
+    if(wasPinch){ diaryPose._pinch=null; if(pointers.size<2)diaryPose.drag=null; return; }
     if(diaryPose.tool==='none'){diaryPose.drag=null;return;}
     const drag=diaryPose.drag; diaryPose.drag=null;
     if(!drag)return;
@@ -2303,6 +2370,9 @@ function closeMemoModal(){
     const dc=document.getElementById('diaryDrawCanvas');
     if(dc){dc.classList.remove('on'); if(dc.width)dc.getContext('2d').clearRect(0,0,dc.width,dc.height);}
     const dt2=document.getElementById('diaryTools'); if(dt2)dt2.style.display='none';
+    const zb2=document.getElementById('diaryZoombar'); if(zb2)zb2.style.display='none';
+    diaryPose.view={scale:1,tx:0,ty:0};
+    ['diaryVideo','diaryPoseCanvas','diaryDrawCanvas'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.transform='';});
   }catch(e){}
   document.getElementById('memoModal').classList.remove('show');
   editingLogId = null;
@@ -3010,6 +3080,10 @@ function cmpInit(){
   if(dUndo)dUndo.addEventListener('click',()=>{ if(diaryPose.draws.length){diaryPose.draws.pop();diaRender();} });
   const dClear=document.getElementById('diaClear');
   if(dClear)dClear.addEventListener('click',()=>{ diaryPose.draws=[];diaryPose.pending=null;diaryPose.hover=null;diaRender(); });
+  // 다이어리 화면 조절(줌)
+  const dzi=document.getElementById('diaZoomIn'); if(dzi)dzi.addEventListener('click',()=>diaZoomStep(1.4));
+  const dzo=document.getElementById('diaZoomOut'); if(dzo)dzo.addEventListener('click',()=>diaZoomStep(1/1.4));
+  const dzr=document.getElementById('diaZoomReset'); if(dzr)dzr.addEventListener('click',diaResetView);
 }
 // 비교 모달 등 일부 DOM은 이 스크립트 블록 "뒤"에 위치한다.
 // 따라서 즉시 실행하면 cmpDrawA / cmpToolLine 등이 아직 없어 바인딩이 모두 누락된다.
@@ -3054,12 +3128,13 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
         <div class="cmp-sep"></div>
         <button class="cmp-tbtn" id="cmpUndo">실행취소</button>
         <button class="cmp-tbtn" id="cmpClearAll">전체 지우기</button>
-        <div class="cmp-sep"></div>
+        <label class="cmp-toggle"><input type="checkbox" id="cmpTgSkeleton" checked> 관절</label>
+      </div>
+      <div class="cmp-zoombar">
+        <span class="cmp-zoom-label">화면</span>
         <button class="cmp-tbtn" id="cmpZoomOut" title="축소">−</button>
         <button class="cmp-tbtn" id="cmpZoomIn" title="확대">＋</button>
         <button class="cmp-tbtn" id="cmpZoomReset" title="원래대로">100%</button>
-        <div class="cmp-sep"></div>
-        <label class="cmp-toggle"><input type="checkbox" id="cmpTgSkeleton" checked> 관절</label>
       </div>
 
       <div class="cmp-stage">
