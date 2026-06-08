@@ -601,11 +601,11 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <div class="menu-divider" id="m-pro-divider"></div>
       <a href="/encyclopedia.html" onclick="closeMobileMenu()">골프 이야기</a>
       <div class="menu-divider"></div>
-      <button onclick="event.stopPropagation();handleMobileLogout()">로그아웃</button>
-      <div class="menu-divider" id="m-promo-divider"></div>
-      <button id="m-promo-btn" onclick="openPromoModal();closeMobileMenu()">프로모션 코드</button>
-      <div class="menu-divider"></div>
       <button onclick="copyBizEmail();closeMobileMenu()">비즈니스 문의</button>
+      <div class="menu-divider" id="m-promo-divider" style="display:none"></div>
+      <button id="m-promo-btn" onclick="openPromoModal();closeMobileMenu()" style="display:none">프로모션 코드</button>
+      <div class="menu-divider"></div>
+      <button onclick="event.stopPropagation();handleMobileLogout()">로그아웃</button>
     </div>
   </div>
 </div>
@@ -1274,8 +1274,12 @@ function initAuth() {
     show('hdr-pro-btn', pro ? 'none' : 'inline-flex');
     show('m-pro-btn', pro ? 'none' : 'block');
     show('m-pro-divider', pro ? 'none' : 'block');
-    show('m-promo-btn', pro ? 'none' : 'block');
-    show('m-promo-divider', pro ? 'none' : 'block');
+    // 프로모션 코드 메뉴는 여기서 직접 노출하지 않음.
+    // Pro 여부가 확정된 뒤(refreshProStatus 완료) applyPromoMenuVisibility로만 노출 → Pro에게 깜빡 노출 방지.
+    if (pro) { try { applyPromoMenuVisibility(true); } catch (e) {} }
+    else if (typeof refreshProStatus === 'function') {
+      refreshProStatus().then(function(p){ try { applyPromoMenuVisibility(!!p); } catch(e){} }).catch(function(){});
+    }
     // PC 헤더 핵심 버튼(그린 바탕 흰 글씨): 무료=Pro구독 / Pro=My Diary
     const myd = document.getElementById('hdr-mydiary');
     if (myd) { if (pro) myd.classList.add('is-cta'); else myd.classList.remove('is-cta'); }
@@ -1290,25 +1294,29 @@ function initAuth() {
 
 // ── 모바일 햄버거 메뉴 토글 ──
 function applyMenuProVisibility(pro) {
+  // Pro 구독 버튼: 캐시 기반 즉시 반영 (Pro면 숨김)
   var pb = document.getElementById('m-pro-btn');
   var pd = document.getElementById('m-pro-divider');
   if (pb) pb.style.display = pro ? 'none' : 'block';
   if (pd) pd.style.display = pro ? 'none' : 'block';
-  // 프로모 코드 입력도 Pro면 숨김 (이미 Pro라 사용 불가)
+}
+// 프로모션 코드 메뉴: 무료회원 전용. Pro 여부가 '확정'됐을 때만 호출해 노출/숨김 결정
+// (확정 전에는 기본 display:none 유지 → Pro에게 깜빡 노출되는 사고 방지)
+function applyPromoMenuVisibility(pro) {
   var qb = document.getElementById('m-promo-btn');
   var qd = document.getElementById('m-promo-divider');
   if (qb) qb.style.display = pro ? 'none' : 'block';
   if (qd) qd.style.display = pro ? 'none' : 'block';
 }
 function toggleMobileMenu() {
-  // 1) 일단 현재 캐시값으로 즉시 반영
+  // 1) Pro 구독 버튼은 현재 캐시값으로 즉시 반영 (promo는 건드리지 않음 = 기본 숨김 유지)
   try { applyMenuProVisibility((typeof isProUser === 'function') && isProUser()); } catch (e) {}
   document.getElementById('mobile-menu').classList.toggle('open');
-  // 2) 로그인 상태면 Pro 상태를 한 번 더 비동기로 확정해서 재반영
-  //    (모바일에서 메뉴 여는 시점에 Pro 캐시가 아직 안 채워졌을 수 있어 한 박자 늦게라도 확실히 숨김)
+  // 2) 로그인 상태면 Pro 상태를 비동기로 확정한 뒤 promo 노출까지 결정
   if (currentUser && currentUser.id && typeof refreshProStatus === 'function') {
     refreshProStatus().then(function (pro) {
       try { applyMenuProVisibility(!!pro); } catch (e) {}
+      try { applyPromoMenuVisibility(!!pro); } catch (e) {}
     }).catch(function () {});
   }
 }
