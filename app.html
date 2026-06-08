@@ -599,11 +599,11 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <div class="menu-divider"></div>
       <a href="/subscribe.html" id="m-pro-btn" onclick="closeMobileMenu()">Pro 구독</a>
       <div class="menu-divider" id="m-pro-divider"></div>
-      <button id="m-promo-btn" onclick="openPromoModal();closeMobileMenu()">프로모 코드 입력</button>
-      <div class="menu-divider" id="m-promo-divider"></div>
       <a href="/encyclopedia.html" onclick="closeMobileMenu()">골프 이야기</a>
       <div class="menu-divider"></div>
       <button onclick="event.stopPropagation();handleMobileLogout()">로그아웃</button>
+      <div class="menu-divider" id="m-promo-divider"></div>
+      <button id="m-promo-btn" onclick="openPromoModal();closeMobileMenu()">프로모션 코드</button>
       <div class="menu-divider"></div>
       <button onclick="copyBizEmail();closeMobileMenu()">비즈니스 문의</button>
     </div>
@@ -823,7 +823,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 <div class="modal-overlay" id="modal-promo">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('promo')">✕</button>
-    <h2>프로모 코드 입력</h2>
+    <h2>프로모션 코드</h2>
     <p style="font-size:.85rem;color:rgba(76,120,87,0.85);line-height:1.6;margin:4px 0 16px">
       받으신 코드를 입력하면 Pro 기능을 무료로 사용할 수 있어요.
     </p>
@@ -1274,6 +1274,8 @@ function initAuth() {
     show('hdr-pro-btn', pro ? 'none' : 'inline-flex');
     show('m-pro-btn', pro ? 'none' : 'block');
     show('m-pro-divider', pro ? 'none' : 'block');
+    show('m-promo-btn', pro ? 'none' : 'block');
+    show('m-promo-divider', pro ? 'none' : 'block');
     // PC 헤더 핵심 버튼(그린 바탕 흰 글씨): 무료=Pro구독 / Pro=My Diary
     const myd = document.getElementById('hdr-mydiary');
     if (myd) { if (pro) myd.classList.add('is-cta'); else myd.classList.remove('is-cta'); }
@@ -2069,16 +2071,12 @@ async function submitPromo() {
     return;
   }
 
-  // 성공 → Pro 상태 갱신 후 안내
+  // 성공 → Pro 상태 갱신 후 안내 (한 번만)
   try { await refreshProStatus(); } catch (e) {}
   try { initAuth(); } catch (e) {}
-  err.style.color = '#4C7857';
-  err.textContent = '✓ ' + json.months + '개월 Pro가 적용되었습니다!';
-  setTimeout(function(){
-    closeModal('promo');
-    alert(json.months + '개월 Pro 무료 이용이 시작되었어요! 마음껏 분석해보세요.');
-    location.reload();
-  }, 900);
+  closeModal('promo');
+  alert('🎉 ' + json.months + '개월 Pro 이용이 시작됐어요!\n이제 모든 Pro 기능을 무료로 사용하실 수 있습니다.');
+  location.reload();
 }
 
 // ── 로그인 회원: 영상을 Supabase Storage에 업로드 (무료 1개 / Pro 30개) ──

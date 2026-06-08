@@ -1921,6 +1921,36 @@ function renderSubscription(){
   const status = activeSubscription?.status || 'active';
   const isOnetime = activeSubscription?.plan === 'pro_onetime';
 
+  // ── 프로모션 코드로 받은 무료 이용: 결제건이 아니므로 환불/결제정보 숨김 ──
+  const isPromo = typeof orderId === 'string' && orderId.indexOf('promo-') === 0;
+  if (isPromo) {
+    section.innerHTML = `
+      <div class="sub-card">
+        <div class="sub-row">
+          <span class="sub-label">현재 플랜</span>
+          <span class="sub-value gold">✦ Pro (프로모션 코드)</span>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">상태</span>
+          <span class="sub-value">Pro 이용 중</span>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">시작일</span>
+          <span class="sub-value">${startDate ? formatDate(startDate) : '—'}</span>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">이용 만료일</span>
+          <span class="sub-value">${periodEnd ? formatDate(periodEnd) : '확인 중'}</span>
+        </div>
+      </div>
+      <p style="font-size:.75rem;color:var(--text-dim);margin-top:14px;line-height:1.6">
+        ※ 프로모션 코드로 받은 무료 이용입니다. 별도로 결제되지 않습니다.<br>
+        ※ 이용 만료일이 지나면 자동으로 무료 회원으로 전환됩니다.<br>
+        ※ 영상과 분석 기록은 만료 후에도 90일간 보관됩니다.
+      </p>`;
+    return;
+  }
+
   if (isOnetime) {
     // ── 단건결제: '다음 결제일' 아님 → '이용 만료일', '구독 해지' 아님 → '결제 취소/환불' ──
     const canceled = status === 'canceled' || !!activeSubscription?.canceled_at;
@@ -2055,6 +2085,12 @@ function bindEvents(){
 
 // ─── 구독 해지 ───
 async function handleCancelSubscription(){
+  // 프로모션 코드로 받은 무료 이용은 결제건이 아니므로 취소/환불 대상이 아님
+  const oid = activeSubscription?.portone_payment_id || activeSubscription?.order_id || '';
+  if (typeof oid === 'string' && oid.indexOf('promo-') === 0) {
+    alert('프로모션 코드로 받은 무료 이용은 별도 결제가 없어 취소할 항목이 없습니다.\n만료일이 지나면 자동으로 무료 회원으로 전환됩니다.');
+    return;
+  }
   const isOnetime = activeSubscription?.plan === 'pro_onetime';
 
   const confirmed = isOnetime
