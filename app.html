@@ -575,6 +575,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <a href="/mypage.html" class="btn-mydiary" id="hdr-mydiary">My Diary</a>
       <a href="/encyclopedia.html" class="nav-link">골프 이야기</a>
       <button class="nav-link btn-biz-user" onclick="copyBizEmail()">비즈니스 문의</button>
+      <button class="nav-link" id="hdr-promo-btn" onclick="openPromoModal()" style="display:none">프로모션 코드</button>
       <a href="/subscribe.html" class="nav-cta" id="hdr-pro-btn">Pro 구독</a>
       <span class="auth-email" id="auth-email-txt"></span>
       <button class="nav-link" onclick="logout()">로그아웃</button>
@@ -600,7 +601,6 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <a href="/subscribe.html" id="m-pro-btn" onclick="closeMobileMenu()">Pro 구독</a>
       <div class="menu-divider" id="m-pro-divider"></div>
       <a href="/encyclopedia.html" onclick="closeMobileMenu()">골프 이야기</a>
-      <div class="menu-divider"></div>
       <button onclick="copyBizEmail();closeMobileMenu()">비즈니스 문의</button>
       <div class="menu-divider" id="m-promo-divider" style="display:none"></div>
       <button id="m-promo-btn" onclick="openPromoModal();closeMobileMenu()" style="display:none">프로모션 코드</button>
@@ -1307,6 +1307,9 @@ function applyPromoMenuVisibility(pro) {
   var qd = document.getElementById('m-promo-divider');
   if (qb) qb.style.display = pro ? 'none' : 'block';
   if (qd) qd.style.display = pro ? 'none' : 'block';
+  // PC 헤더 프로모션 코드 버튼 (무료회원만 노출)
+  var hb = document.getElementById('hdr-promo-btn');
+  if (hb) hb.style.display = pro ? 'none' : 'inline-flex';
 }
 function toggleMobileMenu() {
   // 1) Pro 구독 버튼은 현재 캐시값으로 즉시 반영 (promo는 건드리지 않음 = 기본 숨김 유지)
@@ -2013,12 +2016,16 @@ async function refreshProStatus() {
   try {
     // sb.from 대신 REST 직접 호출 (sb 락 데드락 회피)
     const row = await SB_REST.selectOne('user_profiles', 'plan', 'id', currentUser.id);
-    cachedProStatus = !!(row && typeof row.plan === 'string' && row.plan.indexOf('pro') === 0);
+    // 정상적으로 plan 값을 받았을 때만 캐시 갱신.
+    // (조회는 됐으나 행/필드가 비어 오면 네트워크 흔들림일 수 있으므로 기존 값 유지 → Pro가 잘못 풀리는 것 방지)
+    if (row && typeof row.plan === 'string') {
+      cachedProStatus = row.plan.indexOf('pro') === 0;
+    }
     return cachedProStatus;
   } catch (e) {
-    console.error('[Pro] 조회 오류:', e);
-    cachedProStatus = false;
-    return false;
+    console.error('[Pro] 조회 오류(기존 상태 유지):', e);
+    // 실패 시 cachedProStatus를 덮어쓰지 않음 → 이미 Pro로 확정된 사용자가 false로 뒤집히지 않게
+    return cachedProStatus;
   }
 }
 

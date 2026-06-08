@@ -419,6 +419,23 @@ tr:hover td { background:rgba(255,255,255,0.02); }
           <option value="expired">만료됨</option>
         </select>
       </div>
+      <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-card green">
+          <div class="label">정기결제 (활성)</div>
+          <div class="value" id="stat-sub-monthly">—</div>
+          <div class="sub">자동 갱신 구독자</div>
+        </div>
+        <div class="stat-card gold">
+          <div class="label">단건결제 (활성)</div>
+          <div class="value" id="stat-sub-onetime">—</div>
+          <div class="sub">1회 이용권 구매자</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">프로모션 코드 (활성)</div>
+          <div class="value" id="stat-sub-promo">—</div>
+          <div class="sub">코드로 받은 무료 이용</div>
+        </div>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1023,6 +1040,10 @@ async function loadSubscriptions() {
   }
 
   const list = json.subscriptions || [];
+
+  // 상단 카드(활성 유저 분류) 갱신 — 상태 필터와 무관하게 항상 active 기준
+  updateSubStats(status, list, token);
+
   if (!list.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="loading">구독 데이터가 없습니다.</td></tr>';
     return;
@@ -1031,21 +1052,65 @@ async function loadSubscriptions() {
   tbody.innerHTML = list.map(s => {
     const email = s.email || (s.userId ? s.userId.slice(0,12) + '...' : '—');
     const key = s.billingKeyMasked || s.paymentIdMasked || '—';
+    // 프로모션 코드로 발급된 건: 실제 결제가 아니므로 환불 대상 아님. 별도 표시.
+    const isPromo = s.paymentMethod === 'promo'
+      || (typeof s.paymentIdMasked === 'string' && s.paymentIdMasked.indexOf('promo-') === 0);
+    const planCell = isPromo
+      ? '<span class="badge pro_onetime">프로모션 코드</span>'
+      : `<span class="badge ${s.plan}">${(s.plan||'').toUpperCase()}</span>`;
+    const actionCell = (s.status === 'active' && !isPromo)
+      ? `<button onclick="openCancelModal('${s.id}','${email}','${s.plan||''}')"
+          style="padding:4px 10px;background:rgba(248,113,113,0.1);color:var(--red);border:1px solid rgba(248,113,113,0.3);font-size:.65rem;cursor:pointer">환불</button>`
+      : '<span style="color:var(--dim)">—</span>';
     return `<tr>
         <td>${email}</td>
-        <td><span class="badge ${s.plan}">${(s.plan||'').toUpperCase()}</span></td>
+        <td>${planCell}</td>
         <td><span class="badge ${s.status}">${statusLabel(s.status)}</span></td>
         <td>${fmtDate(s.startedAt)}</td>
         <td>${fmtDate(s.currentPeriodEnd)}</td>
         <td style="color:var(--muted);font-size:.68rem">${key}</td>
-        <td>
-          ${s.status === 'active'
-            ? `<button onclick="openCancelModal('${s.id}','${email}','${s.plan||''}')"
-                style="padding:4px 10px;background:rgba(248,113,113,0.1);color:var(--red);border:1px solid rgba(248,113,113,0.3);font-size:.65rem;cursor:pointer">환불</button>`
-            : '<span style="color:var(--dim)">—</span>'}
-        </td>
+        <td>${actionCell}</td>
       </tr>`;
   }).join('');
+}
+
+// 활성 구독을 정기결제/단건결제/프로모션 코드로 분류해 유니크 유저 수 카운트.
+// 상태 필터와 무관하게 항상 active 기준. (전체/활성 필터면 받은 list 재사용, 그 외엔 active만 별도 조회)
+async function updateSubStats(currentStatus, list, token) {
+  let activeList = list;
+  if (currentStatus && currentStatus !== 'active') {
+    // 지금 list가 active가 아님 → 카드용 active 데이터를 한 번 더 조회
+    try {
+      const r = await fetch(BACKEND_URL + '/api/admin/subscriptions?status=active', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const j = await r.json();
+      activeList = r.ok ? (j.subscriptions || []) : [];
+    } catch (e) {
+      activeList = [];
+    }
+  } else {
+    // 전체/활성 필터: 받은 list에서 active만 추림
+    activeList = list.filter(s => s.status === 'active');
+  }
+
+  const isPromo = s => s.paymentMethod === 'promo'
+    || (typeof s.paymentIdMasked === 'string' && s.paymentIdMasked.indexOf('promo-') === 0);
+
+  // 유니크 유저(user_id) 기준 집계 — 한 유저가 여러 활성 행을 가질 가능성 대비
+  const monthly = new Set(), onetime = new Set(), promo = new Set();
+  activeList.forEach(s => {
+    const uid = s.userId || s.email;
+    if (!uid) return;
+    if (isPromo(s)) promo.add(uid);
+    else if (s.plan === 'pro_monthly') monthly.add(uid);
+    else if (s.plan === 'pro_onetime') onetime.add(uid);
+  });
+
+  const set = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n + '명'; };
+  set('stat-sub-monthly', monthly.size);
+  set('stat-sub-onetime', onetime.size);
+  set('stat-sub-promo', promo.size);
 }
 
 // ── 결제 취소 ──
