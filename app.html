@@ -1275,10 +1275,16 @@ function initAuth() {
     show('m-pro-btn', pro ? 'none' : 'block');
     show('m-pro-divider', pro ? 'none' : 'block');
     // 프로모션 코드 메뉴는 여기서 직접 노출하지 않음.
-    // Pro 여부가 확정된 뒤(refreshProStatus 완료) applyPromoMenuVisibility로만 노출 → Pro에게 깜빡 노출 방지.
     if (pro) { try { applyPromoMenuVisibility(true); } catch (e) {} }
-    else if (typeof refreshProStatus === 'function') {
-      refreshProStatus().then(function(p){ try { applyPromoMenuVisibility(!!p); } catch(e){} }).catch(function(){});
+    // Pro 여부를 비동기로 재확정해 모든 버튼(Pro구독+프로모션) 가시성을 최종 일치시킴.
+    // (초기 캐시가 미확정/지연이어도 결국 올바르게 수렴 → Pro에게 잘못 노출되는 일 방지)
+    if (typeof refreshProStatus === 'function') {
+      refreshProStatus().then(function(p){
+        try { applyMenuProVisibility(!!p); } catch (e) {}
+        try { applyPromoMenuVisibility(!!p); } catch (e) {}
+        var hp = document.getElementById('hdr-pro-btn');
+        if (hp) hp.style.display = p ? 'none' : 'inline-flex';
+      }).catch(function(){});
     }
     // PC 헤더 핵심 버튼(그린 바탕 흰 글씨): 무료=Pro구독 / Pro=My Diary
     const myd = document.getElementById('hdr-mydiary');
@@ -1312,15 +1318,22 @@ function applyPromoMenuVisibility(pro) {
   if (hb) hb.style.display = pro ? 'none' : 'inline-flex';
 }
 function toggleMobileMenu() {
-  // 1) Pro 구독 버튼은 현재 캐시값으로 즉시 반영 (promo는 건드리지 않음 = 기본 숨김 유지)
-  try { applyMenuProVisibility((typeof isProUser === 'function') && isProUser()); } catch (e) {}
+  // 메뉴 열기/닫기
   document.getElementById('mobile-menu').classList.toggle('open');
-  // 2) 로그인 상태면 Pro 상태를 비동기로 확정한 뒤 promo 노출까지 결정
-  if (currentUser && currentUser.id && typeof refreshProStatus === 'function') {
-    refreshProStatus().then(function (pro) {
-      try { applyMenuProVisibility(!!pro); } catch (e) {}
-      try { applyPromoMenuVisibility(!!pro); } catch (e) {}
-    }).catch(function () {});
+  // 로그인 상태면 Pro 여부를 확정한 뒤에만 버튼 가시성 반영.
+  // (확정 전 캐시값으로 섣불리 켜면, Pro 사용자에게 'Pro 구독/프로모션 코드'가 잘못 노출됨)
+  if (currentUser && currentUser.id) {
+    // 현재 캐시가 이미 Pro면 즉시 숨김(되돌리지 않음). 무료/미확정이면 refresh로 확정.
+    if (typeof isProUser === 'function' && isProUser()) {
+      try { applyMenuProVisibility(true); } catch (e) {}
+      try { applyPromoMenuVisibility(true); } catch (e) {}
+    }
+    if (typeof refreshProStatus === 'function') {
+      refreshProStatus().then(function (pro) {
+        try { applyMenuProVisibility(!!pro); } catch (e) {}
+        try { applyPromoMenuVisibility(!!pro); } catch (e) {}
+      }).catch(function () {});
+    }
   }
 }
 function closeMobileMenu() {
