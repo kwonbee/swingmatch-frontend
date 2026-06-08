@@ -470,31 +470,46 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       </div>
       <p style="font-size:.74rem;color:rgba(245,239,224,0.55);margin-bottom:20px;line-height:1.6">
         🎟️ 무료회원이 입력하면 Pro 무료 기간을 부여하는 코드입니다. (결제와 무관)<br>
-        · 코드 1개 = 1회용. 한 번 사용되면 영구 소멸됩니다.<br>
-        · 이미 Pro인 회원은 사용할 수 없습니다(무료회원 전용).<br>
+        · <b>1회용 코드</b>: 사용 인원 1명. 한 번 쓰이면 소멸 — 인플루언서·개인 지급용.<br>
+        · <b>캠페인 코드</b>: 사용 인원을 N명으로 — 메타 광고 등 한 코드를 여러 명에게 배포.<br>
+        · <b>만료일</b>: 지정하면 그날까지만 사용 가능(긴급성↑). 비우면 무기한.<br>
+        · 이미 Pro인 회원·같은 코드를 이미 쓴 회원은 사용할 수 없습니다.<br>
         · 무료 기간이 끝나면 자동으로 무료 등급으로 돌아갑니다.
       </p>
 
       <!-- 발급 폼 -->
-      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:18px 20px;margin-bottom:24px;max-width:560px">
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:18px 20px;margin-bottom:24px;max-width:640px">
         <div style="font-size:.78rem;color:var(--text);margin-bottom:14px;font-weight:500">새 코드 발급</div>
-        <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end">
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:14px">
           <div>
-            <label style="display:block;font-size:.68rem;color:var(--muted);margin-bottom:5px">기간</label>
-            <select id="promo-months" style="padding:8px 10px;background:#1a1a1a;color:var(--text);border:1px solid rgba(255,255,255,0.15);border-radius:4px;font-size:.78rem;font-family:inherit">
-              <option value="1">1개월</option>
-              <option value="3">3개월</option>
+            <label style="display:block;font-size:.68rem;color:var(--muted);margin-bottom:5px">부여 기간</label>
+            <select id="promo-months" style="width:100%;padding:8px 10px;background:#1a1a1a;color:var(--text);border:1px solid rgba(255,255,255,0.15);border-radius:4px;font-size:.78rem;font-family:inherit">
+              <option value="1">1개월 Pro</option>
+              <option value="3">3개월 Pro</option>
             </select>
           </div>
           <div>
-            <label style="display:block;font-size:.68rem;color:var(--muted);margin-bottom:5px">수량 (1~100)</label>
-            <input type="number" id="promo-count" value="1" min="1" max="100" style="width:90px;padding:8px 10px;background:#1a1a1a;color:var(--text);border:1px solid rgba(255,255,255,0.15);border-radius:4px;font-size:.78rem;font-family:inherit" />
+            <label style="display:block;font-size:.68rem;color:var(--muted);margin-bottom:5px">코드 개수 (1~100)</label>
+            <input type="number" id="promo-count" value="1" min="1" max="100" style="width:100%;padding:8px 10px;background:#1a1a1a;color:var(--text);border:1px solid rgba(255,255,255,0.15);border-radius:4px;font-size:.78rem;font-family:inherit;box-sizing:border-box" />
           </div>
-          <div style="flex:1;min-width:160px">
+          <div>
+            <label style="display:block;font-size:.68rem;color:var(--muted);margin-bottom:5px">코드당 사용 인원</label>
+            <input type="number" id="promo-maxuses" value="1" min="1" max="100000" style="width:100%;padding:8px 10px;background:#1a1a1a;color:var(--text);border:1px solid rgba(255,255,255,0.15);border-radius:4px;font-size:.78rem;font-family:inherit;box-sizing:border-box" />
+            <div style="font-size:.64rem;color:var(--muted);margin-top:4px">1 = 1회용 · 여러 명이면 캠페인 코드</div>
+          </div>
+          <div>
+            <label style="display:block;font-size:.68rem;color:var(--muted);margin-bottom:5px">사용 마감일 (선택)</label>
+            <input type="date" id="promo-expires" style="width:100%;padding:7px 10px;background:#1a1a1a;color:var(--text);border:1px solid rgba(255,255,255,0.15);border-radius:4px;font-size:.78rem;font-family:inherit;box-sizing:border-box" />
+            <div style="font-size:.64rem;color:var(--muted);margin-top:4px">비우면 무기한</div>
+          </div>
+          <div style="grid-column:1 / -1">
             <label style="display:block;font-size:.68rem;color:var(--muted);margin-bottom:5px">메모 (선택)</label>
-            <input type="text" id="promo-memo" placeholder="예: 인플루언서 김프로" style="width:100%;padding:8px 10px;background:#1a1a1a;color:var(--text);border:1px solid rgba(255,255,255,0.15);border-radius:4px;font-size:.78rem;font-family:inherit;box-sizing:border-box" />
+            <input type="text" id="promo-memo" placeholder="예: 메타광고 6월 / 인플루언서 김프로" style="width:100%;padding:8px 10px;background:#1a1a1a;color:var(--text);border:1px solid rgba(255,255,255,0.15);border-radius:4px;font-size:.78rem;font-family:inherit;box-sizing:border-box" />
           </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <button class="ad-save-btn" id="promo-create-btn" onclick="createPromo()">코드 생성</button>
+          <span id="promo-create-hint" style="font-size:.7rem;color:var(--muted)"></span>
         </div>
         <div id="promo-create-result" style="margin-top:14px;font-size:.74rem;line-height:1.7"></div>
       </div>
@@ -504,17 +519,17 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         <h2 style="font-size:.74rem">발급 목록</h2>
         <select id="promo-status-filter" onchange="loadPromos()" style="margin-left:auto;padding:6px 10px;background:#1a1a1a;color:var(--text);border:1px solid rgba(255,255,255,0.15);border-radius:4px;font-size:.74rem;font-family:inherit">
           <option value="">전체</option>
-          <option value="active">미사용</option>
-          <option value="used">사용됨</option>
+          <option value="active">사용 가능</option>
+          <option value="used">소진/마감</option>
           <option value="disabled">비활성</option>
         </select>
       </div>
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th>코드</th><th>기간</th><th>상태</th><th>메모</th><th>발급일</th><th>사용일</th>
+            <th>코드</th><th>기간</th><th>사용 현황</th><th>상태</th><th>만료일</th><th>메모</th><th>발급일</th>
           </tr></thead>
-          <tbody id="promo-table"><tr><td colspan="6" class="loading">로딩 중...</td></tr></tbody>
+          <tbody id="promo-table"><tr><td colspan="7" class="loading">로딩 중...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -618,7 +633,7 @@ function showSection(name, el) {
   if (name === 'analytics') loadAnalytics();
   if (name === 'subscriptions') loadSubscriptions();
   if (name === 'ads') loadAds();
-  if (name === 'promo') loadPromos();
+  if (name === 'promo') { loadPromos(); initPromoHintOnce(); }
 }
 
 // ── 날짜 포맷 ──
@@ -1412,8 +1427,35 @@ function statusLabel(s) {
 }
 
 // ── 프로모 코드 ──
+// 발급 폼 입력 이벤트를 1회만 바인딩 + 초기 힌트 표시
+var _promoHintBound = false;
+function initPromoHintOnce() {
+  if (!_promoHintBound) {
+    ['promo-count', 'promo-maxuses', 'promo-months'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', updatePromoHint);
+    });
+    var exp = document.getElementById('promo-expires');
+    if (exp) exp.addEventListener('change', updatePromoHint);
+    _promoHintBound = true;
+  }
+  updatePromoHint();
+}
+
 function promoStatusLabel(s) {
-  return { active:'미사용', used:'사용됨', disabled:'비활성' }[s] || s;
+  return { active:'사용 가능', used:'소진/마감', disabled:'비활성' }[s] || s;
+}
+
+// 발급 폼 입력에 따라 "어떤 코드가 만들어지는지" 실시간 힌트
+function updatePromoHint() {
+  var hintEl = document.getElementById('promo-create-hint');
+  if (!hintEl) return;
+  var count = parseInt(document.getElementById('promo-count').value, 10) || 1;
+  var maxUses = parseInt(document.getElementById('promo-maxuses').value, 10) || 1;
+  var exp = document.getElementById('promo-expires').value;
+  var kind = maxUses <= 1 ? '1회용 코드' : ('캠페인 코드(코드당 ' + maxUses.toLocaleString() + '명)');
+  var expTxt = exp ? (' · ' + exp + '까지') : ' · 무기한';
+  hintEl.textContent = '→ ' + kind + ' ' + count + '개 발급' + expTxt;
 }
 
 async function createPromo() {
@@ -1421,7 +1463,15 @@ async function createPromo() {
   const result = document.getElementById('promo-create-result');
   const months = parseInt(document.getElementById('promo-months').value, 10);
   const count = parseInt(document.getElementById('promo-count').value, 10) || 1;
+  const maxUses = parseInt(document.getElementById('promo-maxuses').value, 10) || 1;
+  const expiresInput = document.getElementById('promo-expires').value; // YYYY-MM-DD or ''
   const memo = document.getElementById('promo-memo').value.trim();
+
+  // 날짜 입력 → 그날 23:59:59까지 유효하도록 하루 끝으로 변환 (마감일 당일 포함)
+  let expiresAt = null;
+  if (expiresInput) {
+    expiresAt = new Date(expiresInput + 'T23:59:59').toISOString();
+  }
 
   const { data: sess } = await sb.auth.getSession();
   const token = sess?.session?.access_token;
@@ -1437,7 +1487,7 @@ async function createPromo() {
     resp = await fetch(BACKEND_URL + '/api/admin/promo/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ months, count, memo: memo || null })
+      body: JSON.stringify({ months, count, memo: memo || null, maxUses, expiresAt })
     });
     json = await resp.json();
   } catch (e) {
@@ -1452,8 +1502,10 @@ async function createPromo() {
   }
 
   const codes = json.codes || [];
+  const kindTxt = (json.maxUses && json.maxUses > 1) ? `캠페인(코드당 ${json.maxUses.toLocaleString()}명)` : '1회용';
+  const expTxt = json.expiresAt ? ` · 만료 ${fmtDate(json.expiresAt)}` : ' · 무기한';
   result.innerHTML =
-    `<span style="color:#7dd56f">✓ ${codes.length}개 발급 완료 (${json.months}개월)</span>` +
+    `<span style="color:#7dd56f">✓ ${codes.length}개 발급 완료 (${json.months}개월 · ${kindTxt}${expTxt})</span>` +
     `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">` +
     codes.map(c => `<code style="background:rgba(200,169,110,0.12);border:1px solid rgba(200,169,110,0.3);color:var(--gold);padding:4px 8px;border-radius:4px;font-size:.74rem;user-select:all">${c}</code>`).join('') +
     `</div>` +
@@ -1468,14 +1520,45 @@ function copyPromoCodes(joined) {
     .catch(() => alert('복사 실패 — 코드를 직접 선택해 복사해주세요.'));
 }
 
+// 사용 현황 셀: "12 / 50" + 진행 막대. 1회용은 "1명"으로 간결 표시.
+function promoUsageCell(c) {
+  const max = Number(c.max_uses) || 1;
+  const used = Number(c.used_count) || 0;
+  if (max <= 1) {
+    return used >= 1
+      ? '<span style="color:var(--muted)">사용됨</span>'
+      : '<span style="color:#7dd56f">미사용</span>';
+  }
+  const pct = Math.min(100, Math.round((used / max) * 100));
+  const barColor = pct >= 100 ? '#ff8090' : (pct >= 70 ? '#e0b060' : '#7dd56f');
+  return `<div style="min-width:110px">
+      <div style="font-size:.72rem;margin-bottom:3px">${used.toLocaleString()} / ${max.toLocaleString()}명</div>
+      <div style="height:5px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${barColor}"></div>
+      </div>
+    </div>`;
+}
+
+// 만료일 셀: 지난 코드는 빨강 "만료됨", 임박(3일 내)은 주황 강조.
+function promoExpiryCell(c) {
+  if (!c.expires_at) return '<span style="color:var(--muted)">무기한</span>';
+  const exp = new Date(c.expires_at);
+  const now = new Date();
+  const days = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+  const dateStr = fmtDate(c.expires_at);
+  if (exp < now) return `<span style="color:#ff8090">만료됨</span><br><span style="font-size:.66rem;color:var(--muted)">${dateStr}</span>`;
+  if (days <= 3) return `<span style="color:#e0b060">D-${days}</span><br><span style="font-size:.66rem;color:var(--muted)">${dateStr}</span>`;
+  return `<span style="font-size:.72rem">${dateStr}</span>`;
+}
+
 async function loadPromos() {
   const status = document.getElementById('promo-status-filter').value;
   const tbody = document.getElementById('promo-table');
-  tbody.innerHTML = '<tr><td colspan="6" class="loading">로딩 중...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" class="loading">로딩 중...</td></tr>';
 
   const { data: sess } = await sb.auth.getSession();
   const token = sess?.session?.access_token;
-  if (!token) { tbody.innerHTML = '<tr><td colspan="6" class="loading" style="color:#ff8090">세션이 만료되었습니다. 다시 로그인해주세요.</td></tr>'; return; }
+  if (!token) { tbody.innerHTML = '<tr><td colspan="7" class="loading" style="color:#ff8090">세션이 만료되었습니다. 다시 로그인해주세요.</td></tr>'; return; }
 
   let resp, json;
   try {
@@ -1484,28 +1567,35 @@ async function loadPromos() {
     });
     json = await resp.json();
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="6" class="loading" style="color:#ff8090">백엔드 통신 실패: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="loading" style="color:#ff8090">백엔드 통신 실패: ${e.message}</td></tr>`;
     return;
   }
   if (!resp.ok) {
-    tbody.innerHTML = `<tr><td colspan="6" class="loading" style="color:#ff8090">목록 조회 실패: ${json.error || resp.status}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="loading" style="color:#ff8090">목록 조회 실패: ${json.error || resp.status}</td></tr>`;
     return;
   }
 
   const list = json.codes || [];
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="loading">발급된 코드가 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">발급된 코드가 없습니다.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = list.map(c => `<tr>
-      <td style="font-family:monospace;user-select:all">${c.code}</td>
-      <td>${c.months}개월</td>
+  tbody.innerHTML = list.map(c => {
+    const max = Number(c.max_uses) || 1;
+    const kindBadge = max > 1
+      ? '<span style="font-size:.6rem;color:#e0b060;border:1px solid rgba(224,176,96,0.4);border-radius:3px;padding:1px 4px;margin-left:5px">캠페인</span>'
+      : '';
+    return `<tr>
+      <td style="font-family:monospace;user-select:all;white-space:nowrap">${c.code}${kindBadge}</td>
+      <td style="white-space:nowrap">${c.months}개월</td>
+      <td>${promoUsageCell(c)}</td>
       <td><span class="badge ${c.status === 'active' ? 'active' : (c.status === 'used' ? 'expired' : 'canceled')}">${promoStatusLabel(c.status)}</span></td>
+      <td style="white-space:nowrap">${promoExpiryCell(c)}</td>
       <td style="color:var(--muted);font-size:.7rem">${c.memo || '—'}</td>
-      <td>${fmtDate(c.created_at)}</td>
-      <td>${c.redeemed_at ? fmtDate(c.redeemed_at) : '—'}</td>
-    </tr>`).join('');
+      <td style="white-space:nowrap">${fmtDate(c.created_at)}</td>
+    </tr>`;
+  }).join('');
 }
 </script>
 </body>
