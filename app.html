@@ -680,11 +680,11 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <div class="sample-banner-body" id="sampleBannerBody">
         <p class="sample-banner-guide">샘플 스윙으로 분석을 바로 체험해보세요</p>
         <div class="sample-choices">
-          <button type="button" class="sample-choice" onclick="runSample('a', this)">
+          <button type="button" class="sample-choice" onclick="runSample('b', this)">
             <span class="sample-choice-title">여성 스윙 체험</span>
             <span class="sample-choice-sub">준비된 스윙으로 바로 분석</span>
           </button>
-          <button type="button" class="sample-choice" onclick="runSample('b', this)">
+          <button type="button" class="sample-choice" onclick="runSample('a', this)">
             <span class="sample-choice-title">남성 스윙 체험</span>
             <span class="sample-choice-sub">준비된 스윙으로 바로 분석</span>
           </button>
@@ -2027,8 +2027,8 @@ function toggleSampleBanner() {
 
 // 샘플 영상 클럽 매핑 (샘플은 클럽을 자동 지정 → 사용자가 안 골라도 됨)
 const SAMPLE_MAP = {
-  a: { path: '/samples/sample_a.mp4', name: '여성 스윙 샘플', club: 'driver' },
-  b: { path: '/samples/sample_b.mp4', name: '남성 스윙 샘플', club: 'driver' }
+  a: { path: '/samples/sample_a.mp4', name: '남성 스윙 샘플', club: 'driver' },
+  b: { path: '/samples/sample_b.mp4', name: '여성 스윙 샘플', club: 'driver' }
 };
 
 // 샘플 영상을 fetch → File 객체로 변환 → 기존 handleFile() 흐름에 그대로 투입.
