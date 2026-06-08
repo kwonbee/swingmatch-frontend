@@ -599,6 +599,8 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <div class="menu-divider"></div>
       <a href="/subscribe.html" id="m-pro-btn" onclick="closeMobileMenu()">Pro 구독</a>
       <div class="menu-divider" id="m-pro-divider"></div>
+      <button id="m-promo-btn" onclick="openPromoModal();closeMobileMenu()">프로모 코드 입력</button>
+      <div class="menu-divider" id="m-promo-divider"></div>
       <a href="/encyclopedia.html" onclick="closeMobileMenu()">골프 이야기</a>
       <div class="menu-divider"></div>
       <button onclick="event.stopPropagation();handleMobileLogout()">로그아웃</button>
@@ -814,6 +816,25 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
     </button>
     <div class="inapp-sheet-hint">외부 브라우저로 열면 구글도 가능해요</div>
     <button class="inapp-sheet-cancel" onclick="closeInappSheet()">닫기</button>
+  </div>
+</div>
+
+<!-- 프로모 코드 입력 모달 -->
+<div class="modal-overlay" id="modal-promo">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('promo')">✕</button>
+    <h2>프로모 코드 입력</h2>
+    <p style="font-size:.85rem;color:rgba(76,120,87,0.85);line-height:1.6;margin:4px 0 16px">
+      받으신 코드를 입력하면 Pro 기능을 무료로 사용할 수 있어요.
+    </p>
+    <div class="modal-field">
+      <label>코드</label>
+      <input type="text" id="promo-input" placeholder="SWING-XXXXXXXX" autocomplete="off"
+        style="text-transform:uppercase;letter-spacing:.05em;font-family:monospace"
+        onkeydown="if(event.key==='Enter')submitPromo()">
+    </div>
+    <div class="modal-err" id="promo-err"></div>
+    <button class="modal-submit" id="promo-submit-btn" onclick="submitPromo()">적용하기</button>
   </div>
 </div>
 
@@ -1271,6 +1292,11 @@ function applyMenuProVisibility(pro) {
   var pd = document.getElementById('m-pro-divider');
   if (pb) pb.style.display = pro ? 'none' : 'block';
   if (pd) pd.style.display = pro ? 'none' : 'block';
+  // 프로모 코드 입력도 Pro면 숨김 (이미 Pro라 사용 불가)
+  var qb = document.getElementById('m-promo-btn');
+  var qd = document.getElementById('m-promo-divider');
+  if (qb) qb.style.display = pro ? 'none' : 'block';
+  if (qd) qd.style.display = pro ? 'none' : 'block';
 }
 function toggleMobileMenu() {
   // 1) 일단 현재 캐시값으로 즉시 반영
@@ -1988,6 +2014,71 @@ async function refreshProStatus() {
 
 function isProUser() {
   return cachedProStatus;
+}
+
+// ── 프로모 코드 입력 ──
+function openPromoModal() {
+  // 비로그인 → 로그인 유도
+  if (!currentUser || !currentUser.id) {
+    openModal('login');
+    return;
+  }
+  var inp = document.getElementById('promo-input');
+  var err = document.getElementById('promo-err');
+  if (inp) inp.value = '';
+  if (err) err.textContent = '';
+  openModal('promo');
+  setTimeout(function(){ if (inp) inp.focus(); }, 50);
+}
+
+async function submitPromo() {
+  var inp = document.getElementById('promo-input');
+  var err = document.getElementById('promo-err');
+  var btn = document.getElementById('promo-submit-btn');
+  var code = (inp.value || '').trim().toUpperCase();
+  err.style.color = '';
+  if (!code) { err.textContent = '코드를 입력해주세요.'; return; }
+
+  // 진짜 access_token 첨부 (백엔드가 토큰으로 user_id 검증)
+  var sess = await sb.auth.getSession();
+  var token = sess && sess.data && sess.data.session && sess.data.session.access_token;
+  if (!token) { err.textContent = '세션이 만료되었습니다. 다시 로그인해주세요.'; return; }
+
+  btn.disabled = true;
+  var prev = btn.textContent;
+  btn.textContent = '적용 중...';
+  err.textContent = '';
+
+  var resp, json;
+  try {
+    resp = await fetch(BACKEND + '/api/promo/redeem', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ code: code })
+    });
+    json = await resp.json();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = prev;
+    err.textContent = '통신 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+    return;
+  }
+  btn.disabled = false; btn.textContent = prev;
+
+  if (!resp.ok) {
+    err.textContent = (json && json.error) || '코드 적용에 실패했습니다.';
+    return;
+  }
+
+  // 성공 → Pro 상태 갱신 후 안내
+  try { await refreshProStatus(); } catch (e) {}
+  try { initAuth(); } catch (e) {}
+  err.style.color = '#4C7857';
+  err.textContent = '✓ ' + json.months + '개월 Pro가 적용되었습니다!';
+  setTimeout(function(){
+    closeModal('promo');
+    alert(json.months + '개월 Pro 무료 이용이 시작되었어요! 마음껏 분석해보세요.');
+    location.reload();
+  }, 900);
 }
 
 // ── 로그인 회원: 영상을 Supabase Storage에 업로드 (무료 1개 / Pro 30개) ──
