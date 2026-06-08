@@ -2020,6 +2020,8 @@ async function getMemberTodayCount(userId) {
 
 // Pro 회원 여부 (DB의 user_profiles.plan 기반)
 let cachedProStatus = false; // 로그인 시 한 번 조회해서 캐시
+// [임시] URL에 ?promodebug=1 있으면 Pro 판정 진단 alert 켜기
+try { window.__PROMO_DEBUG__ = new URLSearchParams(location.search).get('promodebug') === '1'; } catch (e) {}
 
 async function refreshProStatus() {
   if (!currentUser || !currentUser.id) {
@@ -2029,6 +2031,10 @@ async function refreshProStatus() {
   try {
     // sb.from 대신 REST 직접 호출 (sb 락 데드락 회피)
     const row = await SB_REST.selectOne('user_profiles', 'plan', 'id', currentUser.id);
+    // [임시 진단] 모바일 Pro 판정 실패 원인 확인용. 확인 후 제거.
+    if (window.__PROMO_DEBUG__) {
+      alert('[진단]\nuser.id=' + currentUser.id + '\nrow=' + JSON.stringify(row) + '\ncached(before)=' + cachedProStatus);
+    }
     // 정상적으로 plan 값을 받았을 때만 캐시 갱신.
     // (조회는 됐으나 행/필드가 비어 오면 네트워크 흔들림일 수 있으므로 기존 값 유지 → Pro가 잘못 풀리는 것 방지)
     if (row && typeof row.plan === 'string') {
