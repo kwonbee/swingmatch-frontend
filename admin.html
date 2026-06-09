@@ -517,7 +517,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       <!-- 목록 -->
       <div class="section-header" style="margin-top:8px;">
         <h2 style="font-size:.74rem">발급 목록</h2>
-        <select id="promo-status-filter" onchange="loadPromos()" style="margin-left:auto;padding:6px 10px;background:#1a1a1a;color:var(--text);border:1px solid rgba(255,255,255,0.15);border-radius:4px;font-size:.74rem;font-family:inherit">
+        <button onclick="backfillVouchers(this)" style="margin-left:auto;margin-right:8px;padding:6px 12px;background:none;color:#7fd0a0;border:1px solid rgba(127,208,160,0.4);border-radius:4px;font-size:.74rem;font-family:inherit;cursor:pointer">바우처 일괄 생성</button>
+        <select id="promo-status-filter" onchange="loadPromos()" style="padding:6px 10px;background:#1a1a1a;color:var(--text);border:1px solid rgba(255,255,255,0.15);border-radius:4px;font-size:.74rem;font-family:inherit">
           <option value="">전체</option>
           <option value="active">사용 가능</option>
           <option value="used">소진/마감</option>
@@ -1626,6 +1627,35 @@ async function downloadVoucher(url, code) {
     URL.revokeObjectURL(a.href);
   } catch (e) {
     alert('다운로드 실패: ' + e.message);
+  }
+}
+
+// ── 바우처 일괄 생성 (image_url 없는 기존 코드 채우기) ──
+async function backfillVouchers(btn) {
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '생성 중…';
+  try {
+    const { data: sess } = await sb.auth.getSession();
+    const token = sess?.session?.access_token;
+    if (!token) { alert('세션이 만료되었습니다. 다시 로그인해주세요.'); btn.disabled = false; btn.textContent = orig; return; }
+
+    const resp = await fetch(BACKEND_URL + '/api/admin/promo/backfill-vouchers', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await resp.json();
+    if (!resp.ok) {
+      alert('일괄 생성 실패: ' + (json.error || resp.status));
+    } else {
+      alert('바우처 ' + json.count + '개 생성 완료');
+      loadPromos(); // 목록 새로고침
+    }
+  } catch (e) {
+    alert('일괄 생성 실패: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
   }
 }
 </script>
