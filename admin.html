@@ -372,7 +372,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
               <th>이름</th><th>이메일</th><th>플랜</th><th>총 분석 횟수</th><th>마지막 분석</th><th>가입일</th><th>관리</th>
             </tr>
           </thead>
-          <tbody id="user-table"><tr><td colspan="7" class="loading">로딩 중...</td></tr></tbody>
+          <tbody id="user-table"><tr><td colspan="8" class="loading">로딩 중...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -443,7 +443,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
               <th>유저</th><th>플랜</th><th>상태</th><th>시작일</th><th>만료일</th><th>결제키</th><th>관리</th>
             </tr>
           </thead>
-          <tbody id="sub-table"><tr><td colspan="7" class="loading">로딩 중...</td></tr></tbody>
+          <tbody id="sub-table"><tr><td colspan="8" class="loading">로딩 중...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -527,9 +527,9 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th>코드</th><th>기간</th><th>사용 현황</th><th>상태</th><th>만료일</th><th>메모</th><th>발급일</th>
+            <th>코드</th><th>기간</th><th>사용 현황</th><th>상태</th><th>만료일</th><th>메모</th><th>발급일</th><th>바우처</th>
           </tr></thead>
-          <tbody id="promo-table"><tr><td colspan="7" class="loading">로딩 중...</td></tr></tbody>
+          <tbody id="promo-table"><tr><td colspan="8" class="loading">로딩 중...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1030,12 +1030,12 @@ async function loadAnalytics() {
 async function loadSubscriptions() {
   const status = document.getElementById('sub-status-filter').value;
   const tbody = document.getElementById('sub-table');
-  tbody.innerHTML = '<tr><td colspan="7" class="loading">로딩 중...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" class="loading">로딩 중...</td></tr>';
 
   // 백엔드(service_role) 경유 — subscriptions를 anon에 노출하지 않음. 어드민 access_token으로 인증.
   const { data: sess } = await sb.auth.getSession();
   const token = sess?.session?.access_token;
-  if (!token) { tbody.innerHTML = '<tr><td colspan="7" class="loading" style="color:#ff8090">세션이 만료되었습니다. 다시 로그인해주세요.</td></tr>'; return; }
+  if (!token) { tbody.innerHTML = '<tr><td colspan="8" class="loading" style="color:#ff8090">세션이 만료되었습니다. 다시 로그인해주세요.</td></tr>'; return; }
 
   let resp, json;
   try {
@@ -1045,12 +1045,12 @@ async function loadSubscriptions() {
     json = await resp.json();
   } catch (e) {
     console.error('[Admin] 구독 조회 통신 실패:', e);
-    tbody.innerHTML = `<tr><td colspan="7" class="loading" style="color:#ff8090">백엔드 통신 실패: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="loading" style="color:#ff8090">백엔드 통신 실패: ${e.message}</td></tr>`;
     return;
   }
   if (!resp.ok) {
     console.error('[Admin] 구독 조회 실패:', json);
-    tbody.innerHTML = `<tr><td colspan="7" class="loading" style="color:#ff8090">구독 조회 실패: ${json.error || resp.status}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="loading" style="color:#ff8090">구독 조회 실패: ${json.error || resp.status}</td></tr>`;
     return;
   }
 
@@ -1060,7 +1060,7 @@ async function loadSubscriptions() {
   updateSubStats(status, list, token);
 
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="loading">구독 데이터가 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">구독 데이터가 없습니다.</td></tr>';
     return;
   }
 
@@ -1554,11 +1554,11 @@ function promoExpiryCell(c) {
 async function loadPromos() {
   const status = document.getElementById('promo-status-filter').value;
   const tbody = document.getElementById('promo-table');
-  tbody.innerHTML = '<tr><td colspan="7" class="loading">로딩 중...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" class="loading">로딩 중...</td></tr>';
 
   const { data: sess } = await sb.auth.getSession();
   const token = sess?.session?.access_token;
-  if (!token) { tbody.innerHTML = '<tr><td colspan="7" class="loading" style="color:#ff8090">세션이 만료되었습니다. 다시 로그인해주세요.</td></tr>'; return; }
+  if (!token) { tbody.innerHTML = '<tr><td colspan="8" class="loading" style="color:#ff8090">세션이 만료되었습니다. 다시 로그인해주세요.</td></tr>'; return; }
 
   let resp, json;
   try {
@@ -1567,17 +1567,17 @@ async function loadPromos() {
     });
     json = await resp.json();
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="7" class="loading" style="color:#ff8090">백엔드 통신 실패: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="loading" style="color:#ff8090">백엔드 통신 실패: ${e.message}</td></tr>`;
     return;
   }
   if (!resp.ok) {
-    tbody.innerHTML = `<tr><td colspan="7" class="loading" style="color:#ff8090">목록 조회 실패: ${json.error || resp.status}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="loading" style="color:#ff8090">목록 조회 실패: ${json.error || resp.status}</td></tr>`;
     return;
   }
 
   const list = json.codes || [];
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="loading">발급된 코드가 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">발급된 코드가 없습니다.</td></tr>';
     return;
   }
 
@@ -1594,8 +1594,39 @@ async function loadPromos() {
       <td style="white-space:nowrap">${promoExpiryCell(c)}</td>
       <td style="color:var(--muted);font-size:.7rem">${c.memo || '—'}</td>
       <td style="white-space:nowrap">${fmtDate(c.created_at)}</td>
+      <td style="white-space:nowrap">${promoVoucherCell(c)}</td>
     </tr>`;
   }).join('');
+}
+
+// ── 바우처 이미지 셀: 보기(새 탭) + 다운로드 버튼 ──
+function promoVoucherCell(c) {
+  if (!c.image_url) {
+    return '<span style="color:var(--muted);font-size:.7rem">생성 중…</span>';
+  }
+  const url = c.image_url;
+  const code = c.code;
+  return '<a href="' + url + '" target="_blank" rel="noopener" '
+    + 'style="font-size:.65rem;color:#e0b060;text-decoration:none;border:1px solid rgba(224,176,96,0.4);border-radius:3px;padding:2px 6px;margin-right:4px">보기</a>'
+    + '<button onclick="downloadVoucher(\'' + url + '\',\'' + code + '\')" '
+    + 'style="font-size:.65rem;color:#7fd0a0;background:none;cursor:pointer;border:1px solid rgba(127,208,160,0.4);border-radius:3px;padding:2px 6px">다운로드</button>';
+}
+
+// 바우처 PNG를 파일로 다운로드 (코드명.png)
+async function downloadVoucher(url, code) {
+  try {
+    const resp = await fetch(url);
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = code + '.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    alert('다운로드 실패: ' + e.message);
+  }
 }
 </script>
 </body>
