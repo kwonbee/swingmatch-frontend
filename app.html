@@ -2201,21 +2201,26 @@ async function submitPromo() {
 }
 
 // ── 로그인 회원: 영상을 Supabase Storage에 업로드 (무료 1개 / Pro 30개) ──
-async function uploadVideoToStorage(videoFile) {
-  // 로그인 회원만 업로드 (비회원은 저장 안 함)
-  if (!currentUser || !currentUser.id) {
+async function uploadVideoToStorage(videoFile, opts) {
+  opts = opts || {};
+  const guestMode = opts.guest === true;
+
+  // 회원: {user_id}/... 경로에 보관. 게스트: guest/... 임시 경로(분석 후 백엔드가 삭제).
+  if (!guestMode && (!currentUser || !currentUser.id)) {
     console.log('[Video] 비회원 - 영상 저장 스킵');
     return null;
   }
-  
+
   try {
-    // 파일 경로: {user_id}/{timestamp}_{filename}
     const timestamp = Date.now();
     const safeName = videoFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filePath = `${currentUser.id}/${timestamp}_${safeName}`;
-    
+    const rand = Math.random().toString(36).slice(2, 8);
+    const filePath = guestMode
+      ? `guest/${timestamp}_${rand}_${safeName}`
+      : `${currentUser.id}/${timestamp}_${safeName}`;
+
     console.log('[Video] 업로드 시작:', filePath, '(' + (videoFile.size / (1024*1024)).toFixed(1) + 'MB)');
-    
+
     const { data, error } = await sb.storage
       .from('swing-videos')
       .upload(filePath, videoFile, {
@@ -2223,19 +2228,21 @@ async function uploadVideoToStorage(videoFile) {
         upsert: false,
         contentType: videoFile.type || 'video/mp4'
       });
-    
+
     if (error) {
       console.error('[Video] 업로드 실패:', error.message);
       return null;
     }
-    
-    // 인증된 사용자만 볼 수 있는 signed URL 생성 (7일간 유효)
-    const { data: urlData, error: urlError } = await sb.storage
-      .from('swing-videos')
-      .createSignedUrl(filePath, 60 * 60 * 24 * 7); // 7일
-    
-    const videoUrl = urlError ? null : urlData.signedUrl;
-    
+
+    // 게스트 임시 영상은 signed URL 불필요 (분석에만 쓰고 삭제)
+    let videoUrl = null;
+    if (!guestMode) {
+      const { data: urlData, error: urlError } = await sb.storage
+        .from('swing-videos')
+        .createSignedUrl(filePath, 60 * 60 * 24 * 7); // 7일
+      videoUrl = urlError ? null : urlData.signedUrl;
+    }
+
     console.log('[Video] ✅ 업로드 성공:', filePath);
     return {
       path: filePath,
@@ -2244,6 +2251,19 @@ async function uploadVideoToStorage(videoFile) {
   } catch (e) {
     console.error('[Video] 업로드 예외:', e);
     return null;
+  }
+}
+
+// ── [B안] 게스트 임시 영상 삭제 (프론트 안전망) ──
+// 백엔드도 분석 후 삭제하지만, 폴백/네트워크 실패로 백엔드에 못 닿은 경우 대비해
+// 프론트에서도 한 번 더 정리한다. (이미 지워졌으면 조용히 무시)
+async function deleteGuestTempVideo(videoPath) {
+  if (!videoPath || videoPath.indexOf('guest/') !== 0) return;
+  try {
+    await sb.storage.from('swing-videos').remove([videoPath]);
+    console.log('[Video] 게스트 임시 영상 정리:', videoPath);
+  } catch (e) {
+    console.warn('[Video] 게스트 임시 영상 정리 실패(무시):', e);
   }
 }
 
@@ -2444,18 +2464,43 @@ async function startAnalysis() {
       document.getElementById('prog-bar').style.width = curPct + '%';
     }
   }, 1200);
+  // [B안] catch 블록에서도 참조하므로 try 밖에서 선언
+  const isMember = !!(currentUser && currentUser.id);
+  let preUploaded = null;
   try {
-    const fd = new FormData(); 
-    fd.append('video', file); 
-    fd.append('club', club);
-    // 로그인된 사용자면 user_id도 전송 (어드민에서 유저별 추적용)
-    if (currentUser && currentUser.id) {
-      fd.append('userId', currentUser.id);
-      console.log('[Analyze] 로그인 사용자 분석:', currentUser.email, currentUser.id.slice(0,8));
-    } else {
-      console.log('[Analyze] 비회원 분석');
+    // ── [B안] 영상을 먼저 Supabase에 직접 업로드 → 백엔드엔 경로(JSON)만 전송 ──
+    //   기존: 영상 본문을 multipart로 백엔드에 직접 업로드 → Railway 엣지가 큰 본문을
+    //         못 넘겨 502/CORS 장애(2026-06-10). 본문을 URL 한 줄로 줄여 엣지 부담 제거.
+    //   회원: {uid}/... 경로에 보관(MY DIARY 재사용). 게스트: guest/... 임시(분석 후 백엔드 삭제).
+    try {
+      preUploaded = await uploadVideoToStorage(file, { guest: !isMember });
+    } catch (e) {
+      console.warn('[Analyze] 사전 업로드 예외:', e);
     }
-    const r = await fetch(BACKEND + '/api/analyze', { method: 'POST', body: fd });
+
+    let r;
+    if (preUploaded && preUploaded.path) {
+      // 새 방식: JSON 전송 (videoPath)
+      console.log('[Analyze] Storage 경로로 분석 요청:', preUploaded.path, isMember ? '(회원)' : '(게스트)');
+      r = await fetch(BACKEND + '/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoPath: preUploaded.path,
+          club: club,
+          userId: isMember ? currentUser.id : null,
+          isGuest: !isMember
+        })
+      });
+    } else {
+      // 폴백(업로드 실패): 기존 multipart 방식으로 직접 전송 (하위호환)
+      console.warn('[Analyze] 사전 업로드 실패 → multipart 폴백');
+      const fd = new FormData();
+      fd.append('video', file);
+      fd.append('club', club);
+      if (isMember) fd.append('userId', currentUser.id);
+      r = await fetch(BACKEND + '/api/analyze', { method: 'POST', body: fd });
+    }
     clearInterval(iv); clearInterval(creepIv); document.getElementById('prog-pct').textContent='분석 완료'; document.getElementById('prog-bar').style.width='100%'; document.getElementById('prog-msg').textContent='';
     if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || 'HTTP ' + r.status); }
     const data = await r.json();
@@ -2478,13 +2523,25 @@ async function startAnalysis() {
     }
     await updateCountDisplay();
     
-    // ★ 결과 먼저 표시 (영상 업로드 기다리지 않음!)
+    // ★ 결과 먼저 표시 (영상 후처리 기다리지 않음!)
     saveToHistory(normalized, null);
     renderResult(normalized, null);
     
-    // ★ 로그인 회원: 영상을 백그라운드로 업로드 (무료 1개 / Pro 30개, 결과는 이미 보임)
-    if (currentUser && currentUser.id) {
-      uploadVideoToStorage(file).then(async videoInfo => {
+    // ★ 로그인 회원: 이미 업로드한 영상 정보(preUploaded)로 MY DIARY 연결 (재업로드 없음)
+    //   게스트는 임시 영상이라 백엔드가 분석 후 삭제 → 여기서 별도 처리 없음.
+    if (isMember) {
+      (async () => {
+        let videoInfo = preUploaded;
+        // 폴백 경로(사전 업로드 실패)였다면 여기서 정식 업로드 시도
+        if (!videoInfo || !videoInfo.path) {
+          videoInfo = await uploadVideoToStorage(file);
+        }
+        // signed URL이 없으면(예: 사전 업로드는 됐으나 URL 생성 실패) 보강
+        if (videoInfo && videoInfo.path && !videoInfo.url) {
+          videoInfo.url = await refreshVideoUrl(videoInfo.path);
+        }
+        return videoInfo;
+      })().then(async videoInfo => {
         if (!videoInfo || !videoInfo.url) {
           console.log('[Video] 업로드 실패 또는 스킵');
           return;
@@ -2583,10 +2640,15 @@ async function startAnalysis() {
       }).catch(err => {
         console.warn('[Video] 업로드 실패 (분석 결과는 정상):', err);
       });
+    } else if (preUploaded && preUploaded.path) {
+      // 게스트: 임시 영상은 백엔드가 분석 후 삭제하지만, 프론트에서도 안전망으로 정리
+      deleteGuestTempVideo(preUploaded.path);
     }
   } catch(e) {
     clearInterval(iv); pg.classList.remove('on');
     document.getElementById('abtn').disabled = false;
+    // [B안] 게스트 임시 영상이 남아있으면 정리 (백엔드에 못 닿았을 수 있음)
+    try { if (!isMember && preUploaded && preUploaded.path) deleteGuestTempVideo(preUploaded.path); } catch(_) {}
     const msg = e.message || '';
     // 진짜 원인은 콘솔에 남겨 디버깅 가능하게 (사용자 메시지와 별개)
     console.error('[Analyze] 실패 원인:', msg, e);
