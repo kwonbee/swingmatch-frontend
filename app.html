@@ -187,6 +187,14 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 
 /* 진행 */
 
+/* ── 백그라운드 분석 복원 배너 ── */
+#resume-banner{position:fixed;left:50%;transform:translateX(-50%) translateY(-120%);top:calc(12px + env(safe-area-inset-top,0px));z-index:9999;display:none;align-items:center;gap:10px;max-width:440px;width:calc(100% - 32px);padding:13px 14px 13px 16px;background:var(--gold);color:#fff;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.32);cursor:pointer;font-family:'Pretendard',sans-serif;transition:transform .32s cubic-bezier(.22,1,.36,1)}
+#resume-banner.on{display:flex;transform:translateX(-50%) translateY(0)}
+#resume-banner .rb-ico{font-size:1rem;flex-shrink:0}
+#resume-banner .rb-txt{flex:1;font-size:.84rem;font-weight:500;letter-spacing:.01em}
+#resume-banner .rb-arrow{font-size:1.2rem;opacity:.85;flex-shrink:0}
+#resume-banner #resume-banner-close{background:rgba(255,255,255,.18);border:none;color:#fff;width:22px;height:22px;border-radius:50%;font-size:.7rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;margin-left:2px}
+
 /* ── 분석 진행 표시 ── */
 .prog-bar-wrap{width:100%;margin-top:4px}
 .prog-bar-track{width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;margin-bottom:8px}
@@ -515,6 +523,14 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 
 <!-- 배경 -->
 <div class="bg"><img src="/bg.jpg" alt=""></div>
+
+<!-- 백그라운드 분석 복원 배너 (앱 나갔다 돌아왔을 때 표시) -->
+<div id="resume-banner" role="button" tabindex="0" aria-label="분석 결과 보기">
+  <span class="rb-ico">✨</span>
+  <span class="rb-txt">분석이 완료됐어요 — 결과 보기</span>
+  <span class="rb-arrow">›</span>
+  <button id="resume-banner-close" aria-label="닫기">✕</button>
+</div>
 
 <!-- NAV 1 -->
 <div class="nav-top">
@@ -1141,6 +1157,9 @@ async function checkSession() {
   if (session) {
     await applyAuthedState(session.user); // 이미 로그인된 상태 → 통합 초기화
 
+    // 첫 로드 시: 이전에 돌려놓고 앱을 닫았던 분석이 있으면 점검(완료 배너 / 진행 중 폴링 재개)
+    checkPendingAnalysis();
+
     // ?next=subscribe 면 이미 로그인되어 있으므로 즉시 구독 페이지로
     const nextParam = new URLSearchParams(location.search).get('next');
     if (nextParam === 'subscribe') {
@@ -1286,6 +1305,8 @@ document.addEventListener('visibilitychange', async () => {
     const { data: { session } } = await sb.auth.getSession();
     if (session) {
       await applyAuthedState(session.user);
+      // 떠나 있는 동안 끝났을 수 있는 백그라운드 분석을 점검 → 완료면 배너, 진행 중이면 이어서 폴링
+      checkPendingAnalysis();
     } else if (currentUser) {
       // 떠나 있는 동안 세션이 만료됨 → 게스트 상태로 정리
       swingHistory = [];
@@ -2426,6 +2447,151 @@ async function updateCountDisplay() {
   }
 }
 
+// ════════════════════════════════════════════════════════════════
+// 백그라운드 분석 복원 — 앱을 나갔다(화면 끔/탭 전환) 다시 와도 결과를 잃지 않음.
+//   서버는 회원 분석을 백그라운드에서 끝까지 돌려 DB(analysis_logs)에 저장한다.
+//   프론트는 진행 중인 logId를 localStorage에 기억했다가, 복귀 시 상태를 확인:
+//     done → "완료됐어요 — 보기" 배너 표시(탭하면 결과 렌더)
+//     processing/pending → 진행 화면 복원 + 폴링 재개
+//     failed/만료 → 조용히 정리
+// ════════════════════════════════════════════════════════════════
+const PENDING_KEY = 'pendingAnalysis';      // localStorage 키
+const PENDING_MAX_AGE = 10 * 60 * 1000;     // 10분 지나면 만료로 간주(서버 타임아웃과 정렬)
+let _resumeInFlight = false;                // 중복 복원 방지
+
+function savePendingAnalysis(logId, club) {
+  try { localStorage.setItem(PENDING_KEY, JSON.stringify({ logId, club: club || null, ts: Date.now() })); } catch (e) {}
+}
+function clearPendingAnalysis() {
+  try { localStorage.removeItem(PENDING_KEY); } catch (e) {}
+}
+function getPendingAnalysis() {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (!p || !p.logId) return null;
+    if (Date.now() - (p.ts || 0) > PENDING_MAX_AGE) { clearPendingAnalysis(); return null; }
+    return p;
+  } catch (e) { return null; }
+}
+
+function showResumeBanner() {
+  const b = document.getElementById('resume-banner');
+  if (b) b.classList.add('on');
+}
+function hideResumeBanner() {
+  const b = document.getElementById('resume-banner');
+  if (b) b.classList.remove('on');
+}
+
+// 완료된 결과(result_json)를 화면에 복원 — 기존 분석 완료 흐름과 동일하게 처리.
+function presentRestoredResult(result, logId) {
+  try {
+    const normalized = result && result.topMatch ? result : (result && result.result ? result.result : null);
+    if (!normalized || !normalized.topMatch) { clearPendingAnalysis(); return; }
+    const withId = Object.assign({}, normalized, { logId: logId });
+    // 분석 패널로 전환 후 결과 렌더 (히스토리에도 반영)
+    if (typeof showPanel === 'function') showPanel('analyze');
+    saveToHistory(withId, null);
+    renderResult(withId, null);
+    // 진행 표시는 숨기고, 결과 영역으로 스크롤 (renderResult가 result.on 처리)
+    const pg = document.getElementById('prog'); if (pg) pg.classList.remove('on');
+    const rs = document.getElementById('result'); if (rs) { rs.classList.add('on'); rs.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  } catch (e) {
+    console.warn('[Resume] 결과 복원 실패:', e);
+  } finally {
+    clearPendingAnalysis();
+    hideResumeBanner();
+    const ab = document.getElementById('abtn'); if (ab) ab.disabled = false;
+  }
+}
+
+// 복귀 시 진행 중이던 분석을 점검. 회원만 대상(게스트는 동기 분석이라 복원 불필요).
+async function checkPendingAnalysis() {
+  if (_resumeInFlight) return;
+  if (!currentUser || !currentUser.id) return;   // 비회원 제외
+  const p = getPendingAnalysis();
+  if (!p) return;
+  _resumeInFlight = true;
+  try {
+    let token = null;
+    try { const { data: sess } = await sb.auth.getSession(); token = sess && sess.session ? sess.session.access_token : null; } catch (e) {}
+    const resp = await fetch(BACKEND + '/api/analyze/status?logId=' + encodeURIComponent(p.logId), {
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+    });
+    if (!resp.ok) { return; } // 일시 오류 → 다음 복귀 때 재시도(만료 전까지)
+    const s = await resp.json().catch(() => ({}));
+
+    if (s.status === 'done' && s.result && s.result.topMatch) {
+      // 완료됨 → 배너로 알림(탭하면 결과 표시). 결과는 클릭 시점에 다시 안 받아도 되게 보관.
+      window.__restoredResult = { result: s.result, logId: p.logId };
+      showResumeBanner();
+    } else if (s.status === 'failed') {
+      clearPendingAnalysis(); hideResumeBanner();
+    } else {
+      // pending / processing → 아직 분석 중. 진행 화면 띄우고 폴링 재개.
+      hideResumeBanner();
+      await resumeInProgress(p.logId);
+    }
+  } catch (e) {
+    console.warn('[Resume] 상태 확인 실패:', e);
+  } finally {
+    _resumeInFlight = false;
+  }
+}
+
+// 아직 분석 중인 건을 이어서 폴링 — 완료되면 자동으로 결과 렌더.
+async function resumeInProgress(logId) {
+  try {
+    if (typeof showPanel === 'function') showPanel('analyze');
+    const ab = document.getElementById('abtn'); if (ab) ab.disabled = true;
+    const pg = document.getElementById('prog'); if (pg) pg.classList.add('on');
+    const setMsg = (txt) => { const m = document.getElementById('prog-msg'); if (m) m.textContent = txt; };
+    const setPct = (v) => {
+      const shown = Math.min(99, Math.floor(v));
+      const pe = document.getElementById('prog-pct'); if (pe) pe.textContent = shown + '%';
+      const bar = document.getElementById('prog-bar'); if (bar) bar.style.width = shown + '%';
+    };
+    // 이어받는 거라 진행률은 70%에서 시작해 99%로 천천히 차오르게(체감상 거의 다 됨)
+    let cur = 70; setPct(cur); setMsg('분석을 이어서 마무리하고 있어요');
+    const iv = setInterval(() => { const r = 99 - cur; if (r > 0.3) { cur += r * 0.02 + 0.03; setPct(cur); } }, 120);
+    let result;
+    try {
+      result = await pollAnalysisStatus(logId, (st) => { setMsg(st === 'processing' ? '프로 스윙과 정밀 비교 중이에요' : '분석을 준비하고 있어요'); });
+    } finally { clearInterval(iv); }
+    setPct(100); const pe = document.getElementById('prog-pct'); if (pe) pe.textContent = '분석 완료';
+    presentRestoredResult(result, logId);
+  } catch (e) {
+    console.warn('[Resume] 이어서 폴링 실패:', e);
+    clearPendingAnalysis();
+    const pg = document.getElementById('prog'); if (pg) pg.classList.remove('on');
+  }
+}
+
+// 배너 이벤트 연결 (탭 → 결과 표시, ✕ → 닫기만)
+(function bindResumeBanner() {
+  const wire = () => {
+    const b = document.getElementById('resume-banner');
+    const x = document.getElementById('resume-banner-close');
+    if (!b) return;
+    b.addEventListener('click', () => {
+      const r = window.__restoredResult;
+      if (r) { presentRestoredResult(r.result, r.logId); window.__restoredResult = null; }
+      else { hideResumeBanner(); }
+    });
+    b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); b.click(); } });
+    if (x) x.addEventListener('click', (e) => {
+      e.stopPropagation();           // 배너 클릭(=결과 표시)으로 번지지 않게
+      hideResumeBanner();
+      clearPendingAnalysis();        // 닫으면 더는 안 띄움(결과는 MY DIARY에 있음)
+      window.__restoredResult = null;
+    });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
+  else wire();
+})();
+
 // ── [비동기] 분석 상태 폴링 ──
 // 백엔드가 logId를 즉시 주면, status가 done/failed가 될 때까지 주기적으로 조회.
 // onProgress(status) 콜백으로 진행 표시 갱신 가능. done이면 result 반환, failed면 throw.
@@ -2570,6 +2736,8 @@ async function startAnalysis() {
     // 끊겨도 서버는 계속 분석하므로, 폴링이 일시 실패해도 재시도하며 기다린다.
     if (data && data.async && data.logId) {
       console.log('[Analyze] 비동기 접수 — logId:', data.logId, '폴링 시작');
+      // 진행 중인 분석을 기억 → 앱을 나갔다 와도 복원 가능(화면 끔/탭 전환 대비).
+      savePendingAnalysis(data.logId, club);
       // 진행 바(iv)는 계속 돌려 멈춤 없이 차오르게 둔다(중요: 여기서 iv를 멈추면 폴링 내내 정지).
       // 자동 구간 메시지 대신 폴링 상태 메시지를 우선 표시하도록 잠근다.
       const result = await pollAnalysisStatus(data.logId, (st) => {
@@ -2579,6 +2747,7 @@ async function startAnalysis() {
       });
       // 폴링 결과(result_json)에 logId를 실어 기존 흐름과 동일하게 처리
       data = Object.assign({}, result, { logId: data.logId });
+      clearPendingAnalysis(); // 정상 완료 → 복원 대상에서 제거
     }
     // 분석 완료 표시 (동기·비동기 공통) — 타이머 정지 후 100% 스냅
     clearInterval(iv);
