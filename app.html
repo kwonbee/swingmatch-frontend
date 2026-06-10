@@ -231,7 +231,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 
 /* 촬영 가이드 */
 .guide-card{width:100%;background:rgba(255,255,255,.85);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:14px 20px;margin-bottom:12px}
-#daily-count{text-shadow:0 0 8px rgba(255,255,255,.9)}
+#daily-count:not(:empty){display:block;width:fit-content;margin-left:auto;margin-right:auto;background:rgba(255,255,255,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:2px;padding:8px 16px}
 .prog.on{background:rgba(255,255,255,.85);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:14px 16px}
 .guide-title{font-size:.7rem;letter-spacing:.12em;color:var(--gold);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:6px}
 .guide-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px 16px}
@@ -688,7 +688,6 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
         <span class="box-ico"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22.5"/><path class="ln" d="M24 31V18M18.5 23.5L24 18l5.5 5.5"/></svg></span>
         <h3>골프 스윙 영상 업로드</h3>
         <p>드래그 앤 드롭</p>
-        <div class="fmt">MP4 · MOV · AVI</div>
         <div class="fname" id="fname"></div>
       </div>
       <button type="button" class="tvz" id="sampleBannerHead" onclick="toggleSampleBanner()" aria-expanded="false">
@@ -758,7 +757,6 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <div class="gi"><span class="gi-ico"><svg class="gi-svg" viewBox="0 0 32 32" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M22.091,12.778l-1.477-2.3a5.475,5.475,0,0,1-.87-2.964V5.423H17V2.563H15v2.86H12.249V7.516a5.483,5.483,0,0,1-.869,2.964L9.9,12.778a7.534,7.534,0,0,0-.4,7.473,7.121,7.121,0,0,0,5.832,4c.218.018.439.026.663.026s.443-.008.663-.026a7.12,7.12,0,0,0,5.831-4A7.534,7.534,0,0,0,22.091,12.778ZM20.7,19.365a5.073,5.073,0,0,1-4.2,2.9,6.324,6.324,0,0,1-1,0,5.073,5.073,0,0,1-4.2-2.9,5.551,5.551,0,0,1,.291-5.505l1.477-2.3a7.472,7.472,0,0,0,1.187-4.045V7.423h3.495v.093a7.468,7.468,0,0,0,1.188,4.045l1.475,2.3A5.547,5.547,0,0,1,20.7,19.365Z"></path><rect width="2" height="4.825" x="14.997" y="9.318"></rect><rect width="3.357" height="2" x="25.085" y="15.994"></rect><rect width="2" height="3.357" x="22.611" y="22.927" transform="rotate(-45 23.61 24.605)"></rect><rect width="2" height="3.357" x="15" y="26.079"></rect><rect width="3.357" height="2" x="6.709" y="23.605" transform="rotate(-45 8.388 24.606)"></rect><rect width="3.356" height="2" x="3.558" y="15.994"></rect></svg></span><div class="gi-text"><strong>촬영 환경</strong><span>밝은 환경, 전신이 보이게</span></div></div>
       <div class="gi"><span class="gi-ico"><svg class="gi-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"></circle></svg></span><div class="gi-text"><strong>포함 동작</strong><span>어드레스~피니시 전체</span></div></div>
     </div>
-    <div class="guide-tip"><strong>Tip.</strong> 연습장에서 핸드폰을 삼각대나 카트에 올려두고 측면에서 촬영하면 가장 정확한 분석이 가능합니다.<br><span style="color:rgba(76,120,87,0.8);font-size:.7rem">무료 회원은 분석 영상 1개 자동 저장 · Pro 회원은 최근 30개 자동 저장 + 영구 보관할 영상은 하트로 즐겨찾기 (10개)</span></div>
   </div>
   <!-- Callaway 광고 -->
   <div class="ad-inline" id="ad-callaway" style="display:none">
