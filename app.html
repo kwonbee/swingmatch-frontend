@@ -57,7 +57,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 
 /* 배경 */
 .bg{position:fixed;inset:0;z-index:0}
-.bg img{width:100%;height:100%;object-fit:cover;object-position:center 55%;filter:brightness(1.08) saturate(0.75) contrast(0.95);opacity:0.5}
+.bg img{width:100%;height:100%;object-fit:cover;object-position:center 55%;filter:brightness(1.08) saturate(0.75) contrast(0.95);opacity:0.85}
 .bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,0.02) 0%,rgba(255,255,255,0.08) 100%);pointer-events:none}
 
 /* 광고 공통 */
@@ -140,27 +140,45 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .ph p{font-size:.8rem;color:var(--muted);letter-spacing:.03em;line-height:1.65}
 
 /* 업로드 카드 */
-.upload-card{width:100%;background:var(--card);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(20px);padding:28px 28px 24px;margin-bottom:16px}
-.club-label{font-size:.68rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:10px}
-.club-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:20px}
-.cb{background:rgba(255,255,255,.78);border:1px solid var(--border);color:#3F3F3D;padding:7px 6px 6px;border-radius:2px;cursor:pointer;font-size:.68rem;font-family:'Pretendard',sans-serif;letter-spacing:.04em;text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.2}
-.cb:hover{border-color:var(--gold);color:var(--gold);background:rgba(255,255,255,.92)}
-.cb.active{border-color:var(--gold);background:rgba(76,120,87,.12);color:var(--accent)}
-.cb img{filter:hue-rotate(100deg) saturate(0.55) brightness(0.62) contrast(1.15);transition:filter .2s}
+/* 업로드 카드 — 컨테이너 시각 제거 (JS scrollIntoView 앵커용으로 클래스만 유지) */
+.upload-card{width:100%;background:transparent;border:none;border-radius:0;backdrop-filter:none;padding:0;margin-bottom:16px}
+
+/* 1행: 업로드(좌) + 테스트 영상(우) — 배경 위 독립 글라스 박스 */
+.row-upload{display:grid;grid-template-columns:1.4fr 1fr;gap:10px;margin-bottom:12px}
+.box-ico{display:block;margin-bottom:9px}
+.box-ico svg{width:30px;height:30px;display:block}
+.box-ico circle{fill:none;stroke:rgba(76,120,87,.45);stroke-width:1.5}
+.box-ico .tri{fill:var(--accent);stroke:none}
+.box-ico .ln{fill:none;stroke:var(--accent);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.tvz{position:relative;border:1px solid var(--border);border-radius:2px;padding:22px 12px;text-align:center;cursor:pointer;transition:all .25s;background:rgba(255,255,255,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;flex-direction:column;justify-content:center;align-items:center;font-family:inherit;margin:0;width:100%}
+.tvz:hover{border-color:var(--gold);background:rgba(255,255,255,.92)}
+.tvz h3{font-family:'Pretendard',sans-serif;font-weight:600;font-size:.84rem;letter-spacing:.01em;margin-bottom:4px;color:#1A1A1A}
+.tvz p{font-size:.7rem;color:#3F3F3D;line-height:1.6}
+.tvz-arrow{font-size:.78rem;color:var(--accent);margin-top:7px;transition:transform .22s;display:block}
+#sampleBannerHead[aria-expanded="true"] .tvz-arrow{transform:rotate(180deg)}
+.club-label{font-size:.68rem;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:8px;font-weight:600;text-shadow:0 0 6px rgba(255,255,255,.85)}
+.club-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.cb{background:rgba(255,255,255,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);color:#3F3F3D;padding:7px 4px 6px;border-radius:2px;cursor:pointer;font-size:.66rem;font-family:'Pretendard',sans-serif;letter-spacing:.04em;text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.2}
+.cb:hover{border-color:var(--gold);color:var(--gold);background:rgba(255,255,255,.94)}
+.cb.active{border-color:var(--gold);background:rgba(76,120,87,.14);color:var(--accent)}
+.cb img{width:22px;height:22px;filter:hue-rotate(100deg) saturate(0.55) brightness(0.62) contrast(1.15);transition:filter .2s}
 .cb.active img{filter:hue-rotate(100deg) saturate(0.7) brightness(0.5) contrast(1.2)}
 
 /* 업로드존 */
-.uz{position:relative;border:1px dashed rgba(76,120,87,.3);border-radius:2px;padding:44px 20px;text-align:center;cursor:pointer;transition:all .25s;background:rgba(255,255,255,.78)}
-.uz:hover,.uz.over{border-color:var(--gold);background:rgba(255,255,255,.88)}
+.uz{position:relative;border:1px solid var(--border);border-radius:2px;padding:22px 12px;text-align:center;cursor:pointer;transition:all .25s;background:rgba(255,255,255,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;flex-direction:column;justify-content:center;align-items:center}
+.uz:hover,.uz.over{border-color:var(--gold);background:rgba(255,255,255,.92)}
 .uz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .uz-ico{font-size:2rem;margin-bottom:12px;opacity:.85;display:block}
-.uz h3{font-family:'Noto Serif KR',serif;font-weight:400;font-size:1.1rem;letter-spacing:.03em;margin-bottom:6px;color:#1A1A1A}
-.uz p{font-size:.8rem;color:#3F3F3D;line-height:1.65}
-.uz .fmt{font-size:.72rem;color:#4C7857;margin-top:8px;letter-spacing:.06em;font-weight:500}
+.uz h3{font-family:'Pretendard',sans-serif;font-weight:600;font-size:.84rem;letter-spacing:.01em;margin-bottom:4px;color:#1A1A1A}
+.uz p{font-size:.7rem;color:#3F3F3D;line-height:1.6}
+.uz .fmt{font-size:.66rem;color:#4C7857;margin-top:7px;letter-spacing:.06em;font-weight:500}
 
 /* ── 테스트 영상 배너 ──
    --sample-accent 하나만 바꾸면 그린↔핑크 전환 (예: #FF6B81). 기본은 브랜드 그린. */
-.sample-banner{--sample-accent:var(--accent);margin-top:12px;border:1.5px solid var(--sample-accent);border-radius:4px;overflow:hidden;background:rgba(45,74,51,0.04)}
+/* ── 테스트 영상 선택 패널 ──
+   헤드는 .tvz(우측 박스)로 이동. #sampleBanner는 펼침 본문만 담고 .open일 때만 표시. */
+.sample-banner{--sample-accent:var(--accent);display:none;margin:0 0 12px;border:1px solid var(--border);border-radius:2px;overflow:hidden;background:rgba(255,255,255,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.sample-banner.open{display:block}
 .sample-banner-head{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:transparent;border:none;cursor:pointer;text-align:left;font-family:inherit;transition:background .18s}
 .sample-banner-head:hover{background:rgba(45,74,51,0.07)}
 .sample-banner-txt{display:flex;flex-direction:column;gap:3px}
@@ -212,7 +230,9 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .step.done .dot{background:#2D4A33}
 
 /* 촬영 가이드 */
-.guide-card{width:100%;background:var(--card);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(20px);padding:14px 20px;margin-bottom:12px}
+.guide-card{width:100%;background:rgba(255,255,255,.85);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:14px 20px;margin-bottom:12px}
+#daily-count{text-shadow:0 0 8px rgba(255,255,255,.9)}
+.prog.on{background:rgba(255,255,255,.85);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:14px 16px}
 .guide-title{font-size:.7rem;letter-spacing:.12em;color:var(--gold);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:6px}
 .guide-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px 16px}
 .gi{display:flex;align-items:flex-start;gap:10px}
@@ -226,7 +246,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 /* 결과 */
 .result{display:none;width:100%;margin-top:20px}
 .result.on{display:block}
-.rcard{background:var(--card);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(20px);overflow:hidden}
+.rcard{background:rgba(255,255,255,.85);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);overflow:hidden}
 .tabs{display:flex;border-bottom:1px solid var(--border)}
 .tbtn{flex:1;padding:12px 8px;background:transparent;border:none;color:var(--muted);font-family:'Pretendard',sans-serif;font-size:.73rem;letter-spacing:.05em;cursor:pointer;transition:all .2s;border-bottom:2px solid transparent;margin-bottom:-1px}
 .tbtn.active{color:var(--gold);border-bottom-color:var(--gold)}
@@ -320,7 +340,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 
 /* 히스토리 */
 .hist-list{display:flex;flex-direction:column;gap:10px;width:100%}
-.hist-item{background:var(--card);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(16px);padding:18px 20px;display:flex;align-items:flex-start;gap:10px}
+.hist-item{background:rgba(255,255,255,.85);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:18px 20px;display:flex;align-items:flex-start;gap:10px}
 .hist-top{display:flex;align-items:center;gap:12px;margin-bottom:10px}
 .hist-emoji{font-size:1.5rem}.hist-pro{flex:1}
 .hpname{font-size:.88rem;color:var(--text);margin-bottom:1px}
@@ -333,7 +353,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .hscore span{color:var(--gold)}
 
 /* 그래프 */
-.graph-card{width:100%;background:var(--card);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(20px);padding:22px 24px;margin-bottom:14px}
+.graph-card{width:100%;background:rgba(255,255,255,.85);border:1px solid var(--border);border-radius:2px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:22px 24px;margin-bottom:14px}
 .gtitle{font-size:.68rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:16px}
 .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .gstat{text-align:center;padding:14px 8px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:2px}
@@ -498,7 +518,8 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
   .nav-right .nav-cta.btn-guest-signup,
   .auth-area .btn-mydiary{color:#FFFFFF!important;background:#2D4A33!important;border:1px solid #2D4A33!important;border-radius:0!important;padding:8px 18px!important}
   .main{padding:24px 14px 80px}
-  .upload-card,.guide-card{padding:12px 14px}
+  .upload-card{padding:0}
+  .guide-card{padding:12px 14px}
   .guide-grid{grid-template-columns:1fr 1fr}
   .tc{padding:18px}
   .rgrid{grid-template-columns:1fr}
@@ -660,6 +681,41 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 <!-- 스윙 분석 패널 -->
 <div class="panel active" id="panel-analyze">
   <div class="upload-card">
+    <!-- 1행: 업로드(좌) / 테스트 영상(우) -->
+    <div class="row-upload">
+      <div class="uz" id="uz">
+        <input type="file" id="fi" accept="video/*" onchange="handleFile(this.files[0])">
+        <span class="box-ico"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22.5"/><path class="ln" d="M24 31V18M18.5 23.5L24 18l5.5 5.5"/></svg></span>
+        <h3>골프 스윙 영상 업로드</h3>
+        <p>드래그 앤 드롭</p>
+        <div class="fmt">MP4 · MOV · AVI</div>
+        <div class="fname" id="fname"></div>
+      </div>
+      <button type="button" class="tvz" id="sampleBannerHead" onclick="toggleSampleBanner()" aria-expanded="false">
+        <span class="box-ico"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22.5"/><path class="tri" d="M20 16.5L32 24l-12 7.5z"/></svg></span>
+        <h3>테스트 영상</h3>
+        <p>샘플 영상 선택</p>
+        <span class="tvz-arrow" id="sampleBannerArrow">▾</span>
+      </button>
+    </div>
+
+    <!-- ── 테스트 영상 선택 패널 (우측 박스 탭 시 펼쳐짐) ── -->
+    <div class="sample-banner" id="sampleBanner">
+      <div class="sample-banner-body" id="sampleBannerBody">
+        <p class="sample-banner-guide">샘플 스윙으로 분석을 바로 체험해보세요</p>
+        <div class="sample-choices">
+          <button type="button" class="sample-choice" onclick="runSample('b', this)">
+            <span class="sample-choice-title">여성 스윙 체험</span>
+            <span class="sample-choice-sub">준비된 스윙으로 바로 분석</span>
+          </button>
+          <button type="button" class="sample-choice" onclick="runSample('a', this)">
+            <span class="sample-choice-title">남성 스윙 체험</span>
+            <span class="sample-choice-sub">준비된 스윙으로 바로 분석</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <span class="club-label">클럽 선택</span>
     <div class="club-grid">
       <button class="cb active" data-club="driver" onclick="selClub(this)">
@@ -674,38 +730,6 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
       <button class="cb" data-club="putter" onclick="selClub(this)">
         <img src="data:image/png;base64,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" width="30" height="30" style="object-fit:contain">퍼터
       </button>
-    </div>
-    <div class="uz" id="uz">
-      <input type="file" id="fi" accept="video/*" onchange="handleFile(this.files[0])">
-      <span class="uz-ico">🎬</span>
-      <h3>골프 스윙 영상을 업로드하세요</h3>
-      <p>드래그 앤 드롭 또는 클릭하여 선택</p>
-      <div class="fmt">MP4 · MOV · AVI</div>
-      <div class="fname" id="fname"></div>
-    </div>
-
-    <!-- ── 테스트 영상 배너 (영상 없는 방문자용) ── -->
-    <div class="sample-banner" id="sampleBanner">
-      <button type="button" class="sample-banner-head" id="sampleBannerHead" onclick="toggleSampleBanner()" aria-expanded="false">
-        <div class="sample-banner-txt">
-          <strong>영상이 없어도 OK!</strong>
-          <span>테스트 영상이 준비되어 있습니다</span>
-        </div>
-        <span class="sample-banner-arrow" id="sampleBannerArrow">▾</span>
-      </button>
-      <div class="sample-banner-body" id="sampleBannerBody">
-        <p class="sample-banner-guide">샘플 스윙으로 분석을 바로 체험해보세요</p>
-        <div class="sample-choices">
-          <button type="button" class="sample-choice" onclick="runSample('b', this)">
-            <span class="sample-choice-title">여성 스윙 체험</span>
-            <span class="sample-choice-sub">준비된 스윙으로 바로 분석</span>
-          </button>
-          <button type="button" class="sample-choice" onclick="runSample('a', this)">
-            <span class="sample-choice-title">남성 스윙 체험</span>
-            <span class="sample-choice-sub">준비된 스윙으로 바로 분석</span>
-          </button>
-        </div>
-      </div>
     </div>
     <!-- 프레임 프리뷰 -->
     <div id="frames-preview">
@@ -2079,6 +2103,8 @@ async function runSample(key, btnEl) {
 
     // 3) 배너 접고, 기존 업로드 흐름에 그대로 투입
     document.getElementById('sampleBanner').classList.remove('open');
+    const sbHead = document.getElementById('sampleBannerHead');
+    if (sbHead) sbHead.setAttribute('aria-expanded', 'false');
     handleFile(fileObj);
 
     // 4) 업로드 카드로 부드럽게 스크롤 (프레임 추출되는 모습 보이게)
