@@ -2390,15 +2390,15 @@ function drawDiaryPose(){
   const frame=Math.min(d.frames.length-1,Math.max(0,Math.round((video.currentTime||0)*diaryPose.fps)));
   const j=d.frames[frame]; if(!j)return;
   const vt=d.vis_threshold??0.5;
-  ctx.lineWidth=Math.max(2.5,W/130);ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.lineWidth=Math.max(1.5,W/190);ctx.lineCap='round';ctx.lineJoin='round'; // 선 굵기 ↓ (기존 W/130)
   d.skeleton.forEach(([p1,p2])=>{const p=j[p1],q=j[p2];if(!p||!q)return;
     if(p.v<vt||q.v<vt)return;
-    ctx.strokeStyle='#ffffff';ctx.globalAlpha=.95;
+    ctx.strokeStyle='#ffffff';ctx.globalAlpha=1; // 불투명 100%로 선명하게 (기존 .95)
     ctx.beginPath();ctx.moveTo(p.x*W,p.y*H);ctx.lineTo(q.x*W,q.y*H);ctx.stroke();});
-  ctx.globalAlpha=1;const r=Math.max(3.5,W/90);
+  ctx.globalAlpha=1;const r=Math.max(2.5,W/130); // 관절 점 크기 ↓ (기존 3.5, W/90)
   Object.values(j).forEach(p=>{if(typeof p!=='object'||p.x==null)return;if(p.v<vt)return;
     ctx.beginPath();ctx.arc(p.x*W,p.y*H,r,0,7);ctx.fillStyle='#ffffff';ctx.fill();
-    ctx.lineWidth=2;ctx.strokeStyle='rgba(0,0,0,.55)';ctx.stroke();});
+    ctx.lineWidth=1.5;ctx.strokeStyle='rgba(0,0,0,.55)';ctx.stroke();});
 }
 
 // ── 다이어리 그리기 레이어 (직선 각도 / 3점 각도, 비교 모달과 동일 규칙) ──
@@ -2904,17 +2904,17 @@ function cmpDrawPose(side){
   const j=S.data.frames[frame];if(!j)return;
   const vt=S.data.vis_threshold??0.5;
   // 뼈대
-  ctx.lineWidth=Math.max(2.5,W/130);ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.lineWidth=Math.max(1.5,W/190);ctx.lineCap='round';ctx.lineJoin='round'; // 선 굵기 ↓ (기존 W/130)
   S.data.skeleton.forEach(([p1,p2])=>{const p=j[p1],q=j[p2];if(!p||!q)return;
     const vis=p.v>=vt&&q.v>=vt;if(!vis)return;
-    ctx.strokeStyle=CMP_SKEL;ctx.globalAlpha=.95;
+    ctx.strokeStyle=CMP_SKEL;ctx.globalAlpha=1; // 불투명 100%로 선명하게 (기존 .95)
     ctx.beginPath();ctx.moveTo(p.x*W,p.y*H);ctx.lineTo(q.x*W,q.y*H);ctx.stroke();});
   ctx.globalAlpha=1;
   // 관절 점
-  const r=Math.max(3.5,W/90);
+  const r=Math.max(2.5,W/130); // 관절 점 크기 ↓ (기존 3.5, W/90)
   Object.values(j).forEach(p=>{if(typeof p!=='object'||p.x==null)return;if(p.v<vt)return;
     ctx.beginPath();ctx.arc(p.x*W,p.y*H,r,0,7);ctx.fillStyle=CMP_JOINT;ctx.fill();
-    ctx.lineWidth=2;ctx.strokeStyle='rgba(0,0,0,.55)';ctx.stroke();});
+    ctx.lineWidth=1.5;ctx.strokeStyle='rgba(0,0,0,.55)';ctx.stroke();});
 }
 function cmpLineLen(p,q){return Math.hypot(q.x-p.x,q.y-p.y);}
 // 두 점이 이루는 직선의 '수평 기준 기울기'를 0~90°로 반환.
