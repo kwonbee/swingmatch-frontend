@@ -1283,6 +1283,7 @@
       <div class="dia-sep"></div>
       <button class="dia-tbtn" id="diaUndo">실행취소</button>
       <button class="dia-tbtn" id="diaClear">지우기</button>
+      <label class="cmp-toggle"><input type="checkbox" id="diaTgTrail" checked> 궤도</label>
     </div>
     <div class="diary-zoombar" id="diaryZoombar" style="display:none">
       <span class="dia-zoom-label">화면</span>
@@ -2289,7 +2290,7 @@ function poseFeaturesToText(pose){
   return `📊 모션 트래킹 측정값${dr}\n${lines.join('\n')}\n※ 촬영 환경(각도·거리)에 따라 값이 미세하게 조정될 수 있습니다.\n\n— 아래에 자유롭게 메모를 남겨보세요 —\n`;
 }
 
-const diaryPose={data:null,fps:30,on:true,draws:[],tool:'none',pending:null,hover:null,drag:null,seq:0,view:{scale:1,tx:0,ty:0}};
+const diaryPose={data:null,fps:30,on:true,showTrail:true,draws:[],tool:'none',pending:null,hover:null,drag:null,seq:0,view:{scale:1,tx:0,ty:0}};
 async function setupDiaryPose(log){
   const canvas=document.getElementById('diaryPoseCanvas');
   const toggle=document.getElementById('diaryPoseToggle');
@@ -2297,6 +2298,7 @@ async function setupDiaryPose(log){
   const dcv=document.getElementById('diaryDrawCanvas');
   diaryPose.data=null;
   // 그리기 상태 초기화
+  diaryPose.showTrail=true; const tgT=document.getElementById('diaTgTrail'); if(tgT)tgT.checked=true;
   diaryPose.draws=[]; diaryPose.tool='none'; diaryPose.pending=null; diaryPose.hover=null; diaryPose.drag=null; diaryPose.seq=0; diaryPose.view={scale:1,tx:0,ty:0};
   canvas.classList.remove('on'); toggle.style.display='none';
   if(tools)tools.style.display='none';
@@ -2466,7 +2468,7 @@ function drawDiaryPose(){
   const frame=Math.min(d.frames.length-1,Math.max(0,Math.round((video.currentTime||0)*diaryPose.fps)));
   const j=d.frames[frame]; if(!j)return;
   const vt=d.vis_threshold??0.5;
-  drawSwingTrail(ctx,W,H,d,frame); // 스윙 궤도 — 관절보다 아래 레이어
+  if(diaryPose.showTrail) drawSwingTrail(ctx,W,H,d,frame); // 스윙 궤도 — 관절보다 아래 레이어 (체크박스로 ON/OFF)
   ctx.lineWidth=Math.max(1.5,W/190);ctx.lineCap='round';ctx.lineJoin='round'; // 선 굵기 ↓ (기존 W/130)
   d.skeleton.forEach(([p1,p2])=>{const p=j[p1],q=j[p2];if(!p||!q)return;
     if(p.v<vt||q.v<vt)return;
@@ -3367,6 +3369,8 @@ function cmpInit(){
   if(dUndo)dUndo.addEventListener('click',()=>{ if(diaryPose.draws.length){diaryPose.draws.pop();diaRender();} });
   const dClear=document.getElementById('diaClear');
   if(dClear)dClear.addEventListener('click',()=>{ diaryPose.draws=[];diaryPose.pending=null;diaryPose.hover=null;diaRender(); });
+  const dTrail=document.getElementById('diaTgTrail');
+  if(dTrail)dTrail.addEventListener('change',e=>{ diaryPose.showTrail=e.target.checked; diaRender(); });
   // 다이어리 화면 조절(줌)
   const dzi=document.getElementById('diaZoomIn'); if(dzi)dzi.addEventListener('click',()=>diaZoomStep(1.4));
   const dzo=document.getElementById('diaZoomOut'); if(dzo)dzo.addEventListener('click',()=>diaZoomStep(1/1.4));
