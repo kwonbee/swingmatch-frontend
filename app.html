@@ -2507,6 +2507,67 @@ function hideResumeBanner() {
   if (b) b.classList.remove('on');
 }
 
+// ════════════════════════════════════════════════════════════════
+// 재방문 복원 — "방금 한 분석"의 상세를 한 번 놓쳐도 24시간 내 재방문 시 1회 복원.
+//   MY DIARY는 설계상 점수만 보여주므로, 결과 화면을 놓치면 상세를 영영 못 봄 → 그 케이스 방지.
+//   규칙: status='done' AND viewed_at IS NULL AND 24시간 내, 최신 1건만 배너로 제안.
+//   viewed 마킹 = renderResult가 실제로 그린 시점 (DB: analysis_logs.viewed_at, 기기 무관).
+//   배너 ✕ 닫기도 viewed 처리 → 같은 분석이 다시 뜨지 않음.
+// ════════════════════════════════════════════════════════════════
+
+// 상세 열람 마킹 — 실패해도 결과 표시에 영향 없도록 fire-and-forget(무음).
+// 최악의 실패 모드 = 배너가 한 번 더 뜨는 것. 분석 흐름은 절대 막지 않는다.
+function markAnalysisViewed(logId) {
+  try {
+    if (logId == null) return;
+    if (!currentUser || !currentUser.id) return;   // 비회원 분석은 DB 추적 대상 아님
+    sb.from('analysis_logs')
+      .update({ viewed_at: new Date().toISOString() })
+      .eq('id', logId)
+      .eq('user_id', currentUser.id)
+      .then(({ error }) => { if (error) console.warn('[Viewed] 마킹 실패(무시):', error); });
+  } catch (e) { /* 무음 */ }
+}
+
+const UNVIEWED_WINDOW_MS = 24 * 60 * 60 * 1000;  // 복원 대상 시간 제한: 24시간
+let _lastUnviewedCheck = 0;                       // DB 조회 쓰로틀용
+
+// 24시간 내 "아직 상세를 안 본" 완료 분석 1건을 점검해 배너 제안.
+// checkPendingAnalysis에서 진행 중 건이 없을 때만 호출됨(진행 중 이어받기가 항상 우선).
+async function checkUnviewedAnalysis() {
+  try {
+    if (!currentUser || !currentUser.id) return;
+    if (_analysisLiveInView) return;               // 이 화면에서 분석/폴링 진행 중이면 끼어들지 않음
+    if (window.__restoredResult) { showResumeBanner(); return; }  // 이미 대기 중인 복원이 있으면 배너만 유지
+    const now = Date.now();
+    if (now - _lastUnviewedCheck < 60 * 1000) return;  // 60초 쓰로틀(복귀 잦아도 DB 조회 남발 방지)
+    _lastUnviewedCheck = now;
+
+    const sinceIso = new Date(now - UNVIEWED_WINDOW_MS).toISOString();
+    const { data: rows, error } = await sb.from('analysis_logs')
+      .select('id, result_json, created_at')
+      .eq('user_id', currentUser.id)
+      .eq('analysis_status', 'done')
+      .is('viewed_at', null)
+      .gte('created_at', sinceIso)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (error) { console.warn('[Unviewed] 조회 실패(무시):', error); return; }
+    if (!rows || !rows.length) return;
+
+    const row = rows[0];
+    const raw = row.result_json;
+    const normalized = raw && raw.topMatch ? raw : (raw && raw.result ? raw.result : null);
+    if (!normalized || !normalized.topMatch) {
+      markAnalysisViewed(row.id);                  // 표시 불가능한 row는 정리해 다시 잡히지 않게
+      return;
+    }
+    // 기존 배너 UI 재사용 — 탭하면 presentRestoredResult가 renderResult로 표시(그때 viewed 마킹됨)
+    window.__restoredResult = { result: normalized, logId: row.id };
+    showResumeBanner();
+  } catch (e) { console.warn('[Unviewed] 점검 실패(무시):', e); }
+}
+
 // 완료된 결과(result_json)를 화면에 복원 — 기존 분석 완료 흐름과 동일하게 처리.
 function presentRestoredResult(result, logId) {
   try {
@@ -2535,7 +2596,7 @@ async function checkPendingAnalysis() {
   if (_analysisLiveInView) return;               // 이미 이 화면에서 분석/폴링 진행 중 → 복원 끼어들지 않음(91→71% 되돌림 방지)
   if (!currentUser || !currentUser.id) return;   // 비회원 제외
   const p = getPendingAnalysis();
-  if (!p) return;
+  if (!p) { checkUnviewedAnalysis(); return; }   // 진행 중 건 없음 → 재방문 복원 점검(24h 미열람 done)
   _resumeInFlight = true;
   try {
     let token = null;
@@ -2614,6 +2675,8 @@ async function resumeInProgress(logId) {
       e.stopPropagation();           // 배너 클릭(=결과 표시)으로 번지지 않게
       hideResumeBanner();
       clearPendingAnalysis();        // 닫으면 더는 안 띄움(결과는 MY DIARY에 있음)
+      const r = window.__restoredResult;
+      if (r && r.logId != null) markAnalysisViewed(r.logId);  // 닫음 = 본 것으로 간주 → 재방문 복원에도 다시 안 잡힘
       window.__restoredResult = null;
     });
   };
@@ -3126,6 +3189,9 @@ function applyRyuFilter(d){
 }
 
 function renderResult(d, videoInfo) {
+  // 재방문 복원: 결과가 실제로 화면에 그려지는 이 시점 = "상세를 봤다"로 기록.
+  // fire-and-forget(무음)이라 마킹이 실패해도 아래 표시 흐름엔 영향 없음.
+  try { if (d && d.logId != null) markAnalysisViewed(d.logId); } catch (e) {}
   // 류소연 스위치는 이제 백엔드(server.js)에서 본문까지 함께 교체해 처리한다.
   // 프론트에서 한 번 더 덮어쓰면 화면과 DB(히스토리)가 어긋나므로 여기선 적용하지 않는다.
   // 모션 트래킹 안내는 매 분석마다 숨김으로 초기화 → 영상 저장 성공 시에만 다시 표시.
