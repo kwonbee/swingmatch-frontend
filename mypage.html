@@ -1442,6 +1442,8 @@ async function loadSubscription(){
   }
 }
 
+let totalLogCount = 0; // 전체 분석 수 (limit 100과 무관한 정확한 카운트)
+
 async function loadHistory(){
   const { data, error } = await supabaseClient
     .from('analysis_logs')
@@ -1452,9 +1454,21 @@ async function loadHistory(){
   if (error) {
     console.error('[history]', error);
     allLogs = [];
-    return;
+  } else {
+    allLogs = data || [];
   }
-  allLogs = data || [];
+  // 총 분석 횟수: 행을 받지 않고 count만 조회 (실패/진행중 제외 = 완료건만)
+  try {
+    const { count, error: cntErr } = await supabaseClient
+      .from('analysis_logs')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', currentUser.id)
+      .or('analysis_status.is.null,analysis_status.eq.done');
+    totalLogCount = (!cntErr && typeof count === 'number') ? count : allLogs.length;
+  } catch (e) {
+    console.warn('[history count]', e);
+    totalLogCount = allLogs.length;
+  }
 }
 
 // ─── 헤더 ───
@@ -1480,7 +1494,7 @@ function renderStats(){
   const grid = document.getElementById('statsGrid');
 
   // 통계 계산
-  const totalAnalysis = userProfile.total_analysis_count || allLogs.length || 0;
+  const totalAnalysis = totalLogCount || userProfile.total_analysis_count || allLogs.length || 0;
   const daysSinceJoin = userProfile.created_at
     ? Math.floor((Date.now() - new Date(userProfile.created_at).getTime()) / (1000*60*60*24))
     : 0;
