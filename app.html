@@ -177,7 +177,7 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
    --sample-accent 하나만 바꾸면 그린↔핑크 전환 (예: #FF6B81). 기본은 브랜드 그린. */
 /* ── 테스트 영상 선택 패널 ──
    헤드는 .tvz(우측 박스)로 이동. #sampleBanner는 펼침 본문만 담고 .open일 때만 표시. */
-.sample-banner{--sample-accent:var(--accent);display:none;margin:0 0 12px;border:1px solid var(--border);border-radius:2px;overflow:hidden;background:rgba(255,255,255,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.sample-banner{--sample-accent:var(--accent);display:none;margin:0 0 12px}
 .sample-banner.open{display:block}
 .sample-banner-head{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:transparent;border:none;cursor:pointer;text-align:left;font-family:inherit;transition:background .18s}
 .sample-banner-head:hover{background:rgba(45,74,51,0.07)}
@@ -189,8 +189,8 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .sample-banner-body{max-height:0;overflow:hidden;transition:max-height .28s ease;}
 .sample-banner.open .sample-banner-body{max-height:300px}
 .sample-banner-guide{font-size:.78rem;color:#3F3F3D;padding:0 18px 12px;margin:0}
-.sample-choices{display:flex;gap:10px;padding:0 18px 18px}
-.sample-choice{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;padding:14px 12px;background:#fff;border:1px solid var(--sample-accent);border-radius:4px;cursor:pointer;text-align:center;font-family:inherit;transition:all .16s}
+.sample-choices{display:flex;gap:10px;padding:0}
+.sample-choice{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;padding:16px 12px;background:rgba(255,255,255,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--sample-accent);border-radius:2px;cursor:pointer;text-align:center;font-family:inherit;transition:all .16s}
 .sample-choice:hover{background:var(--sample-accent);transform:translateY(-1px)}
 .sample-choice:hover .sample-choice-title,.sample-choice:hover .sample-choice-sub{color:#fff}
 .sample-choice:disabled{opacity:.5;cursor:default;transform:none}
@@ -701,15 +701,12 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
     <!-- ── 테스트 영상 선택 패널 (우측 박스 탭 시 펼쳐짐) ── -->
     <div class="sample-banner" id="sampleBanner">
       <div class="sample-banner-body" id="sampleBannerBody">
-        <p class="sample-banner-guide">샘플 스윙으로 분석을 바로 체험해보세요</p>
         <div class="sample-choices">
           <button type="button" class="sample-choice" onclick="runSample('b', this)">
             <span class="sample-choice-title">여성 스윙 체험</span>
-            <span class="sample-choice-sub">준비된 스윙으로 바로 분석</span>
           </button>
           <button type="button" class="sample-choice" onclick="runSample('a', this)">
             <span class="sample-choice-title">남성 스윙 체험</span>
-            <span class="sample-choice-sub">준비된 스윙으로 바로 분석</span>
           </button>
         </div>
       </div>
