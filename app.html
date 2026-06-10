@@ -2458,6 +2458,7 @@ async function updateCountDisplay() {
 const PENDING_KEY = 'pendingAnalysis';      // localStorage 키
 const PENDING_MAX_AGE = 10 * 60 * 1000;     // 10분 지나면 만료로 간주(서버 타임아웃과 정렬)
 let _resumeInFlight = false;                // 중복 복원 방지
+let _analysisLiveInView = false;            // 지금 이 화면에서 분석/폴링이 진행 중인가 (true면 복원 끼어들기 금지)
 
 function savePendingAnalysis(logId, club) {
   try { localStorage.setItem(PENDING_KEY, JSON.stringify({ logId, club: club || null, ts: Date.now() })); } catch (e) {}
@@ -2510,6 +2511,7 @@ function presentRestoredResult(result, logId) {
 // 복귀 시 진행 중이던 분석을 점검. 회원만 대상(게스트는 동기 분석이라 복원 불필요).
 async function checkPendingAnalysis() {
   if (_resumeInFlight) return;
+  if (_analysisLiveInView) return;               // 이미 이 화면에서 분석/폴링 진행 중 → 복원 끼어들지 않음(91→71% 되돌림 방지)
   if (!currentUser || !currentUser.id) return;   // 비회원 제외
   const p = getPendingAnalysis();
   if (!p) return;
@@ -2543,19 +2545,23 @@ async function checkPendingAnalysis() {
 
 // 아직 분석 중인 건을 이어서 폴링 — 완료되면 자동으로 결과 렌더.
 async function resumeInProgress(logId) {
+  _analysisLiveInView = true;                  // 복원 폴링 중에도 또 다른 복원 끼어들기 차단
   try {
     if (typeof showPanel === 'function') showPanel('analyze');
     const ab = document.getElementById('abtn'); if (ab) ab.disabled = true;
     const pg = document.getElementById('prog'); if (pg) pg.classList.add('on');
     const setMsg = (txt) => { const m = document.getElementById('prog-msg'); if (m) m.textContent = txt; };
+    let cur = 70;                              // 이어받기 진행률(되돌아가 보이지 않게 한 번 정한 뒤로는 증가만)
     const setPct = (v) => {
+      if (v < cur) v = cur;                    // 절대 뒤로 가지 않음
+      cur = v;
       const shown = Math.min(99, Math.floor(v));
       const pe = document.getElementById('prog-pct'); if (pe) pe.textContent = shown + '%';
       const bar = document.getElementById('prog-bar'); if (bar) bar.style.width = shown + '%';
     };
     // 이어받는 거라 진행률은 70%에서 시작해 99%로 천천히 차오르게(체감상 거의 다 됨)
-    let cur = 70; setPct(cur); setMsg('분석을 이어서 마무리하고 있어요');
-    const iv = setInterval(() => { const r = 99 - cur; if (r > 0.3) { cur += r * 0.02 + 0.03; setPct(cur); } }, 120);
+    setPct(70); setMsg('분석을 이어서 마무리하고 있어요');
+    const iv = setInterval(() => { const r = 99 - cur; if (r > 0.3) { setPct(cur + r * 0.02 + 0.03); } }, 120);
     let result;
     try {
       result = await pollAnalysisStatus(logId, (st) => { setMsg(st === 'processing' ? '프로 스윙과 정밀 비교 중이에요' : '분석을 준비하고 있어요'); });
@@ -2566,6 +2572,8 @@ async function resumeInProgress(logId) {
     console.warn('[Resume] 이어서 폴링 실패:', e);
     clearPendingAnalysis();
     const pg = document.getElementById('prog'); if (pg) pg.classList.remove('on');
+  } finally {
+    _analysisLiveInView = false;               // 복원 폴링 종료 → 이후 복원 허용
   }
 }
 
@@ -2654,6 +2662,7 @@ async function startAnalysis() {
   if (!allowed) { return; }
   
   document.getElementById('abtn').disabled = true;
+  _analysisLiveInView = true;                  // 이 화면에서 분석 시작 → 복원 끼어들기 차단
   const pg = document.getElementById('prog'); pg.classList.add('on');
   // ── 매끄러운 진행 표시(시간 기반) ──
   //   기존: 2초 간격 단계 점프(12→28→46…) → 사이사이 멈춤·큰 점프로 "멈춘 듯" 보였음.
@@ -2681,15 +2690,16 @@ async function startAnalysis() {
     }
   };
   updateProgUI();
-  // 감속 곡선: 남은 거리(99-cur)에 비례해 증가 → 처음엔 성큼성큼, 99%에 가까울수록 미세하게.
-  //   계수 0.014 = 약 처음 ~10초에 60%대 도달, 이후 천천히 99%까지 무한 접근(멈추지 않음).
+  // 시간 기반 감속 곡선: 백그라운드 탭에서 setInterval이 느려져도(브라우저 정책)
+  //   복귀 시 "실제 흐른 시간"으로 다시 계산하므로 멈춘 것처럼 보이지 않고 자연스럽게 따라잡음.
+  //   목표 = 경과 t초에 대해 99*(1 - e^(-t/TAU)). TAU≈18 → ~12초에 60%대, 이후 99%로 무한 접근.
+  const progStart = Date.now();
+  const TAU = 18000; // 시상수(ms). 클수록 천천히 차오름.
   const iv = setInterval(() => {
-    const remaining = 99 - curPct;
-    if (remaining > 0.3) {
-      curPct += remaining * 0.014 + 0.05; // 비례 증가 + 최소 증가량(항상 움직임 보장)
-      if (curPct > 99) curPct = 99;
-      updateProgUI();
-    }
+    const elapsed = Date.now() - progStart;
+    const target = 99 * (1 - Math.exp(-elapsed / TAU));
+    if (target > curPct) curPct = target;   // 항상 증가만(되돌아가지 않음)
+    updateProgUI();
   }, TICK_MS);
   // [B안] catch 블록에서도 참조하므로 try 밖에서 선언
   const isMember = !!(currentUser && currentUser.id);
@@ -2751,6 +2761,7 @@ async function startAnalysis() {
     }
     // 분석 완료 표시 (동기·비동기 공통) — 타이머 정지 후 100% 스냅
     clearInterval(iv);
+    _analysisLiveInView = false;               // 분석 종료(완료) → 복원 허용
     document.getElementById('prog-pct').textContent='분석 완료';
     document.getElementById('prog-bar').style.width='100%';
     document.getElementById('prog-msg').textContent='';
@@ -2895,6 +2906,7 @@ async function startAnalysis() {
     }
   } catch(e) {
     clearInterval(iv); pg.classList.remove('on');
+    _analysisLiveInView = false;               // 분석 종료(에러) → 복원 허용
     document.getElementById('abtn').disabled = false;
     // [B안] 게스트 임시 영상이 남아있으면 정리 (백엔드에 못 닿았을 수 있음)
     try { if (!isMember && preUploaded && preUploaded.path) deleteGuestTempVideo(preUploaded.path); } catch(_) {}
