@@ -2426,6 +2426,56 @@ async function updateCountDisplay() {
   }
 }
 
+// ── [비동기] 분석 상태 폴링 ──
+// 백엔드가 logId를 즉시 주면, status가 done/failed가 될 때까지 주기적으로 조회.
+// onProgress(status) 콜백으로 진행 표시 갱신 가능. done이면 result 반환, failed면 throw.
+async function pollAnalysisStatus(logId, onProgress) {
+  const INTERVAL_MS = 2500;     // 2.5초 간격 폴링
+  const TIMEOUT_MS = 5 * 60 * 1000; // 최대 5분 (그 후 포기)
+  const started = Date.now();
+
+  // 본인 확인용 토큰 (있으면 헤더로)
+  let token = null;
+  try {
+    const { data: sess } = await sb.auth.getSession();
+    token = sess && sess.session ? sess.session.access_token : null;
+  } catch (e) {}
+
+  while (true) {
+    if (Date.now() - started > TIMEOUT_MS) {
+      throw new Error('분석이 예상보다 오래 걸리고 있어요. 잠시 후 MY DIARY에서 확인해주세요.');
+    }
+    await new Promise(r => setTimeout(r, INTERVAL_MS));
+
+    let resp;
+    try {
+      resp = await fetch(BACKEND + '/api/analyze/status?logId=' + encodeURIComponent(logId), {
+        headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+      });
+    } catch (e) {
+      // 네트워크 일시 단절은 무시하고 다음 폴링까지 대기 (끊겨도 서버는 계속 분석 중)
+      console.warn('[Poll] 일시 조회 실패, 재시도:', e.message);
+      continue;
+    }
+    if (!resp.ok) {
+      // 404/5xx 등은 한 번 더 기다렸다 재시도 (배포 직후 타이밍 등)
+      console.warn('[Poll] status 응답', resp.status, '- 재시도');
+      continue;
+    }
+    const s = await resp.json().catch(() => ({}));
+    if (typeof onProgress === 'function') { try { onProgress(s.status); } catch (e) {} }
+
+    if (s.status === 'done') {
+      if (!s.result || !s.result.topMatch) throw new Error('분석 결과를 불러오지 못했어요.');
+      return s.result;
+    }
+    if (s.status === 'failed') {
+      throw new Error(s.error || '분석에 실패했어요. 다시 시도해주세요.');
+    }
+    // pending / processing → 계속 폴링
+  }
+}
+
 // ── 분석 시작 ──
 async function startAnalysis() {
   if (!file) { return; }
@@ -2501,10 +2551,28 @@ async function startAnalysis() {
       if (isMember) fd.append('userId', currentUser.id);
       r = await fetch(BACKEND + '/api/analyze', { method: 'POST', body: fd });
     }
-    clearInterval(iv); clearInterval(creepIv); document.getElementById('prog-pct').textContent='분석 완료'; document.getElementById('prog-bar').style.width='100%'; document.getElementById('prog-msg').textContent='';
     if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || 'HTTP ' + r.status); }
-    const data = await r.json();
+    let data = await r.json();
     console.log('백엔드 응답:', JSON.stringify(data));
+
+    // ── [비동기] 회원 분석은 logId만 즉시 옴 → done 될 때까지 폴링 ──
+    // 끊겨도 서버는 계속 분석하므로, 폴링이 일시 실패해도 재시도하며 기다린다.
+    if (data && data.async && data.logId) {
+      console.log('[Analyze] 비동기 접수 — logId:', data.logId, '폴링 시작');
+      // 진행 바는 creep으로 계속 차오르게 두고(멈춤 방지), 단계 메시지 전진만 멈춘다.
+      clearInterval(iv);
+      const result = await pollAnalysisStatus(data.logId, (st) => {
+        const m = document.getElementById('prog-msg');
+        if (m) m.textContent = (st === 'processing') ? '프로 스윙과 정밀 비교 중이에요' : '분석을 준비하고 있어요';
+      });
+      // 폴링 결과(result_json)에 logId를 실어 기존 흐름과 동일하게 처리
+      data = Object.assign({}, result, { logId: data.logId });
+    }
+    // 분석 완료 표시 (동기·비동기 공통)
+    clearInterval(iv); clearInterval(creepIv);
+    document.getElementById('prog-pct').textContent='분석 완료';
+    document.getElementById('prog-bar').style.width='100%';
+    document.getElementById('prog-msg').textContent='';
     // 응답 구조 정규화
     const normalized = data.topMatch ? data : 
       (data.result ? data.result : 
