@@ -1297,7 +1297,9 @@ sb.auth.onAuthStateChange(async (event, session) => {
 let _lastVisibilitySync = 0;
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible') return;
-  // 너무 잦은 재호출 방지 (10초 쓰로틀)
+  // 복원 점검은 쓰로틀과 무관하게 항상 먼저 실행 (분석 직후 바로 나갔다 와도 놓치지 않게)
+  try { if (typeof checkPendingAnalysis === 'function') checkPendingAnalysis(); } catch(_) {}
+  // 너무 잦은 재호출 방지 (10초 쓰로틀) — 무거운 세션/인증 재동기화에만 적용
   const now = Date.now();
   if (now - _lastVisibilitySync < 10000) return;
   _lastVisibilitySync = now;
@@ -1305,8 +1307,6 @@ document.addEventListener('visibilitychange', async () => {
     const { data: { session } } = await sb.auth.getSession();
     if (session) {
       await applyAuthedState(session.user);
-      // 떠나 있는 동안 끝났을 수 있는 백그라운드 분석을 점검 → 완료면 배너, 진행 중이면 이어서 폴링
-      checkPendingAnalysis();
     } else if (currentUser) {
       // 떠나 있는 동안 세션이 만료됨 → 게스트 상태로 정리
       swingHistory = [];
@@ -2908,12 +2908,22 @@ async function startAnalysis() {
     clearInterval(iv); pg.classList.remove('on');
     _analysisLiveInView = false;               // 분석 종료(에러) → 복원 허용
     document.getElementById('abtn').disabled = false;
-    // [B안] 게스트 임시 영상이 남아있으면 정리 (백엔드에 못 닿았을 수 있음)
-    try { if (!isMember && preUploaded && preUploaded.path) deleteGuestTempVideo(preUploaded.path); } catch(_) {}
     const msg = e.message || '';
-    // 진짜 원인은 콘솔에 남겨 디버깅 가능하게 (사용자 메시지와 별개)
     console.error('[Analyze] 실패 원인:', msg, e);
 
+    // ★ 회원 + 서버에 진행 중인 분석(pending)이 살아있으면:
+    //   여기서 throw된 건 "분석 실패"가 아니라 폴링/네트워크가 백그라운드에서 끊긴 것일 뿐.
+    //   서버는 계속 분석을 끝내 analysis_logs에 저장하므로, 알럿을 띄우지 말고 조용히 종료한다.
+    //   → 앱으로 돌아오면 checkPendingAnalysis()가 완료 배너 또는 이어받기로 결과를 살려준다.
+    //   (단, 결과 자체를 못 불러왔거나 서버가 failed로 끝낸 명시적 실패는 아래에서 정상 안내)
+    const isExplicitFailure = msg.includes('분석에 실패') || msg.includes('불러오지 못') || msg.includes('failed');
+    if (isMember && getPendingAnalysis() && !isExplicitFailure) {
+      console.warn('[Analyze] 폴링 중단됐지만 서버 분석은 진행 중 → 복원 대기(알럿 생략)');
+      return; // pending 유지 → 복귀 시 자동 복원
+    }
+
+    // [B안] 게스트 임시 영상이 남아있으면 정리 (백엔드에 못 닿았을 수 있음)
+    try { if (!isMember && preUploaded && preUploaded.path) deleteGuestTempVideo(preUploaded.path); } catch(_) {}
     if (msg.includes('503') || msg.includes('overloaded') || msg.includes('rate')) {
       // 서버 과부하 (확실한 경우만)
       alert('⚠️ 현재 사용자가 많아 분석이 지연되고 있어요.\n잠시 후 다시 시도해주세요.');
