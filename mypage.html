@@ -2380,6 +2380,82 @@ function diaZoomStep(factor){
   vw.scale=ns; diaClampView(); diaApplyView(); diaUpdateCanvasActive();
 }
 function diaResetView(){ diaryPose.view={scale:1,tx:0,ty:0}; diaApplyView(); diaUpdateCanvasActive(); }
+// ════════════════════════════════════════════════════════════════
+// 스윙 궤도(손 궤적) — 기존 pose-worker 데이터만으로 그림 (백엔드/워커 무수정)
+//   · 양쪽 손목의 중점(둘 다 보이면 평균, 한쪽만 보이면 그쪽)을 프레임마다 모아 곡선으로 표시
+//   · 이동평균(창 5) 스무딩으로 떨림 완화
+//   · 신뢰도 낮은 구간(임팩트 근처 손목 튐)은 점선+연하게 → 실측 과신 방지 원칙
+//   · 영상 재생 위치까지만 그려져 스윙을 따라 궤도가 자라남
+// ════════════════════════════════════════════════════════════════
+const TRAIL_COLOR='#ffcf4d';        // 궤도 색 (앰버 — 흰 관절·핑크 측정선과 구분)
+const _trailCache=new WeakMap();    // pose 데이터 → 궤도 배열 캐시 (영상당 1회만 계산)
+
+// 포즈 JSON의 관절 키에서 손목 키를 동적으로 탐색 (워커 네이밍에 의존하지 않게)
+function findWristKeys(frames){
+  for(const j of frames){
+    if(!j) continue;
+    const all=Object.keys(j).filter(k=>typeof j[k]==='object'&&j[k]&&j[k].x!=null);
+    const wrists=all.filter(k=>/wrist/i.test(k));
+    if(wrists.length) return wrists.slice(0,2);
+    const hands=all.filter(k=>/hand/i.test(k));
+    if(hands.length) return hands.slice(0,2);
+    return null; // 첫 유효 프레임에 손목/손 키가 없으면 데이터 자체에 없는 것
+  }
+  return null;
+}
+
+function buildTrail(d){
+  if(_trailCache.has(d)) return _trailCache.get(d);
+  let trail=null;
+  try{
+    const vt=d.vis_threshold??0.5;
+    const keys=findWristKeys(d.frames);
+    if(keys){
+      const raw=d.frames.map(j=>{
+        if(!j) return null;
+        const pts=keys.map(k=>j[k]).filter(p=>p&&p.x!=null);
+        if(!pts.length) return null;
+        const vis=pts.filter(p=>(p.v??1)>=vt);
+        const use=vis.length?vis:pts;     // 둘 다 신뢰도 낮아도 위치는 잇되, ok=false로 표시
+        const x=use.reduce((s,p)=>s+p.x,0)/use.length;
+        const y=use.reduce((s,p)=>s+p.y,0)/use.length;
+        return {x,y,ok:vis.length>0};
+      });
+      // 이동평균(창 5) — 빈 프레임은 건너뛰고 주변 값으로만 평균
+      trail=raw.map((p,i)=>{
+        if(!p) return null;
+        let sx=0,sy=0,n=0;
+        for(let k=i-2;k<=i+2;k++){const q=raw[k];if(q){sx+=q.x;sy+=q.y;n++;}}
+        return {x:sx/n,y:sy/n,ok:p.ok};
+      });
+    }
+  }catch(e){ console.warn('[Trail] 궤도 계산 실패(무시):',e); trail=null; }
+  _trailCache.set(d,trail);
+  return trail;
+}
+
+// 현재 재생 프레임(uptoFrame)까지의 궤도를 그림 — 관절 뼈대보다 아래 레이어로 호출할 것
+function drawSwingTrail(ctx,W,H,d,uptoFrame){
+  const trail=buildTrail(d); if(!trail) return;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle=TRAIL_COLOR;
+  ctx.lineWidth=Math.max(1.5,W/210);
+  let prev=null;
+  const end=Math.min(uptoFrame,trail.length-1);
+  for(let i=0;i<=end;i++){
+    const p=trail[i];
+    if(!p){prev=null;continue;}
+    if(prev){
+      const lowConf=!(p.ok&&prev.ok);
+      ctx.globalAlpha=lowConf?0.4:0.9;
+      ctx.setLineDash(lowConf?[Math.max(3,W/200),Math.max(3,W/200)]:[]);
+      ctx.beginPath();ctx.moveTo(prev.x*W,prev.y*H);ctx.lineTo(p.x*W,p.y*H);ctx.stroke();
+    }
+    prev=p;
+  }
+  ctx.setLineDash([]);ctx.globalAlpha=1;
+}
+
 function drawDiaryPose(){
   const canvas=document.getElementById('diaryPoseCanvas');
   const d=diaryPose.data; if(!d)return;
@@ -2390,6 +2466,7 @@ function drawDiaryPose(){
   const frame=Math.min(d.frames.length-1,Math.max(0,Math.round((video.currentTime||0)*diaryPose.fps)));
   const j=d.frames[frame]; if(!j)return;
   const vt=d.vis_threshold??0.5;
+  drawSwingTrail(ctx,W,H,d,frame); // 스윙 궤도 — 관절보다 아래 레이어
   ctx.lineWidth=Math.max(1.5,W/190);ctx.lineCap='round';ctx.lineJoin='round'; // 선 굵기 ↓ (기존 W/130)
   d.skeleton.forEach(([p1,p2])=>{const p=j[p1],q=j[p2];if(!p||!q)return;
     if(p.v<vt||q.v<vt)return;
@@ -2737,7 +2814,7 @@ const CMP_JOINT='#ffffff';        // 관절 점 색 (흰색)
 const cmp={
   a:{data:null,fps:30,draws:[],pending:null,hover:null,videoReady:false,view:{scale:1,tx:0,ty:0},drag:null},
   b:{data:null,fps:30,draws:[],pending:null,hover:null,videoReady:false,view:{scale:1,tx:0,ty:0},drag:null},
-  tool:'none',showSkel:true,
+  tool:'none',showSkel:true,showTrail:true,
   picks:[]  // 선택된 log id 순서 배열 (최대 2개)
 };
 const cUp=s=>s.toUpperCase();
@@ -2829,7 +2906,7 @@ async function startCompare(logA, logB){
   document.getElementById('cmpSub').textContent='같은 자세에서 멈춰 선·각도를 그어 비교하세요';
   ['a','b'].forEach(s=>{ cmp[s]={data:null,fps:30,draws:[],pending:null,hover:null,videoReady:false,view:{scale:1,tx:0,ty:0},drag:null}; });
   cmpDrawSeq=0;
-  cmp.tool='none'; cmp.showSkel=true;
+  cmp.tool='none'; cmp.showSkel=true; cmp.showTrail=true;
   await Promise.all([ cmpLoadSide('a', prev), cmpLoadSide('b', curr) ]);
   ['a','b'].forEach(s=>{ document.getElementById('cmpDraw'+cUp(s)).style.cursor='pointer'; cmpUpdatePlayIcon(s); });
   // 모달 레이아웃 안정화 후 캔버스 재정렬
@@ -2898,11 +2975,15 @@ function cmpDrawPose(side){
   const S=cmp[side],cv=document.getElementById('cmpPose'+cUp(side));
   const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
   ctx.clearRect(0,0,W,H);
-  if(!cmp.showSkel||!S.data)return;
+  if(!S.data)return;
+  if(!cmp.showSkel&&!cmp.showTrail)return;
   const v=cVid(side);
   const frame=Math.min(S.data.frames.length-1,Math.max(0,Math.round((v.currentTime||0)*S.fps)));
   const j=S.data.frames[frame];if(!j)return;
   const vt=S.data.vis_threshold??0.5;
+  // 스윙 궤도 — 관절보다 아래 레이어
+  if(cmp.showTrail) drawSwingTrail(ctx,W,H,S.data,frame);
+  if(!cmp.showSkel)return;
   // 뼈대
   ctx.lineWidth=Math.max(1.5,W/190);ctx.lineCap='round';ctx.lineJoin='round'; // 선 굵기 ↓ (기존 W/130)
   S.data.skeleton.forEach(([p1,p2])=>{const p=j[p1],q=j[p2];if(!p||!q)return;
@@ -3179,6 +3260,7 @@ function cmpBindWorkspace(){
     const s=b.dataset.clr;cmp[s].draws=[];cmp[s].pending=null;cmp[s].hover=null;
     cmpDrawLayer(s);}));
   document.getElementById('cmpTgSkeleton').addEventListener('change',e=>{cmp.showSkel=e.target.checked;cmpRenderAll();});
+  document.getElementById('cmpTgTrail').addEventListener('change',e=>{cmp.showTrail=e.target.checked;cmpRenderAll();});
 
   // 줌 버튼 — 양쪽 영상 동시에 박스 중심 기준으로 확대/축소
   function cmpZoomStep(factor){
@@ -3334,6 +3416,7 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
         <button class="cmp-tbtn" id="cmpUndo">실행취소</button>
         <button class="cmp-tbtn" id="cmpClearAll">전체 지우기</button>
         <label class="cmp-toggle"><input type="checkbox" id="cmpTgSkeleton" checked> 관절</label>
+        <label class="cmp-toggle"><input type="checkbox" id="cmpTgTrail" checked> 궤도</label>
       </div>
       <div class="cmp-zoombar">
         <span class="cmp-zoom-label">화면</span>
