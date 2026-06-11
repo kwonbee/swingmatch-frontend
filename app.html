@@ -290,6 +290,8 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .rdrill-title{font-size:.92rem;font-weight:600;color:var(--accent)}
 .rdrill-focus{font-size:.7rem;color:var(--gold);letter-spacing:.02em}
 .rdrill-how{font-size:.85rem;color:var(--text);line-height:1.65}
+.rdrill-link{display:inline-flex;align-items:center;gap:5px;margin-top:9px;font-size:.74rem;font-weight:500;color:var(--gold);text-decoration:none;border:1px solid var(--border-accent);border-radius:5px;padding:5px 11px;transition:all .12s}
+.rdrill-link:hover{background:rgba(45,74,51,.07)}
 .rdrills-note{font-size:.7rem;color:var(--muted);line-height:1.5;margin-top:10px}
 .fg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .fi{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:2px;padding:12px}
@@ -3237,6 +3239,42 @@ function renderResult(d, videoInfo) {
   (t.strengths||[]).forEach(s => { const li = document.createElement('li'); li.textContent = s; sl.appendChild(li); });
   const im = document.getElementById('r-imp'); im.innerHTML = '';
   (t.improvements||[]).forEach(s => { const li = document.createElement('li'); li.textContent = s; im.appendChild(li); });
+  // ════════════════════════════════════════════════════════════
+  // 연습 드릴 → 유튜브 참고 영상 링크
+  //   · 원본(큐레이션 작업대) = 노션 "연습 드릴 Database"의 "유튜브 링크" 컬럼.
+  //     노션에서 링크를 채우면 아래 DRILL_LINKS에 같은 드릴명으로 반영(수동 동기화) 후 배포.
+  //   · AI는 URL을 생성하지 않음(URL 환각 방지) — 링크는 이 사전 검증 맵에서만 나옴.
+  //   · 맵에 없는 드릴은 유튜브 검색 링크로 폴백 → 큐레이션 전에도 기능이 비지 않음.
+  // ════════════════════════════════════════════════════════════
+  const DRILL_LINKS = {
+    // '드릴명(라이브러리 표기 그대로)': URL — 원본은 노션 "연습 드릴 Database > 유튜브 링크"
+    // 기준: 영어 쇼츠로 통일, "딱 그 드릴만" 시연 (2026-06-11, 13/50 — 나머지는 폴백 검색 링크)
+    '겨드랑이 수건 드릴': 'https://www.youtube.com/shorts/tT_81vbnIXA',
+    '펌프 드릴': 'https://www.youtube.com/shorts/ho5Pv8j4yD4',
+    'L자 유지 드릴': 'https://www.youtube.com/shorts/SYdXtR8qO3A',
+    '바닥 수건 드릴': 'https://www.youtube.com/shorts/sw95wHAxKxk',
+    '벽 엉덩이 회전 드릴': 'https://www.youtube.com/shorts/JHs0DOPDhEU',
+    '의자 엉덩이 드릴': 'https://www.youtube.com/shorts/BcvnJaBamsQ',
+    '스텝 드릴': 'https://www.youtube.com/shorts/tzCr4MwKlfY',
+    '발 모으고 스윙': 'https://www.youtube.com/shorts/6a6F9_IsZY8',
+    '발 모으고 균형 스윙': 'https://www.youtube.com/shorts/hNkh9yQhRs8',
+    '탑에서 잠깐 멈춤': 'https://www.youtube.com/shorts/4arT8y3yBcw',
+    '한 손 스윙': 'https://www.youtube.com/shorts/_TQM9fEEWa0',
+    '임팩트백 리드 압박': 'https://www.youtube.com/shorts/f6yOguiodtA',
+    '헤드커버 외측 장애물': 'https://www.youtube.com/shorts/uBf4ltTl-bw',
+  };
+  function drillYoutubeUrl(title) {
+    if (!title) return null;
+    const norm = s => String(s).replace(/[\s()\/·]/g, '').toLowerCase();
+    const t = norm(title);
+    for (const k in DRILL_LINKS) { if (norm(k) === t) return DRILL_LINKS[k]; }            // 1순위: 정확 일치
+    for (const k in DRILL_LINKS) {                                                        // 2순위: 부분 일치 (AI가 이름을 줄여 쓴 경우)
+      const nk = norm(k);
+      if (nk.includes(t) || t.includes(nk)) return DRILL_LINKS[k];
+    }
+    return null;
+  }
+
   // 추천 연습 드릴 (server.js practiceDrills). 구버전 기록엔 없으니 있을 때만 노출.
   const drillsWrap = document.getElementById('r-drills-wrap');
   const drillsList = document.getElementById('r-drills');
@@ -3253,6 +3291,17 @@ function renderResult(d, videoInfo) {
         if (d.focus) { const fc = document.createElement('span'); fc.className = 'rdrill-focus'; fc.textContent = d.focus; head.appendChild(fc); }
         card.appendChild(head);
         if (d.how) { const hw = document.createElement('div'); hw.className = 'rdrill-how'; hw.textContent = d.how; card.appendChild(hw); }
+        // 참고 영상 링크 — 큐레이션된 영상이 있으면 그 영상으로, 없으면 유튜브 검색으로 폴백
+        if (d.title) {
+          const curated = drillYoutubeUrl(d.title);
+          const a = document.createElement('a');
+          a.className = 'rdrill-link';
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          if (curated) { a.href = curated; a.textContent = '▶ 참고 영상 보기'; }
+          else { a.href = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(d.title + ' 골프 드릴 shorts'); a.textContent = '▶ 유튜브에서 참고 영상 찾기'; }
+          card.appendChild(a);
+        }
         drillsList.appendChild(card);
       });
       drillsWrap.style.display = 'block';
