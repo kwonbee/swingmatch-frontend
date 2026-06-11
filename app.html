@@ -60,8 +60,10 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .bg img{width:100%;height:100%;object-fit:cover;object-position:center 55%;filter:brightness(1.08) saturate(0.75) contrast(0.95);opacity:0.85}
 .bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,0.02) 0%,rgba(255,255,255,0.08) 100%);pointer-events:none}
 
-/* 광고 공통 */
-.ad-lbl{position:absolute;top:5px;left:5px;background:rgba(0,0,0,0.5);color:rgba(26,26,26,0.45);font-size:9px;letter-spacing:.08em;padding:2px 5px;border-radius:2px}
+/* 광고 공통 — AD 라벨: A안(좌상단 반투명 블랙). 2026-06-11 수정:
+   기존 color가 어두운 회색(rgba(26,26,26,.45))이라 검정 배경 위에서 안 보이던 버그 → 흰색으로.
+   pointer-events:none = 라벨 위를 눌러도 광고 클릭이 그대로 통과. */
+.ad-lbl{position:absolute;top:6px;left:6px;z-index:1;pointer-events:none;background:rgba(0,0,0,0.55);color:#FFFFFF;font-size:11px;font-weight:500;letter-spacing:.05em;padding:2px 7px;border-radius:4px;line-height:1.4}
 .ad-x{position:absolute;top:5px;right:5px;background:rgba(0,0,0,0.5);color:rgba(26,26,26,0.6);border:none;cursor:pointer;width:20px;height:20px;border-radius:50%;font-size:11px;display:flex;align-items:center;justify-content:center}
 
 
