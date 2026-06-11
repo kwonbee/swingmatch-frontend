@@ -3244,11 +3244,12 @@ function renderResult(d, videoInfo) {
   //   · 원본(큐레이션 작업대) = 노션 "연습 드릴 Database"의 "유튜브 링크" 컬럼.
   //     노션에서 링크를 채우면 아래 DRILL_LINKS에 같은 드릴명으로 반영(수동 동기화) 후 배포.
   //   · AI는 URL을 생성하지 않음(URL 환각 방지) — 링크는 이 사전 검증 맵에서만 나옴.
-  //   · 맵에 없는 드릴은 유튜브 검색 링크로 폴백 → 큐레이션 전에도 기능이 비지 않음.
+  //   · 맵에 없는 드릴은 버튼을 표시하지 않음(폴백 검색 폐기, 2026-06-11 Owen 결정 —
+  //     검증 안 된 검색 결과가 혼란/신뢰도 저해 → 버튼 있음 = 영상까지 검증된 드릴).
   // ════════════════════════════════════════════════════════════
   const DRILL_LINKS = {
     // '드릴명(라이브러리 표기 그대로)': URL — 원본은 노션 "연습 드릴 Database > 유튜브 링크"
-    // 기준: 영어 쇼츠로 통일, "딱 그 드릴만" 시연 (2026-06-11, 13/50 — 나머지는 폴백 검색 링크)
+    // 기준: 영어 쇼츠 + "딱 그 드릴만" 시연 + 채널/조회수 신뢰 (2026-06-11, 19/50 — 나머지는 버튼 없음)
     '겨드랑이 수건 드릴': 'https://www.youtube.com/shorts/tT_81vbnIXA',
     '펌프 드릴': 'https://www.youtube.com/shorts/ho5Pv8j4yD4',
     'L자 유지 드릴': 'https://www.youtube.com/shorts/SYdXtR8qO3A',
@@ -3262,16 +3263,21 @@ function renderResult(d, videoInfo) {
     '한 손 스윙': 'https://www.youtube.com/shorts/_TQM9fEEWa0',
     '임팩트백 리드 압박': 'https://www.youtube.com/shorts/f6yOguiodtA',
     '헤드커버 외측 장애물': 'https://www.youtube.com/shorts/uBf4ltTl-bw',
+    '겨드랑이 수건 핀 (양팔)': 'https://www.youtube.com/shorts/TEUNQMWajPg',
+    '머리 벽 접촉 유지': 'https://www.youtube.com/shorts/Av8NTsxJj00',
+    '메트로놈 리듬': 'https://www.youtube.com/shorts/1-2_b_FsqJ4',
+    '손가락 그립 위치': 'https://www.youtube.com/shorts/zFHwFEjkTbw',
+    '하체 선행 전환': 'https://www.youtube.com/shorts/XLfhrWQkmX8',
+    '연속 볼 드릴': 'https://www.youtube.com/shorts/vpAVVI9Tlr0',
   };
   function drillYoutubeUrl(title) {
     if (!title) return null;
     const norm = s => String(s).replace(/[\s()\/·]/g, '').toLowerCase();
     const t = norm(title);
-    for (const k in DRILL_LINKS) { if (norm(k) === t) return DRILL_LINKS[k]; }            // 1순위: 정확 일치
-    for (const k in DRILL_LINKS) {                                                        // 2순위: 부분 일치 (AI가 이름을 줄여 쓴 경우)
-      const nk = norm(k);
-      if (nk.includes(t) || t.includes(nk)) return DRILL_LINKS[k];
-    }
+    for (const k in DRILL_LINKS) { if (norm(k) === t) return DRILL_LINKS[k]; }            // 정확 일치만
+    // 부분 일치 폴백 제거(2026-06-11): '리드팔 한 손 스윙'이 '한 손 스윙' 영상으로 잘못 매칭되는
+    // 류의 오매칭 방지. 드릴명은 서버가 라이브러리 표기 그대로 출력하므로 정확 일치로 충분.
+    // 틀린 영상이 뜨는 것보다 버튼이 안 뜨는 쪽이 안전(신뢰도 우선).
     return null;
   }
 
@@ -3291,16 +3297,18 @@ function renderResult(d, videoInfo) {
         if (d.focus) { const fc = document.createElement('span'); fc.className = 'rdrill-focus'; fc.textContent = d.focus; head.appendChild(fc); }
         card.appendChild(head);
         if (d.how) { const hw = document.createElement('div'); hw.className = 'rdrill-how'; hw.textContent = d.how; card.appendChild(hw); }
-        // 참고 영상 링크 — 큐레이션된 영상이 있으면 그 영상으로, 없으면 유튜브 검색으로 폴백
+        // 참고 영상 링크 — 검증된 영상이 있는 드릴에만 버튼 표시 (없으면 버튼 없음)
         if (d.title) {
           const curated = drillYoutubeUrl(d.title);
-          const a = document.createElement('a');
-          a.className = 'rdrill-link';
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          if (curated) { a.href = curated; a.textContent = '▶ 참고 영상 보기'; }
-          else { a.href = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(d.title + ' 골프 드릴 shorts'); a.textContent = '▶ 유튜브에서 참고 영상 찾기'; }
-          card.appendChild(a);
+          if (curated) {
+            const a = document.createElement('a');
+            a.className = 'rdrill-link';
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.href = curated;
+            a.textContent = '▶ 참고 영상 보기';
+            card.appendChild(a);
+          }
         }
         drillsList.appendChild(card);
       });
