@@ -1283,7 +1283,7 @@
       <div class="dia-sep"></div>
       <button class="dia-tbtn" id="diaUndo">실행취소</button>
       <button class="dia-tbtn" id="diaClear">지우기</button>
-      <label class="cmp-toggle"><input type="checkbox" id="diaTgTrail" checked> 그립 궤도</label>
+      <label class="cmp-toggle"><input type="checkbox" id="diaTgTrail"> 그립 궤도</label>
     </div>
     <div class="diary-zoombar" id="diaryZoombar" style="display:none">
       <span class="dia-zoom-label">화면</span>
@@ -2290,7 +2290,7 @@ function poseFeaturesToText(pose){
   return `📊 모션 트래킹 측정값${dr}\n${lines.join('\n')}\n※ 촬영 환경(각도·거리)에 따라 값이 미세하게 조정될 수 있습니다.\n\n— 아래에 자유롭게 메모를 남겨보세요 —\n`;
 }
 
-const diaryPose={data:null,fps:30,on:true,showTrail:true,draws:[],tool:'none',pending:null,hover:null,drag:null,seq:0,view:{scale:1,tx:0,ty:0}};
+const diaryPose={data:null,fps:30,on:true,showTrail:false,draws:[],tool:'none',pending:null,hover:null,drag:null,seq:0,view:{scale:1,tx:0,ty:0}};
 async function setupDiaryPose(log){
   const canvas=document.getElementById('diaryPoseCanvas');
   const toggle=document.getElementById('diaryPoseToggle');
@@ -2298,7 +2298,7 @@ async function setupDiaryPose(log){
   const dcv=document.getElementById('diaryDrawCanvas');
   diaryPose.data=null;
   // 그리기 상태 초기화
-  diaryPose.showTrail=true; const tgT=document.getElementById('diaTgTrail'); if(tgT)tgT.checked=true;
+  diaryPose.showTrail=false; const tgT=document.getElementById('diaTgTrail'); if(tgT)tgT.checked=false; // 그립 궤도 디폴트 OFF — 보고 싶은 사람만 (6/12 제품 결정)
   diaryPose.draws=[]; diaryPose.tool='none'; diaryPose.pending=null; diaryPose.hover=null; diaryPose.drag=null; diaryPose.seq=0; diaryPose.view={scale:1,tx:0,ty:0};
   canvas.classList.remove('on'); toggle.style.display='none';
   if(tools)tools.style.display='none';
@@ -2398,20 +2398,24 @@ const _trailCache=new WeakMap();    // pose 데이터 → 궤도 배열 캐시 (
 //   · top_index 있으면 백스윙(앰버)/다운스윙(하늘색) 2색, 없으면 기존 단색
 //   · 재생 위치 기준으로 스윙 구간(segment) 안에서 비례해 자라남
 //   · 형식 이상 시 false 반환 → 기존 자체 계산 폴백 (롤백 경로)
-function drawWorkerTrail(ctx,W,H,gt,uptoFrame){
+function drawWorkerTrail(ctx,W,H,gt,uptoFrame,fps){
   try{
     const pts=gt.points;
     if(!Array.isArray(pts)||pts.length<2||pts[0].x==null) return false;
+    fps=fps||30;
     let end;
     if(typeof gt.first_frame==='number'&&typeof gt.points_per_frame==='number'){
       // heavy_v3: 시간 균등 포인트 — 프레임 단위 정확 싱크
       if(uptoFrame<gt.first_frame) return true; // 스윙 전 — 아직 안 그림
+      const lastFrame=gt.first_frame+(pts.length-1)/gt.points_per_frame;
+      if(uptoFrame>lastFrame+fps) return true;  // 스윙 종료 +1초 — 관절처럼 사라짐
       end=Math.min(pts.length-1,Math.max(1,Math.round((uptoFrame-gt.first_frame)*gt.points_per_frame)));
     }else{
       // heavy_v2 이하: 구간 진행률 비례 매핑 (근사 싱크 — 재처리 전 데이터 호환)
       const seg=Array.isArray(gt.segment)?gt.segment:[0,pts.length-1];
       const s=seg[0], e=Math.max(seg[1],s+1);
       if(uptoFrame<s) return true;
+      if(uptoFrame>e+fps) return true;          // 스윙 종료 +1초 — 사라짐
       const frac=Math.min(1,(uptoFrame-s)/(e-s));
       end=Math.max(1,Math.round(frac*(pts.length-1)));
     }
@@ -2481,10 +2485,14 @@ function buildTrail(d){
 
 // 현재 재생 프레임(uptoFrame)까지의 궤도를 그림 — 관절 뼈대보다 아래 레이어로 호출할 것
 function drawSwingTrail(ctx,W,H,d,uptoFrame){
-  // heavy_v2 워커 궤적이 있으면 우선 사용 (없거나 형식 이상이면 기존 자체 계산으로 폴백)
+  // heavy 워커 궤적이 있으면 우선 사용 (없거나 형식 이상이면 기존 자체 계산으로 폴백)
+  const fps=(d&&d.video&&d.video.fps)||30;
   const gt=d&&d.grip_trajectory;
-  if(gt&&gt.points&&drawWorkerTrail(ctx,W,H,gt,uptoFrame)) return;
+  if(gt&&gt.points&&drawWorkerTrail(ctx,W,H,gt,uptoFrame,fps)) return;
   const trail=buildTrail(d); if(!trail) return;
+  // 스윙 종료(마지막 궤적 지점) + 1초 후엔 관절처럼 화면에서 사라짐
+  let lastIdx=trail.length-1; while(lastIdx>0&&!trail[lastIdx])lastIdx--;
+  if(uptoFrame>lastIdx+fps) return;
   ctx.lineCap='round'; ctx.lineJoin='round';
   ctx.strokeStyle=TRAIL_COLOR;
   ctx.lineWidth=Math.max(1.5,W/210);
@@ -2862,7 +2870,7 @@ const CMP_JOINT='#ffffff';        // 관절 점 색 (흰색)
 const cmp={
   a:{data:null,fps:30,draws:[],pending:null,hover:null,videoReady:false,view:{scale:1,tx:0,ty:0},drag:null},
   b:{data:null,fps:30,draws:[],pending:null,hover:null,videoReady:false,view:{scale:1,tx:0,ty:0},drag:null},
-  tool:'none',showSkel:true,showTrail:true,
+  tool:'none',showSkel:true,showTrail:false,
   picks:[]  // 선택된 log id 순서 배열 (최대 2개)
 };
 const cUp=s=>s.toUpperCase();
@@ -2954,7 +2962,7 @@ async function startCompare(logA, logB){
   document.getElementById('cmpSub').textContent='같은 자세에서 멈춰 선·각도를 그어 비교하세요';
   ['a','b'].forEach(s=>{ cmp[s]={data:null,fps:30,draws:[],pending:null,hover:null,videoReady:false,view:{scale:1,tx:0,ty:0},drag:null}; });
   cmpDrawSeq=0;
-  cmp.tool='none'; cmp.showSkel=true; cmp.showTrail=true;
+  cmp.tool='none'; cmp.showSkel=true; cmp.showTrail=false;
   await Promise.all([ cmpLoadSide('a', prev), cmpLoadSide('b', curr) ]);
   ['a','b'].forEach(s=>{ document.getElementById('cmpDraw'+cUp(s)).style.cursor='pointer'; cmpUpdatePlayIcon(s); });
   // 모달 레이아웃 안정화 후 캔버스 재정렬
@@ -3466,7 +3474,7 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
         <button class="cmp-tbtn" id="cmpUndo">실행취소</button>
         <button class="cmp-tbtn" id="cmpClearAll">전체 지우기</button>
         <label class="cmp-toggle"><input type="checkbox" id="cmpTgSkeleton" checked> 관절</label>
-        <label class="cmp-toggle"><input type="checkbox" id="cmpTgTrail" checked> 그립 궤도</label>
+        <label class="cmp-toggle"><input type="checkbox" id="cmpTgTrail"> 그립 궤도</label>
       </div>
       <div class="cmp-zoombar">
         <span class="cmp-zoom-label">화면</span>
