@@ -2420,19 +2420,32 @@ function drawWorkerTrail(ctx,W,H,gt,uptoFrame,fps){
       end=Math.max(1,Math.round(frac*(pts.length-1)));
     }
     const ti=(typeof gt.top_index==='number'&&gt.top_index>0&&gt.top_index<pts.length-1)?gt.top_index:null;
-    const seg2=(from,to,color,wMul)=>{
-      if(to<=from)return;
-      ctx.strokeStyle=color; ctx.lineWidth=Math.max(1.5,W/210)*wMul;
-      ctx.beginPath(); ctx.moveTo(pts[from].x*W,pts[from].y*H);
-      for(let i=from+1;i<=to;i++) ctx.lineTo(pts[i].x*W,pts[i].y*H);
-      ctx.stroke();
+    // ── 붓터치 렌더 (6/12): 시간 균등 포인트라 점 간격 = 속도. 속도 비례 굵기로
+    //    다운스윙이 굵게 "던져지고", 마지막 10%는 붓을 떼듯 가늘어지며 마무리.
+    //    좌표는 측정 그대로 — 그리는 표현만 연출.
+    const n=pts.length, base=Math.max(1.5,W/190); // 관절 선과 동일 기준 굵기
+    const dist=new Array(n-1); let dsum=[];
+    for(let i=0;i<n-1;i++){dist[i]=Math.hypot((pts[i+1].x-pts[i].x)*W,(pts[i+1].y-pts[i].y)*H);dsum.push(dist[i]);}
+    dsum.sort((a,b)=>a-b); const med=Math.max(dsum[Math.floor(dsum.length/2)]||1,0.0001);
+    const taperFrom=Math.floor(n*0.9);
+    const widthAt=(i)=>{
+      let m=Math.min(1.5,Math.max(0.75,0.75+(dist[i]/med)*0.25)); // 속도감은 미세하게만
+      if(i>=taperFrom)m*=Math.max(0.1,1-(i-taperFrom)/(n-taperFrom));
+      return Math.max(1,base*m);
     };
-    ctx.lineCap='round'; ctx.lineJoin='round'; ctx.setLineDash([]); ctx.globalAlpha=0.95;
-    if(ti!=null){
-      if(end>ti) seg2(ti,end,TRAIL_COLOR_DOWN,1.4);   // 다운스윙: 아래층, 약간 두껍게
-      seg2(0,Math.min(ti,end),TRAIL_COLOR,1);          // 백스윙: 위층 (겹침 구간에서도 보이게)
-    }else{
-      seg2(0,end,TRAIL_COLOR,1);                       // 분할 정보 없으면 단색
+    const colAt=(i)=>(ti!=null&&i>=ti)?TRAIL_COLOR_DOWN:TRAIL_COLOR;
+    ctx.lineCap='round'; ctx.lineJoin='round'; ctx.setLineDash([]);
+    // 글로우 레이어
+    ctx.globalAlpha=0.16;
+    for(let i=0;i<end;i++){
+      ctx.strokeStyle=colAt(i); ctx.lineWidth=widthAt(i)*2.4;
+      ctx.beginPath();ctx.moveTo(pts[i].x*W,pts[i].y*H);ctx.lineTo(pts[i+1].x*W,pts[i+1].y*H);ctx.stroke();
+    }
+    // 본선 (시간 알파: 오래된 선 살짝 옅게 → 진행 방향이 읽힘)
+    for(let i=0;i<end;i++){
+      ctx.globalAlpha=0.72+0.24*(i/n);
+      ctx.strokeStyle=colAt(i); ctx.lineWidth=widthAt(i);
+      ctx.beginPath();ctx.moveTo(pts[i].x*W,pts[i].y*H);ctx.lineTo(pts[i+1].x*W,pts[i+1].y*H);ctx.stroke();
     }
     ctx.globalAlpha=1;
     return true;
