@@ -2390,7 +2390,42 @@ function diaResetView(){ diaryPose.view={scale:1,tx:0,ty:0}; diaApplyView(); dia
 //   · 영상 재생 위치까지만 그려져 스윙을 따라 궤도가 자라남
 // ════════════════════════════════════════════════════════════════
 const TRAIL_COLOR='#ffcf4d';        // 궤도 색 (앰버 — 흰 관절·핑크 측정선과 구분)
+const TRAIL_COLOR_DOWN='#78dcff';   // 다운스윙~피니시 색 (하늘색 — heavy_v2 분할 시)
 const _trailCache=new WeakMap();    // pose 데이터 → 궤도 배열 캐시 (영상당 1회만 계산)
+
+// ── 워커 완성 궤적(grip_trajectory, heavy 2차 패스) 그리기 — 있으면 자체 계산 대신 사용 ──
+//   · points: 트림+스무딩+스플라인 완료된 좌표 (워커가 후처리 전담, 프론트는 폴리라인만)
+//   · top_index 있으면 백스윙(앰버)/다운스윙(하늘색) 2색, 없으면 기존 단색
+//   · 재생 위치 기준으로 스윙 구간(segment) 안에서 비례해 자라남
+//   · 형식 이상 시 false 반환 → 기존 자체 계산 폴백 (롤백 경로)
+function drawWorkerTrail(ctx,W,H,gt,uptoFrame){
+  try{
+    const pts=gt.points;
+    if(!Array.isArray(pts)||pts.length<2||pts[0].x==null) return false;
+    const seg=Array.isArray(gt.segment)?gt.segment:[0,pts.length-1];
+    const s=seg[0], e=Math.max(seg[1],s+1);
+    if(uptoFrame<s) return true; // 스윙 전 — 아직 안 그림 (궤도는 스윙부터 자람)
+    const frac=Math.min(1,(uptoFrame-s)/(e-s));
+    const end=Math.max(1,Math.round(frac*(pts.length-1)));
+    const ti=(typeof gt.top_index==='number'&&gt.top_index>0&&gt.top_index<pts.length-1)?gt.top_index:null;
+    const seg2=(from,to,color,wMul)=>{
+      if(to<=from)return;
+      ctx.strokeStyle=color; ctx.lineWidth=Math.max(1.5,W/210)*wMul;
+      ctx.beginPath(); ctx.moveTo(pts[from].x*W,pts[from].y*H);
+      for(let i=from+1;i<=to;i++) ctx.lineTo(pts[i].x*W,pts[i].y*H);
+      ctx.stroke();
+    };
+    ctx.lineCap='round'; ctx.lineJoin='round'; ctx.setLineDash([]); ctx.globalAlpha=0.95;
+    if(ti!=null){
+      if(end>ti) seg2(ti,end,TRAIL_COLOR_DOWN,1.4);   // 다운스윙: 아래층, 약간 두껍게
+      seg2(0,Math.min(ti,end),TRAIL_COLOR,1);          // 백스윙: 위층 (겹침 구간에서도 보이게)
+    }else{
+      seg2(0,end,TRAIL_COLOR,1);                       // 분할 정보 없으면 단색
+    }
+    ctx.globalAlpha=1;
+    return true;
+  }catch(err){ console.warn('[Trail] 워커 궤적 그리기 실패 → 자체 계산 폴백:',err); return false; }
+}
 
 // 포즈 JSON의 관절 키에서 손목 키를 동적으로 탐색 (워커 네이밍에 의존하지 않게)
 function findWristKeys(frames){
@@ -2438,6 +2473,9 @@ function buildTrail(d){
 
 // 현재 재생 프레임(uptoFrame)까지의 궤도를 그림 — 관절 뼈대보다 아래 레이어로 호출할 것
 function drawSwingTrail(ctx,W,H,d,uptoFrame){
+  // heavy_v2 워커 궤적이 있으면 우선 사용 (없거나 형식 이상이면 기존 자체 계산으로 폴백)
+  const gt=d&&d.grip_trajectory;
+  if(gt&&gt.points&&drawWorkerTrail(ctx,W,H,gt,uptoFrame)) return;
   const trail=buildTrail(d); if(!trail) return;
   ctx.lineCap='round'; ctx.lineJoin='round';
   ctx.strokeStyle=TRAIL_COLOR;
