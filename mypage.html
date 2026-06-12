@@ -2402,11 +2402,19 @@ function drawWorkerTrail(ctx,W,H,gt,uptoFrame){
   try{
     const pts=gt.points;
     if(!Array.isArray(pts)||pts.length<2||pts[0].x==null) return false;
-    const seg=Array.isArray(gt.segment)?gt.segment:[0,pts.length-1];
-    const s=seg[0], e=Math.max(seg[1],s+1);
-    if(uptoFrame<s) return true; // 스윙 전 — 아직 안 그림 (궤도는 스윙부터 자람)
-    const frac=Math.min(1,(uptoFrame-s)/(e-s));
-    const end=Math.max(1,Math.round(frac*(pts.length-1)));
+    let end;
+    if(typeof gt.first_frame==='number'&&typeof gt.points_per_frame==='number'){
+      // heavy_v3: 시간 균등 포인트 — 프레임 단위 정확 싱크
+      if(uptoFrame<gt.first_frame) return true; // 스윙 전 — 아직 안 그림
+      end=Math.min(pts.length-1,Math.max(1,Math.round((uptoFrame-gt.first_frame)*gt.points_per_frame)));
+    }else{
+      // heavy_v2 이하: 구간 진행률 비례 매핑 (근사 싱크 — 재처리 전 데이터 호환)
+      const seg=Array.isArray(gt.segment)?gt.segment:[0,pts.length-1];
+      const s=seg[0], e=Math.max(seg[1],s+1);
+      if(uptoFrame<s) return true;
+      const frac=Math.min(1,(uptoFrame-s)/(e-s));
+      end=Math.max(1,Math.round(frac*(pts.length-1)));
+    }
     const ti=(typeof gt.top_index==='number'&&gt.top_index>0&&gt.top_index<pts.length-1)?gt.top_index:null;
     const seg2=(from,to,color,wMul)=>{
       if(to<=from)return;
