@@ -221,6 +221,9 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
 .prog-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:2px;transition:width .8s ease}
 .prog-pct{font-size:.78rem;color:var(--gold);text-align:center;margin-bottom:4px;letter-spacing:.06em}
 .prog-msg{font-size:.72rem;color:var(--muted);text-align:center;letter-spacing:.04em}
+/* 닫아도 진행 안내 (2026-06-12) — 비동기+재방문 복원 구조라 사실인 문구. 숫자(예상시간) 노출 없음 원칙 유지 */
+.prog-keep{margin-top:12px;text-align:center;font-size:.76rem;font-weight:500;color:#3A3A38;letter-spacing:.02em}
+.prog-keep-sub{margin-top:3px;text-align:center;font-size:.7rem;color:var(--muted);letter-spacing:.02em}
 
 .prog{display:none;margin-top:16px;width:100%}
 .prog.on{display:block}
@@ -743,6 +746,8 @@ html,body{min-height:100%;font-family:'Pretendard',sans-serif;color:var(--text);
         <div class="prog-pct" id="prog-pct">0%</div>
         <div class="prog-bar-track"><div class="prog-bar-fill" id="prog-bar"></div></div>
         <div class="prog-msg" id="prog-msg">영상에서 핵심 프레임 추출 중...</div>
+        <div class="prog-keep">닫아도 분석은 계속 진행돼요</div>
+        <div class="prog-keep-sub">끝나면 다시 들어왔을 때 알려드릴게요</div>
       </div>
     </div>
   </div>
