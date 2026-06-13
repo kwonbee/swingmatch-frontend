@@ -6,6 +6,7 @@
 <title>My Diary | MySwingMatch</title>
 <meta name="description" content="MySwingMatch My Diary - 나의 골프 여정 기록. 분석 통계, 영상 갤러리, 성장 그래프, 구독 관리.">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital@0;1&family=Nanum+Pen+Script&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   :root{
@@ -1027,6 +1028,109 @@
     .cmp-stage{grid-template-columns:1fr 1fr;gap:8px}
     .cmp-tbtn{padding:6px 10px;font-size:.74rem}
   }
+
+  /* ───────── 라운딩 기록 (스코어카드) ───────── */
+  .sc-nav{margin-bottom:18px}
+  .sc-nav-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;
+    background:#00461F;color:#E7F3EC;border:none;border-radius:8px 8px 0 0;
+    padding:11px 16px;font-family:inherit;font-size:.9rem;letter-spacing:.5px;cursor:pointer}
+  .sc-nav-chev{transition:transform .2s}
+  .sc-nav-chev.open{transform:rotate(180deg)}
+  .sc-nav-list{border:1px solid #00461F;border-top:none;border-radius:0 0 8px 8px;overflow:hidden}
+  .sc-nav-item{display:flex;justify-content:space-between;align-items:center;gap:12px;
+    padding:11px 16px;font-size:.85rem;color:var(--text-dim);cursor:pointer;
+    background:#FAFAF7;border-top:1px dotted var(--border);transition:background .15s}
+  .sc-nav-item:first-child{border-top:none}
+  .sc-nav-item:hover{background:#EEF4EF;color:var(--text)}
+  .sc-nav-item .sc-nav-score{font-family:'Caveat','Nanum Pen Script',cursive;font-size:1.15rem;color:#00461F;flex-shrink:0}
+
+  /* 카드 목록 */
+  .sc-list{display:flex;flex-direction:column;gap:18px}
+  .scorecard{background:#F5F1E8;border:1px solid #00461F;border-radius:6px;padding:18px 20px;cursor:pointer;
+    transition:box-shadow .15s,transform .15s}
+  .scorecard:hover{box-shadow:0 6px 20px rgba(0,70,31,.12);transform:translateY(-2px)}
+  .sc-head{display:flex;justify-content:space-between;align-items:flex-start;
+    border-bottom:2px solid #00461F;padding-bottom:9px;margin-bottom:10px}
+  .sc-head-title{font-family:'Playfair Display',serif;font-size:.78rem;letter-spacing:3px;color:#00461F}
+  .sc-head-date{font-family:'Caveat','Nanum Pen Script',cursive;font-size:1.15rem;color:#2C2C2A}
+  .sc-course{font-family:'Nanum Pen Script','Caveat',cursive;font-size:1.5rem;color:#2C2C2A;line-height:1.2;margin-bottom:4px}
+  .sc-layout{font-size:.75rem;color:var(--text-faint);margin-bottom:12px}
+  .sc-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:.72rem}
+  .sc-table td{text-align:center;padding:3px 1px}
+  .sc-table .sc-rowlabel{width:42px;text-align:left;color:#00461F;font-family:'Playfair Display',serif;letter-spacing:1px}
+  .sc-table .sc-hole{border-bottom:1px solid #00461F;color:#00461F}
+  .sc-table .sc-par{color:var(--text-faint)}
+  .sc-table .sc-score{font-family:'Caveat','Nanum Pen Script',cursive;font-size:1.05rem;color:#2C2C2A;border-bottom:1px dotted #B4B2A9}
+  .sc-table .sc-sum{color:#00461F;font-family:'Playfair Display',serif}
+  .sc-foot{display:flex;justify-content:space-between;align-items:center;
+    border-top:2px solid #00461F;padding-top:10px;margin-top:12px}
+  .sc-foot-videos{display:flex;align-items:center;gap:6px;font-size:.78rem;color:#00461F}
+  .sc-foot-total{font-family:'Caveat','Nanum Pen Script',cursive;font-size:1.7rem;color:#00461F}
+  .sc-foot-total .sc-diff{font-family:'Playfair Display',serif;font-style:italic;font-size:.85rem;color:var(--text-faint);margin-left:6px}
+  .sc-vchip{display:inline-flex;align-items:center;gap:5px;background:#E7F0E9;border-radius:20px;
+    padding:3px 10px;font-size:.72rem;color:#00461F;margin-right:6px}
+
+  .sc-add-btn{width:100%;margin-top:18px;background:transparent;border:1.5px dashed #00461F;color:#00461F;
+    border-radius:8px;padding:13px;font-family:inherit;font-size:.9rem;cursor:pointer;transition:background .15s}
+  .sc-add-btn:hover{background:#EEF4EF}
+
+  /* 편집 모달 */
+  .sc-form-row{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .sc-field{display:flex;flex-direction:column;gap:5px;min-width:120px}
+  .sc-field-grow{flex:1}
+  .sc-field label{font-size:.78rem;color:var(--text-dim)}
+  .sc-field input{background:#FAFAF7;border:1px solid var(--border);border-radius:6px;padding:9px 11px;
+    font-family:inherit;font-size:.9rem;color:var(--text);width:100%}
+  .sc-field input:focus{outline:none;border-color:#00461F}
+  .sc-holes-toggle{display:flex;gap:6px}
+  .sc-holes-opt{flex:1;background:#FAFAF7;border:1px solid var(--border);border-radius:6px;padding:9px;
+    font-family:inherit;font-size:.85rem;color:var(--text-dim);cursor:pointer}
+  .sc-holes-opt.active{background:#00461F;color:#fff;border-color:#00461F}
+
+  .sc-holes-wrap{display:flex;flex-direction:column;gap:14px;margin:6px 0 16px}
+  .sc-holes-block{overflow-x:auto}
+  .sc-grid{display:grid;gap:4px}
+  .sc-grid-cell{text-align:center}
+  .sc-grid-label{font-size:.7rem;color:#00461F;letter-spacing:1px;padding:4px 0}
+  .sc-grid-hole{font-size:.74rem;color:#00461F;padding:3px 0;border-bottom:1px solid #00461F}
+  .sc-mini{width:100%;min-width:30px;text-align:center;border:1px solid var(--border);border-radius:5px;
+    padding:6px 2px;font-family:inherit;font-size:.85rem;background:#FAFAF7;color:var(--text);-moz-appearance:textfield}
+  .sc-mini::-webkit-outer-spin-button,.sc-mini::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .sc-mini:focus{outline:none;border-color:#00461F}
+  .sc-mini.is-par{color:var(--text-faint)}
+  .sc-mini.is-score{font-family:'Caveat','Nanum Pen Script',cursive;font-size:1.05rem}
+
+  .sc-total-bar{display:flex;justify-content:space-between;align-items:center;
+    background:#EEF4EF;border-radius:8px;padding:12px 16px;font-size:.85rem;color:#00461F}
+  .sc-total-nums strong{font-family:'Caveat','Nanum Pen Script',cursive;font-size:1.25rem;margin:0 2px}
+  .sc-total-bar .sc-diff{margin-left:8px;font-style:italic;color:var(--text-dim)}
+
+  .sc-video-link{margin-top:16px;border:1px solid var(--border);border-radius:8px;padding:14px}
+  .sc-video-link-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .sc-video-link-head>span{font-size:.85rem;color:var(--text);font-weight:600}
+  .sc-video-add{background:transparent;border:1px solid #00461F;color:#00461F;border-radius:6px;
+    padding:6px 12px;font-family:inherit;font-size:.78rem;cursor:pointer;white-space:nowrap}
+  .sc-video-add:hover{background:#EEF4EF}
+  .sc-video-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .sc-chip{display:inline-flex;align-items:center;gap:7px;background:#E7F0E9;border-radius:20px;
+    padding:5px 8px 5px 12px;font-size:.78rem;color:#00461F}
+  .sc-chip button{background:rgba(0,70,31,.15);border:none;color:#00461F;border-radius:50%;
+    width:18px;height:18px;cursor:pointer;font-size:.7rem;line-height:1;display:flex;align-items:center;justify-content:center}
+  .sc-video-hint{font-size:.72rem;color:var(--text-faint);margin-top:10px}
+
+  .sc-edit-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:20px}
+  .btn-sc-save{flex:1;background:#00461F;color:#fff;border:none;border-radius:8px;padding:13px;
+    font-family:inherit;font-size:.95rem;cursor:pointer}
+  .btn-sc-save:hover{background:#013A19}
+  .btn-sc-delete{background:transparent;border:1px solid var(--danger);color:var(--danger);
+    border-radius:8px;padding:13px 18px;font-family:inherit;font-size:.85rem;cursor:pointer}
+
+  @media(max-width:680px){
+    .scorecard{padding:15px 14px}
+    .sc-course{font-size:1.3rem}
+    .sc-field{min-width:100px}
+    .sc-mini{font-size:.8rem;padding:5px 1px}
+  }
 </style>
 </head>
 <body>
@@ -1193,6 +1297,26 @@
     <a href="/subscribe.html" class="btn btn-primary">월 4,900원으로 시작하기</a>
   </div>
 
+  <!-- 라운딩 기록 (스코어카드) -->
+  <div class="section" id="scorecardSectionWrap">
+    <div class="section-header">
+      <h2 class="section-title"><span class="gold-bar"></span>⛳ 라운딩 기록</h2>
+      <span class="section-meta" id="scorecardMeta"></span>
+    </div>
+    <!-- 상단 드롭다운 (날짜·코스·타수 → 탭하면 해당 카드로 점프) -->
+    <div id="scorecardNav" class="sc-nav" style="display:none">
+      <button type="button" class="sc-nav-toggle" id="scNavToggle">
+        <span>라운드 기록</span>
+        <span class="sc-nav-chev" id="scNavChev">▾</span>
+      </button>
+      <div class="sc-nav-list" id="scNavList" style="display:none"></div>
+    </div>
+    <div id="scorecardSection">
+      <div class="loading">불러오는 중...</div>
+    </div>
+    <button type="button" class="sc-add-btn" id="scAddBtn">+ 새 라운드 기록하기</button>
+  </div>
+
   <!-- 내 영상 갤러리 (즐겨찾기만) -->
   <div class="section">
     <div class="section-header">
@@ -1225,6 +1349,83 @@
     </div>
   </div>
 
+</div>
+
+<!-- 스코어카드 입력/편집 모달 -->
+<div class="modal-overlay" id="scEditModal">
+  <div class="modal modal-wide">
+    <div class="modal-header-row">
+      <div>
+        <h3 id="scEditTitle">⛳ 새 라운드</h3>
+        <p class="modal-sub">골프장·날짜·홀별 파/스코어를 직접 적어보세요.</p>
+      </div>
+      <button class="modal-close-x" id="scEditClose">✕</button>
+    </div>
+
+    <div class="sc-form-row">
+      <div class="sc-field">
+        <label>날짜</label>
+        <input type="date" id="scDate">
+      </div>
+      <div class="sc-field sc-field-grow">
+        <label>골프장</label>
+        <input type="text" id="scCourse" placeholder="예: 서원밸리 CC" maxlength="60">
+      </div>
+    </div>
+    <div class="sc-form-row">
+      <div class="sc-field sc-field-grow">
+        <label>코스 / 메모 <span style="color:var(--text-faint);font-weight:400">(선택)</span></label>
+        <input type="text" id="scLayout" placeholder="예: 밸리코스 / 바람 많던 날" maxlength="80">
+      </div>
+      <div class="sc-field">
+        <label>홀 수</label>
+        <div class="sc-holes-toggle">
+          <button type="button" class="sc-holes-opt" data-holes="9">9홀</button>
+          <button type="button" class="sc-holes-opt active" data-holes="18">18홀</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="scHolesWrap" class="sc-holes-wrap"><!-- JS로 채움 --></div>
+
+    <div class="sc-total-bar">
+      <span>합계</span>
+      <span class="sc-total-nums">
+        PAR <strong id="scTotalPar">0</strong>
+        · SCORE <strong id="scTotalScore">0</strong>
+        <span id="scTotalDiff" class="sc-diff"></span>
+      </span>
+    </div>
+
+    <!-- 영상 연결 (만들 때) -->
+    <div class="sc-video-link">
+      <div class="sc-video-link-head">
+        <span>🎬 이 날의 스윙 영상</span>
+        <button type="button" class="sc-video-add" id="scVideoAddBtn">+ 즐겨찾기 영상 연결</button>
+      </div>
+      <div id="scVideoChips" class="sc-video-chips"></div>
+      <p class="sc-video-hint">즐겨찾기한 영상만 기록에 남길 수 있어요.</p>
+    </div>
+
+    <div class="sc-edit-actions">
+      <button type="button" class="btn-sc-delete" id="scDeleteBtn" style="display:none">삭제</button>
+      <button type="button" class="btn-sc-save" id="scSaveBtn">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 즐겨찾기 영상 선택 모달 -->
+<div class="modal-overlay" id="scVideoPickModal">
+  <div class="modal">
+    <div class="modal-header-row">
+      <div>
+        <h3>🎬 즐겨찾기 영상 연결</h3>
+        <p class="modal-sub">이 라운드에 남길 스윙 영상을 골라주세요.</p>
+      </div>
+      <button class="modal-close-x" id="scVideoPickClose">✕</button>
+    </div>
+    <div id="scVideoPickGrid" class="all-videos-grid"><!-- JS로 채움 --></div>
+  </div>
 </div>
 
 <!-- 전체 영상 모달 (영상 저장 카드 클릭 시) -->
@@ -1339,6 +1540,7 @@ let userProfile = null;
 let activeSubscription = null;
 let isPro = false;
 let allLogs = [];
+let allRounds = [];   // 라운딩 기록 (rounds + holes + videos)
 let editingLogId = null;
 
 // ─── 비로그인 사용자 안내 화면 ───
@@ -1362,13 +1564,15 @@ function showNotLoggedIn(){
   await Promise.all([
     loadUserProfile(),
     loadSubscription(),
-    loadHistory()
+    loadHistory(),
+    loadRounds()
   ]);
 
   // 3) UI 렌더링
   renderHeader();
   renderStats();
   renderProCta();
+  renderScorecards();
   renderVideoGallery();
   renderHistory();
   renderSubscription();
@@ -1521,27 +1725,15 @@ function renderStats(){
   const topClub = Object.entries(clubCount).sort((a,b) => b[1]-a[1])[0];
   const clubLabels = {driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터', wood:'우드'};
 
+  // MY DIARY 순서: 총 분석횟수 → 가장 닮은 프로 → 평균 매칭률 → 스코어카드 → 영상 저장 → 주력클럽
+  // ('함께한 날' 카드는 숨김 — 데이터/계산은 보존, UI에서만 제거. 되살리려면 아래 배열에 다시 추가)
   const cards = [
-    {
-      icon: 'DAYS',
-      label: '함께한 날',
-      value: daysSinceJoin,
-      unit: '일',
-      sub: userProfile.created_at ? new Date(userProfile.created_at).toLocaleDateString('ko-KR') + ' 시작' : ''
-    },
     {
       icon: 'SWINGS',
       label: '총 분석 횟수',
       value: totalAnalysis,
       unit: '회',
       gold: true
-    },
-    {
-      icon: 'MATCH',
-      label: '평균 매칭률',
-      value: avgMatch || '—',
-      unit: avgMatch ? '%' : '',
-      sub: matchPcts.length > 0 ? `${matchPcts.length}회 기준` : '분석 시작 전'
     },
     {
       icon: 'TOP PRO',
@@ -1551,11 +1743,20 @@ function renderStats(){
       small: true
     },
     {
-      icon: 'CLUB',
-      label: '주력 클럽',
-      value: topClub ? (clubLabels[topClub[0]] || topClub[0]) : '—',
-      sub: topClub ? `${topClub[1]}회 사용` : '분석 시작 전',
-      small: true
+      icon: 'MATCH',
+      label: '평균 매칭률',
+      value: avgMatch || '—',
+      unit: avgMatch ? '%' : '',
+      sub: matchPcts.length > 0 ? `${matchPcts.length}회 기준` : '분석 시작 전'
+    },
+    {
+      icon: 'CARD',
+      label: '스코어카드',
+      value: allRounds.length || '—',
+      unit: allRounds.length ? '장' : '',
+      sub: allRounds.length ? '탭하면 기록 보기 →' : '첫 라운드 기록하기 →',
+      clickable: true,
+      action: 'scorecard'
     },
     {
       icon: 'VIDEOS',
@@ -1565,6 +1766,13 @@ function renderStats(){
       sub: '탭하면 전체 보기 →',
       clickable: true,
       action: 'allVideos'
+    },
+    {
+      icon: 'CLUB',
+      label: '주력 클럽',
+      value: topClub ? (clubLabels[topClub[0]] || topClub[0]) : '—',
+      sub: topClub ? `${topClub[1]}회 사용` : '분석 시작 전',
+      small: true
     }
   ];
 
@@ -1584,7 +1792,455 @@ function renderStats(){
   grid.querySelectorAll('.stat-card[data-action="allVideos"]').forEach(card => {
     card.addEventListener('click', openAllVideosModal);
   });
+  // 스코어카드 카드 클릭 → 스코어카드 섹션으로 스크롤
+  grid.querySelectorAll('.stat-card[data-action="scorecard"]').forEach(card => {
+    card.addEventListener('click', () => {
+      const sec = document.getElementById('scorecardSectionWrap');
+      if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
 }
+
+// ═══════════════════════════════════════════════════════════════
+// 라운딩 기록 (스코어카드) — rounds / round_holes / round_videos
+// 프론트 단독: Supabase 직접 읽기/쓰기. 백엔드 무수정.
+// ═══════════════════════════════════════════════════════════════
+
+// 편집 모달 상태
+let scEditingRoundId = null;          // null = 새 라운드, uuid = 편집
+let scHoleCount = 18;                 // 9 | 18
+let scLinkedVideos = [];              // [{analysis_id, pro_name, match_pct, created_at, video_path}]
+
+// ─── 데이터 로딩 ───
+async function loadRounds(){
+  try {
+    const { data: rounds, error } = await supabaseClient
+      .from('rounds')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('played_on', { ascending: false })
+      .order('created_at', { ascending: false });
+    if (error) { console.error('[rounds]', error); allRounds = []; return; }
+    const list = rounds || [];
+    if (list.length === 0) { allRounds = []; return; }
+
+    const ids = list.map(r => r.id);
+    // 홀 + 영상 연결을 한 번씩만 조회 후 그룹핑
+    const [{ data: holes }, { data: links }] = await Promise.all([
+      supabaseClient.from('round_holes').select('*').in('round_id', ids),
+      supabaseClient.from('round_videos').select('*').in('round_id', ids)
+    ]);
+
+    // 연결된 영상의 메타는 allLogs(이미 로드됨)에서 매핑 — 추가 쿼리 없음
+    const logById = {};
+    (allLogs || []).forEach(l => { logById[l.id] = l; });
+
+    const holesByRound = {};
+    (holes || []).forEach(h => { (holesByRound[h.round_id] ||= []).push(h); });
+    const linksByRound = {};
+    (links || []).forEach(v => { (linksByRound[v.round_id] ||= []).push(v); });
+
+    allRounds = list.map(r => {
+      const hs = (holesByRound[r.id] || []).sort((a,b) => a.hole_no - b.hole_no);
+      // 영상 연결: analysis_logs에 존재하는 것만(=삭제 안전망. 없으면 칩 숨김)
+      const vids = (linksByRound[r.id] || [])
+        .map(v => logById[v.analysis_id])
+        .filter(Boolean);
+      return { ...r, holes: hs, videos: vids };
+    });
+  } catch (e) {
+    console.error('[loadRounds]', e);
+    allRounds = [];
+  }
+}
+
+// ─── 합계 계산 ───
+function scTotals(holes){
+  let par = 0, score = 0;
+  holes.forEach(h => {
+    if (typeof h.par === 'number') par += h.par;
+    if (typeof h.score === 'number') score += h.score;
+  });
+  return { par, score, diff: score - par };
+}
+function scDiffLabel(diff){
+  if (diff === 0) return 'E';
+  return diff > 0 ? `+${diff}` : `${diff}`;
+}
+
+// ─── 목록 + 드롭다운 렌더 ───
+function renderScorecards(){
+  const section = document.getElementById('scorecardSection');
+  const meta = document.getElementById('scorecardMeta');
+  const nav = document.getElementById('scorecardNav');
+  const navList = document.getElementById('scNavList');
+  if (!section) return;
+
+  if (!allRounds.length) {
+    meta.textContent = '';
+    nav.style.display = 'none';
+    section.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">⛳</div>
+        <strong style="color:var(--text);font-size:.95rem">아직 기록한 라운드가 없어요</strong><br><br>
+        골프장 이름과 홀별 스코어를 직접 적어<br>
+        나만의 클래식 스코어카드를 남겨보세요.<br>
+        즐겨찾기한 스윙 영상도 함께 붙일 수 있어요.
+      </div>`;
+    return;
+  }
+
+  meta.innerHTML = `<span>${allRounds.length}장</span>`;
+
+  // 드롭다운 (날짜 · 코스 · 타수)
+  nav.style.display = 'block';
+  navList.innerHTML = allRounds.map(r => {
+    const t = scTotals(r.holes);
+    return `<div class="sc-nav-item" data-round="${r.id}">
+      <span>${scFmtDate(r.played_on)} · ${escapeHtml(r.course_name)}</span>
+      <span class="sc-nav-score">${t.score || '—'}${t.par ? ` (${scDiffLabel(t.diff)})` : ''}</span>
+    </div>`;
+  }).join('');
+
+  // 카드 목록
+  section.innerHTML = `<div class="sc-list">${allRounds.map(scCardHtml).join('')}</div>`;
+
+  // 카드 클릭 → 편집
+  section.querySelectorAll('.scorecard').forEach(card => {
+    card.addEventListener('click', () => openScEdit(card.dataset.round));
+  });
+  // 드롭다운 항목 클릭 → 해당 카드로 점프
+  navList.querySelectorAll('.sc-nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const el = section.querySelector(`.scorecard[data-round="${item.dataset.round}"]`);
+      if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+      // 닫기
+      navList.style.display = 'none';
+      document.getElementById('scNavChev').classList.remove('open');
+    });
+  });
+}
+
+// 카드 1장 HTML
+function scCardHtml(r){
+  const t = scTotals(r.holes);
+  const holeMap = {};
+  r.holes.forEach(h => { holeMap[h.hole_no] = h; });
+  const count = r.holes.length >= 10 ? 18 : 9;
+
+  function rowBlock(start, end, label){
+    let holeCells = `<td class="sc-rowlabel sc-hole">HOLE</td>`;
+    let parCells  = `<td class="sc-rowlabel sc-par">PAR</td>`;
+    let scoreCells= `<td class="sc-rowlabel">SCORE</td>`;
+    for (let i = start; i <= end; i++){
+      const h = holeMap[i] || {};
+      holeCells  += `<td class="sc-hole">${i}</td>`;
+      parCells   += `<td class="sc-par">${h.par ?? '·'}</td>`;
+      scoreCells += `<td class="sc-score">${h.score ?? '·'}</td>`;
+    }
+    // 소계
+    let sp = 0, ss = 0;
+    for (let i = start; i <= end; i++){ const h = holeMap[i]||{}; sp += h.par||0; ss += h.score||0; }
+    holeCells  += `<td class="sc-hole sc-sum">${label}</td>`;
+    parCells   += `<td class="sc-par sc-sum">${sp||'·'}</td>`;
+    scoreCells += `<td class="sc-score sc-sum" style="color:#00461F">${ss||'·'}</td>`;
+    return `<table class="sc-table"><tbody>
+      <tr>${holeCells}</tr><tr>${parCells}</tr><tr>${scoreCells}</tr></tbody></table>`;
+  }
+
+  let body = rowBlock(1, 9, 'OUT');
+  if (count === 18) body += rowBlock(10, 18, 'IN');
+
+  // 영상 칩 (존재하는 영상만)
+  const vchips = r.videos.length
+    ? `<span class="sc-foot-videos">🎬 ${r.videos.length}개</span>`
+    : `<span class="sc-foot-videos" style="color:var(--text-faint)">🎬 영상 없음</span>`;
+
+  return `<div class="scorecard" data-round="${r.id}">
+    <div class="sc-head">
+      <div>
+        <div class="sc-head-title">SCORE CARD</div>
+        <div class="sc-course">${escapeHtml(r.course_name)}</div>
+        ${r.course_layout ? `<div class="sc-layout">${escapeHtml(r.course_layout)}</div>` : ''}
+      </div>
+      <div class="sc-head-date">${scFmtDate(r.played_on)}</div>
+    </div>
+    ${body}
+    <div class="sc-foot">
+      ${vchips}
+      <div class="sc-foot-total">${t.score || '—'}${t.par ? `<span class="sc-diff">${scDiffLabel(t.diff)}</span>` : ''}</div>
+    </div>
+  </div>`;
+}
+
+function scFmtDate(d){
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return `${dt.getFullYear()}. ${dt.getMonth()+1}. ${dt.getDate()}`;
+}
+
+// ─── 편집 모달 ───
+function openScEdit(roundId){
+  scEditingRoundId = roundId || null;
+  const modal = document.getElementById('scEditModal');
+  const round = roundId ? allRounds.find(r => r.id === roundId) : null;
+
+  document.getElementById('scEditTitle').textContent = round ? '⛳ 라운드 편집' : '⛳ 새 라운드';
+  document.getElementById('scDeleteBtn').style.display = round ? 'inline-block' : 'none';
+
+  // 기본값
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('scDate').value = round ? round.played_on : today;
+  document.getElementById('scCourse').value = round ? round.course_name : '';
+  document.getElementById('scLayout').value = round ? (round.course_layout || '') : '';
+
+  scHoleCount = round ? (round.holes.length >= 10 ? 18 : (round.holes.length ? 9 : 18)) : 18;
+  document.querySelectorAll('.sc-holes-opt').forEach(b => {
+    b.classList.toggle('active', Number(b.dataset.holes) === scHoleCount);
+  });
+
+  // 홀 그리드 (기존 값 채우기)
+  const holeVals = {};
+  if (round) round.holes.forEach(h => { holeVals[h.hole_no] = h; });
+  scRenderHoleGrid(holeVals);
+
+  // 연결 영상
+  scLinkedVideos = round ? round.videos.map(v => ({
+    analysis_id: v.id, pro_name: v.pro_name, match_pct: v.match_pct,
+    created_at: v.created_at, video_path: v.video_path
+  })) : [];
+  scRenderChips();
+
+  scRecalcTotals();
+  modal.classList.add('show');
+}
+
+function scRenderHoleGrid(holeVals){
+  const wrap = document.getElementById('scHolesWrap');
+  holeVals = holeVals || {};
+  function block(start, end, label){
+    const cols = end - start + 1;
+    let holeRow = `<div class="sc-grid-cell sc-grid-label">${label}</div>`;
+    let parRow  = `<div class="sc-grid-cell sc-grid-label">PAR</div>`;
+    let scoreRow= `<div class="sc-grid-cell sc-grid-label">SCORE</div>`;
+    for (let i = start; i <= end; i++){
+      const h = holeVals[i] || {};
+      holeRow  += `<div class="sc-grid-cell sc-grid-hole">${i}</div>`;
+      parRow   += `<div class="sc-grid-cell"><input class="sc-mini is-par" type="number" inputmode="numeric" min="3" max="5" data-hole="${i}" data-kind="par" value="${h.par ?? ''}" placeholder="·"></div>`;
+      scoreRow += `<div class="sc-grid-cell"><input class="sc-mini is-score" type="number" inputmode="numeric" min="1" max="20" data-hole="${i}" data-kind="score" value="${h.score ?? ''}" placeholder="·"></div>`;
+    }
+    return `<div class="sc-holes-block">
+      <div class="sc-grid" style="grid-template-columns:46px repeat(${cols},minmax(30px,1fr))">
+        ${holeRow}${parRow}${scoreRow}
+      </div></div>`;
+  }
+  let html = block(1, 9, 'OUT');
+  if (scHoleCount === 18) html += block(10, 18, 'IN');
+  wrap.innerHTML = html;
+
+  wrap.querySelectorAll('.sc-mini').forEach(inp => {
+    inp.addEventListener('input', scRecalcTotals);
+  });
+}
+
+function scCollectHoles(){
+  const wrap = document.getElementById('scHolesWrap');
+  const map = {};
+  wrap.querySelectorAll('.sc-mini').forEach(inp => {
+    const n = Number(inp.dataset.hole);
+    const kind = inp.dataset.kind;
+    const v = inp.value === '' ? null : Number(inp.value);
+    (map[n] ||= { hole_no:n, par:null, score:null });
+    map[n][kind] = (v === null || isNaN(v)) ? null : v;
+  });
+  // par/score 둘 다 비어있는 홀은 저장 제외
+  return Object.values(map).filter(h => h.par !== null || h.score !== null);
+}
+
+function scRecalcTotals(){
+  const holes = scCollectHoles();
+  const t = scTotals(holes);
+  document.getElementById('scTotalPar').textContent = t.par;
+  document.getElementById('scTotalScore').textContent = t.score;
+  const diffEl = document.getElementById('scTotalDiff');
+  diffEl.textContent = (t.par && t.score) ? scDiffLabel(t.diff) : '';
+}
+
+// ─── 영상 연결 (즐겨찾기만) ───
+function scRenderChips(){
+  const box = document.getElementById('scVideoChips');
+  if (!scLinkedVideos.length){ box.innerHTML = `<span style="font-size:.78rem;color:var(--text-faint)">연결된 영상이 없어요.</span>`; return; }
+  box.innerHTML = scLinkedVideos.map(v => `
+    <span class="sc-chip">
+      ${escapeHtml(v.pro_name || '분석')} · ${formatDate(v.created_at)}
+      <button type="button" data-rm="${v.analysis_id}">✕</button>
+    </span>`).join('');
+  box.querySelectorAll('button[data-rm]').forEach(b => {
+    b.addEventListener('click', () => {
+      scLinkedVideos = scLinkedVideos.filter(v => v.analysis_id !== b.dataset.rm);
+      scRenderChips();
+    });
+  });
+}
+
+function openScVideoPicker(){
+  const modal = document.getElementById('scVideoPickModal');
+  const grid = document.getElementById('scVideoPickGrid');
+  // A안: 즐겨찾기 영상만 (is_favorite + video_path)
+  const favs = (allLogs || []).filter(l => l.is_favorite && l.video_path);
+  const linkedIds = new Set(scLinkedVideos.map(v => v.analysis_id));
+  const pickable = favs.filter(l => !linkedIds.has(l.id));
+
+  if (!favs.length){
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
+      <div class="empty-icon">❤️</div>
+      <strong style="color:var(--text);font-size:.92rem">즐겨찾기한 영상이 없어요</strong><br><br>
+      분석 화면 → 히스토리에서 ❤️ 하트를 누르면<br>여기에서 라운드에 연결할 수 있어요.
+    </div>`;
+  } else if (!pickable.length){
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">즐겨찾기 영상을 모두 연결했어요.</div>`;
+  } else {
+    grid.innerHTML = pickable.map(l => `
+      <div class="video-card-mini" data-id="${l.id}" data-video-path="${escapeHtml(l.video_path)}">
+        <div class="video-thumb-mini has-favorite">
+          <video muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block"></video>
+          <span class="fav-icon-mini">❤️</span>
+        </div>
+        <div class="video-info-mini">
+          <div class="video-pro-mini">${escapeHtml(l.pro_name || '분석')}</div>
+          <div class="video-date" style="font-size:.7rem">${formatDate(l.created_at)} · ${l.match_pct || '-'}%</div>
+        </div>
+      </div>`).join('');
+    grid.querySelectorAll('.video-card-mini').forEach(card => {
+      const tEl = card.querySelector('.video-thumb-mini');
+      const vp = card.dataset.videoPath;
+      if (vp && tEl) loadVideoThumb(tEl, vp);
+      card.addEventListener('click', () => {
+        const l = (allLogs || []).find(x => x.id === card.dataset.id);
+        if (l) {
+          scLinkedVideos.push({ analysis_id:l.id, pro_name:l.pro_name, match_pct:l.match_pct, created_at:l.created_at, video_path:l.video_path });
+          scRenderChips();
+        }
+        modal.classList.remove('show');
+      });
+    });
+  }
+  modal.classList.add('show');
+}
+
+// ─── 저장 / 삭제 ───
+async function scSave(){
+  const course = document.getElementById('scCourse').value.trim();
+  const played = document.getElementById('scDate').value;
+  if (!course){ alert('골프장 이름을 입력해주세요.'); return; }
+  if (!played){ alert('날짜를 선택해주세요.'); return; }
+
+  const layout = document.getElementById('scLayout').value.trim() || null;
+  const holes = scCollectHoles();
+  const t = scTotals(holes);
+  const btn = document.getElementById('scSaveBtn');
+  btn.disabled = true; btn.textContent = '저장 중...';
+
+  try {
+    let roundId = scEditingRoundId;
+    if (roundId){
+      const { error } = await supabaseClient.from('rounds').update({
+        played_on: played, course_name: course, course_layout: layout,
+        total_par: t.par, total_score: t.score
+      }).eq('id', roundId);
+      if (error) throw error;
+      // 홀·영상은 전체 교체(단순·정확)
+      await supabaseClient.from('round_holes').delete().eq('round_id', roundId);
+      await supabaseClient.from('round_videos').delete().eq('round_id', roundId);
+    } else {
+      const { data, error } = await supabaseClient.from('rounds').insert({
+        user_id: currentUser.id, played_on: played, course_name: course,
+        course_layout: layout, total_par: t.par, total_score: t.score
+      }).select('id').single();
+      if (error) throw error;
+      roundId = data.id;
+    }
+
+    if (holes.length){
+      const rows = holes.map(h => ({ round_id: roundId, hole_no: h.hole_no, par: h.par, score: h.score }));
+      const { error: hErr } = await supabaseClient.from('round_holes').insert(rows);
+      if (hErr) throw hErr;
+    }
+    if (scLinkedVideos.length){
+      const vrows = scLinkedVideos.map(v => ({ round_id: roundId, analysis_id: v.analysis_id }));
+      const { error: vErr } = await supabaseClient.from('round_videos').insert(vrows);
+      if (vErr) throw vErr;
+    }
+
+    document.getElementById('scEditModal').classList.remove('show');
+    await loadRounds();
+    renderScorecards();
+    renderStats();
+    showToast(scEditingRoundId ? '라운드를 수정했어요' : '라운드를 기록했어요 ⛳');
+  } catch (e) {
+    console.error('[scSave]', e);
+    alert('저장 중 문제가 발생했어요. 잠시 후 다시 시도해주세요.');
+  } finally {
+    btn.disabled = false; btn.textContent = '저장';
+  }
+}
+
+async function scDelete(){
+  if (!scEditingRoundId) return;
+  if (!confirm('이 라운드 기록을 삭제할까요?\n홀 스코어와 영상 연결도 함께 삭제됩니다.\n(연결된 영상 자체는 삭제되지 않아요)')) return;
+  try {
+    // round 삭제 시 holes/videos는 cascade로 함께 삭제
+    const { error } = await supabaseClient.from('rounds').delete().eq('id', scEditingRoundId);
+    if (error) throw error;
+    document.getElementById('scEditModal').classList.remove('show');
+    await loadRounds();
+    renderScorecards();
+    renderStats();
+    showToast('라운드를 삭제했어요');
+  } catch (e) {
+    console.error('[scDelete]', e);
+    alert('삭제 중 문제가 발생했어요.');
+  }
+}
+
+// ─── 이벤트 바인딩 ───
+function bindScorecardEvents(){
+  const $ = id => document.getElementById(id);
+  $('scAddBtn')?.addEventListener('click', () => openScEdit(null));
+  $('scEditClose')?.addEventListener('click', () => $('scEditModal').classList.remove('show'));
+  $('scSaveBtn')?.addEventListener('click', scSave);
+  $('scDeleteBtn')?.addEventListener('click', scDelete);
+  $('scVideoAddBtn')?.addEventListener('click', openScVideoPicker);
+  $('scVideoPickClose')?.addEventListener('click', () => $('scVideoPickModal').classList.remove('show'));
+
+  // 홀 수 토글
+  document.querySelectorAll('.sc-holes-opt').forEach(b => {
+    b.addEventListener('click', () => {
+      scHoleCount = Number(b.dataset.holes);
+      document.querySelectorAll('.sc-holes-opt').forEach(x => x.classList.toggle('active', x === b));
+      // 현재 입력값 보존 후 재렌더
+      const cur = {};
+      scCollectHoles().forEach(h => { cur[h.hole_no] = h; });
+      scRenderHoleGrid(cur);
+      scRecalcTotals();
+    });
+  });
+
+  // 드롭다운 토글
+  $('scNavToggle')?.addEventListener('click', () => {
+    const list = $('scNavList');
+    const chev = $('scNavChev');
+    const open = list.style.display !== 'none';
+    list.style.display = open ? 'none' : 'block';
+    chev.classList.toggle('open', !open);
+  });
+
+  // 모달 바깥 클릭 닫기
+  ['scEditModal','scVideoPickModal'].forEach(idv => {
+    $(idv)?.addEventListener('click', e => { if (e.target === $(idv)) $(idv).classList.remove('show'); });
+  });
+}
+
 
 // ─── Pro CTA ───
 function renderProCta(){
@@ -2048,6 +2704,7 @@ function renderSubscription(){
 
 // ─── 이벤트 바인딩 ───
 function bindEvents(){
+  bindScorecardEvents();
   // 로그아웃
   document.getElementById('logoutLink').addEventListener('click', async (e) => {
     e.preventDefault();
