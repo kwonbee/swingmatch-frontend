@@ -1365,7 +1365,7 @@
     <div class="modal-header-row">
       <div>
         <h3 id="scEditTitle">⛳ 새 라운드</h3>
-        <p class="modal-sub">골프장·날짜·홀별 파/스코어를 직접 적어보세요.</p>
+        <p class="modal-sub">홀별 파와 +/-(이븐 0·버디 -1·보기 +1)를 적어보세요.</p>
       </div>
       <button class="modal-close-x" id="scEditClose">✕</button>
     </div>
@@ -1412,8 +1412,8 @@
     <div class="sc-total-bar">
       <span>합계</span>
       <span class="sc-total-nums">
-        PAR <strong id="scTotalPar">0</strong>
-        · SCORE <strong id="scTotalScore">0</strong>
+        파 <strong id="scTotalPar">0</strong>
+        · 총타수 <strong id="scTotalScore">—</strong>
         <span id="scTotalDiff" class="sc-diff"></span>
       </span>
     </div>
@@ -1876,20 +1876,24 @@ async function loadRounds(){
 }
 
 // ─── 합계 계산 ───
+// 홀별 score = "파 대비"(이븐 0, 버디 -1, 보기 +1). par = 그 홀의 파(3/4/5).
+// diff = 파 대비 총합(그날 최종 +/-). strokes = 파합 + 파대비합 = 실제 총타수(파 채워졌을 때만 의미).
 function scTotals(holes){
-  let par = 0, score = 0;
+  let parSum = 0, diff = 0;
+  let hasPar = false, hasScore = false;
   holes.forEach(h => {
-    if (typeof h.par === 'number') par += h.par;
-    if (typeof h.score === 'number') score += h.score;
+    if (typeof h.par === 'number'){ parSum += h.par; hasPar = true; }
+    if (typeof h.score === 'number'){ diff += h.score; hasScore = true; }
   });
-  return { par, score, diff: score - par };
+  const strokes = (hasPar && hasScore) ? parSum + diff : null; // 총타수는 파 있어야 산출
+  return { par: parSum, diff, score: strokes, hasPar, hasScore };
 }
-// 라운드 표시용 합계: 홀 데이터 있으면 그걸로, 없으면(총 타수만 모드) 저장된 값 사용
+// 라운드 표시용 합계: 홀 데이터 있으면 계산, 없으면(총 타수만 모드) 저장값 사용
 function scRoundTotals(r){
   if (r.holes && r.holes.length) return scTotals(r.holes);
   const par = r.total_par || 0;
-  const score = r.total_score || 0;
-  return { par, score, diff: score - par };
+  const strokes = r.total_score || 0;
+  return { par, diff: (par && strokes) ? strokes - par : strokes, score: strokes || null, hasPar: !!par, hasScore: !!strokes };
 }
 function scDiffLabel(diff){
   if (diff === 0) return 'E';
@@ -1926,7 +1930,7 @@ function renderScorecards(){
     const t = scRoundTotals(r);
     return `<div class="sc-nav-item" data-round="${r.id}">
       <span>${scFmtDate(r.played_on)} · ${escapeHtml(r.course_name)}</span>
-      <span class="sc-nav-score">${t.score || '—'}${t.par ? ` (${scDiffLabel(t.diff)})` : ''}</span>
+      <span class="sc-nav-score">${t.score != null ? `${t.score} (${scDiffLabel(t.diff)})` : (t.hasScore ? scDiffLabel(t.diff) : '—')}</span>
     </div>`;
   }).join('');
 
@@ -1957,22 +1961,27 @@ function scCardHtml(r){
   if (hasHoles) r.holes.forEach(h => { holeMap[h.hole_no] = h; });
   const count = r.holes.length >= 10 ? 18 : 9;
 
+  function fmtRel(v){
+    if (v == null) return '·';
+    if (v === 0) return 'E';
+    return v > 0 ? `+${v}` : `${v}`;
+  }
   function rowBlock(start, end, label){
     let holeCells = `<td class="sc-rowlabel sc-hole">HOLE</td>`;
     let parCells  = `<td class="sc-rowlabel sc-par">PAR</td>`;
-    let scoreCells= `<td class="sc-rowlabel">SCORE</td>`;
+    let scoreCells= `<td class="sc-rowlabel">+/-</td>`;
     for (let i = start; i <= end; i++){
       const h = holeMap[i] || {};
       holeCells  += `<td class="sc-hole">${i}</td>`;
       parCells   += `<td class="sc-par">${h.par ?? '·'}</td>`;
-      scoreCells += `<td class="sc-score">${h.score ?? '·'}</td>`;
+      scoreCells += `<td class="sc-score">${fmtRel(h.score)}</td>`;
     }
-    // 소계
-    let sp = 0, ss = 0;
-    for (let i = start; i <= end; i++){ const h = holeMap[i]||{}; sp += h.par||0; ss += h.score||0; }
+    // 소계: 파합 / 파대비합
+    let sp = 0, sRel = 0, anyRel = false;
+    for (let i = start; i <= end; i++){ const h = holeMap[i]||{}; sp += h.par||0; if (typeof h.score==='number'){ sRel += h.score; anyRel = true; } }
     holeCells  += `<td class="sc-hole sc-sum">${label}</td>`;
     parCells   += `<td class="sc-par sc-sum">${sp||'·'}</td>`;
-    scoreCells += `<td class="sc-score sc-sum" style="color:#00461F">${ss||'·'}</td>`;
+    scoreCells += `<td class="sc-score sc-sum" style="color:#00461F">${anyRel ? fmtRel(sRel) : '·'}</td>`;
     return `<table class="sc-table"><tbody>
       <tr>${holeCells}</tr><tr>${parCells}</tr><tr>${scoreCells}</tr></tbody></table>`;
   }
@@ -1994,6 +2003,16 @@ function scCardHtml(r){
     ? `<span class="sc-foot-videos">🎬 ${r.videos.length}개</span>`
     : `<span class="sc-foot-videos" style="color:var(--text-faint)">🎬 영상 없음</span>`;
 
+  // 푸터: 총타수(파 있으면) + 파대비. 파 없으면 파대비만.
+  let footTotal;
+  if (t.score != null) {
+    footTotal = `${t.score}<span class="sc-diff">${scDiffLabel(t.diff)}</span>`;
+  } else if (t.hasScore) {
+    footTotal = `<span style="font-size:1.3rem">${scDiffLabel(t.diff)}</span>`;
+  } else {
+    footTotal = '—';
+  }
+
   return `<div class="scorecard" data-round="${r.id}">
     <div class="sc-head">
       <div>
@@ -2006,7 +2025,7 @@ function scCardHtml(r){
     ${body}
     <div class="sc-foot">
       ${vchips}
-      <div class="sc-foot-total">${t.score || '—'}${t.par ? `<span class="sc-diff">${scDiffLabel(t.diff)}</span>` : ''}</div>
+      <div class="sc-foot-total">${footTotal}</div>
     </div>
   </div>`;
 }
@@ -2078,12 +2097,12 @@ function scRenderHoleGrid(holeVals){
     const cols = end - start + 1;
     let holeRow = `<div class="sc-grid-cell sc-grid-label">${label}</div>`;
     let parRow  = `<div class="sc-grid-cell sc-grid-label">PAR</div>`;
-    let scoreRow= `<div class="sc-grid-cell sc-grid-label">SCORE</div>`;
+    let scoreRow= `<div class="sc-grid-cell sc-grid-label">+/-</div>`;
     for (let i = start; i <= end; i++){
       const h = holeVals[i] || {};
       holeRow  += `<div class="sc-grid-cell sc-grid-hole">${i}</div>`;
       parRow   += `<div class="sc-grid-cell"><input class="sc-mini is-par" type="number" inputmode="numeric" min="3" max="5" data-hole="${i}" data-kind="par" value="${h.par ?? ''}" placeholder="·"></div>`;
-      scoreRow += `<div class="sc-grid-cell"><input class="sc-mini is-score" type="number" inputmode="numeric" min="1" max="20" data-hole="${i}" data-kind="score" value="${h.score ?? ''}" placeholder="·"></div>`;
+      scoreRow += `<div class="sc-grid-cell"><input class="sc-mini is-score" type="number" inputmode="numeric" min="-10" max="10" data-hole="${i}" data-kind="score" value="${h.score ?? ''}" placeholder="·"></div>`;
     }
     return `<div class="sc-holes-block">
       <div class="sc-grid" style="grid-template-columns:46px repeat(${cols},minmax(30px,1fr))">
@@ -2105,9 +2124,14 @@ function scCollectHoles(){
   wrap.querySelectorAll('.sc-mini').forEach(inp => {
     const n = Number(inp.dataset.hole);
     const kind = inp.dataset.kind;
-    const v = inp.value === '' ? null : Number(inp.value);
+    const raw = inp.value.trim();
+    let v = raw === '' ? null : Number(raw);
+    if (v !== null && isNaN(v)) v = null;
+    // par는 양수(3~5)만 의미 있음 → 0·음수·빈칸은 미입력
+    if (kind === 'par' && (v === null || v <= 0)) v = null;
+    // score는 파 대비라 0·음수 유효. 빈칸만 미입력.
     (map[n] ||= { hole_no:n, par:null, score:null });
-    map[n][kind] = (v === null || isNaN(v)) ? null : v;
+    map[n][kind] = v;
   });
   // par/score 둘 다 비어있는 홀은 저장 제외
   return Object.values(map).filter(h => h.par !== null || h.score !== null);
@@ -2116,16 +2140,17 @@ function scCollectHoles(){
 function scRecalcTotals(){
   let t;
   if (scHoleCount === 0) {
-    const score = Number(document.getElementById('scTotalOnlyScore').value) || 0;
-    const par   = Number(document.getElementById('scTotalOnlyPar').value) || 0;
-    t = { par, score, diff: score - par };
+    const strokes = Number(document.getElementById('scTotalOnlyScore').value) || 0;
+    const par     = Number(document.getElementById('scTotalOnlyPar').value) || 0;
+    t = { par, score: strokes || null, diff: (par && strokes) ? strokes - par : strokes,
+          hasPar: !!par, hasScore: !!strokes };
   } else {
     t = scTotals(scCollectHoles());
   }
-  document.getElementById('scTotalPar').textContent = t.par;
-  document.getElementById('scTotalScore').textContent = t.score;
+  document.getElementById('scTotalPar').textContent = t.par || 0;
+  document.getElementById('scTotalScore').textContent = (t.score != null) ? t.score : '—';
   const diffEl = document.getElementById('scTotalDiff');
-  diffEl.textContent = (t.par && t.score) ? scDiffLabel(t.diff) : '';
+  diffEl.textContent = t.hasScore ? scDiffLabel(t.diff) : '';
 }
 
 // ─── 영상 연결 (즐겨찾기만) ───
@@ -2201,16 +2226,24 @@ async function scSave(){
   const isTotalOnly = scHoleCount === 0;
 
   let holes = [];
-  let t;
+  let totalPar = null, totalScore = null;
   if (isTotalOnly) {
-    const score = Number(document.getElementById('scTotalOnlyScore').value) || 0;
-    const par   = Number(document.getElementById('scTotalOnlyPar').value) || 0;
-    if (!score){ alert('총 타수를 입력해주세요.'); return; }
-    t = { par, score, diff: score - par };
+    const strokes = Number(document.getElementById('scTotalOnlyScore').value) || 0;
+    const par     = Number(document.getElementById('scTotalOnlyPar').value) || 0;
+    if (!strokes){ alert('총 타수를 입력해주세요.'); return; }
+    totalScore = strokes;
+    totalPar = par || null;
   } else {
     holes = scCollectHoles();
-    if (!holes.length){ alert('홀별 스코어를 입력하거나, "총 타수만" 모드로 기록해주세요.'); return; }
-    t = scTotals(holes);
+    if (!holes.length){ alert('홀별 파 또는 스코어를 입력하거나, "총 타수만" 모드로 기록해주세요.'); return; }
+    // DB 제약: par 3~5, score(파 대비) -10~10. 범위 밖이면 안내 후 중단(원시 400 방지)
+    const badPar = holes.find(h => h.par !== null && (h.par < 3 || h.par > 5));
+    if (badPar){ alert(`파는 3, 4, 5만 입력할 수 있어요. (${badPar.hole_no}번 홀 확인)`); return; }
+    const badScore = holes.find(h => h.score !== null && (h.score < -10 || h.score > 10));
+    if (badScore){ alert(`+/- 는 -10 ~ +10 사이로 입력해주세요. (${badScore.hole_no}번 홀 확인)`); return; }
+    const t = scTotals(holes);
+    totalPar = t.hasPar ? t.par : null;
+    totalScore = (t.score != null) ? t.score : null; // 총타수(파 있을 때만). 없으면 null
   }
 
   const btn = document.getElementById('scSaveBtn');
@@ -2221,7 +2254,7 @@ async function scSave(){
     if (roundId){
       const { error } = await supabaseClient.from('rounds').update({
         played_on: played, course_name: course, course_layout: layout,
-        total_par: t.par, total_score: t.score
+        total_par: totalPar, total_score: totalScore
       }).eq('id', roundId);
       if (error) throw error;
       // 홀·영상은 전체 교체(단순·정확)
@@ -2230,7 +2263,7 @@ async function scSave(){
     } else {
       const { data, error } = await supabaseClient.from('rounds').insert({
         user_id: currentUser.id, played_on: played, course_name: course,
-        course_layout: layout, total_par: t.par, total_score: t.score
+        course_layout: layout, total_par: totalPar, total_score: totalScore
       }).select('id').single();
       if (error) throw error;
       roundId = data.id;
