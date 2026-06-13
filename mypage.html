@@ -897,6 +897,8 @@
     .diary-video-wrap{max-height:52vh}
   }
   /* 히스토리 더보기/접기 */
+  .history-btn-row{display:flex;gap:8px;margin-top:14px}
+  .history-btn-row .history-toggle-btn{margin-top:0;flex:1}
   .history-toggle-btn{
     display:flex;
     align-items:center;
@@ -1079,6 +1081,11 @@
   .sc-more-btn{display:block;margin:14px auto 0;background:transparent;border:none;color:var(--gold);
     font-family:inherit;font-size:.85rem;cursor:pointer;padding:6px 14px}
   .sc-more-btn:hover{text-decoration:underline}
+  .sc-more-row{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap}
+  .sc-collapse-btn{color:var(--text-faint)}
+  .sc-back-btn{background:transparent;border:none;color:var(--gold);font-family:inherit;font-size:.85rem;
+    cursor:pointer;padding:4px 0 12px;display:block}
+  .sc-back-btn:hover{text-decoration:underline}
 
   /* 편집 모달 */
   .sc-form-row{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
@@ -1337,7 +1344,10 @@
     <div id="scorecardSection">
       <div class="loading">불러오는 중...</div>
     </div>
-    <button type="button" class="sc-more-btn" id="scMoreBtn" style="display:none"></button>
+    <div class="sc-more-row">
+      <button type="button" class="sc-more-btn" id="scMoreBtn" style="display:none"></button>
+      <button type="button" class="sc-more-btn sc-collapse-btn" id="scCollapseBtn" style="display:none">접기 ▲</button>
+    </div>
     <button type="button" class="sc-add-btn" id="scAddBtn">+ 새 라운드 기록하기</button>
   </div>
 
@@ -1844,6 +1854,7 @@ const SC_PAGE = 10;                   // 더 보기 1회당 추가 장수
 let roundsMeta = [];                  // 전체 라운드 메타(rounds 행만, 홀·영상 조인 X) — 드롭다운·개수·합계용
 const roundsDetail = {};              // round_id -> { holes, videos } (필요한 만큼만 로드)
 let scShownCount = 1;                 // 현재 화면에 그린 카드 수 (기본 1)
+let scSoloId = null;                  // 드롭다운에서 단독 선택한 라운드 id (null=목록 모드)
 
 // allRounds = 화면에 그릴 라운드 배열(메타 + 로드된 상세 병합). renderScorecards에서 구성.
 // 호환 유지를 위해 빈 배열로 둠.
@@ -1904,18 +1915,26 @@ function scRoundView(meta){
 
 // ─── 합계 계산 ───
 // 홀별 score = "파 대비"(이븐 0, 버디 -1, 보기 +1). par = 그 홀의 파(3/4/5).
-// diff = 파 대비 총합(그날 최종 +/-). strokes = 파합 + 파대비합 = 실제 총타수(파 채워졌을 때만 의미).
+// diff = 파 대비 총합(그날 최종 +/-). strokes = 파합 + 파대비합 = 실제 총타수.
+// 파 미입력 홀은 기본 파4로 간주(정규 18홀=72 기준). 점수만 적어도 총타수 산출 가능.
+const SC_DEFAULT_PAR = 4;
 function scTotals(holes){
   let parSum = 0, diff = 0;
   let hasPar = false, hasScore = false;
   holes.forEach(h => {
-    if (typeof h.par === 'number'){ parSum += h.par; hasPar = true; }
-    if (typeof h.score === 'number'){ diff += h.score; hasScore = true; }
+    if (typeof h.score === 'number'){
+      diff += h.score; hasScore = true;
+      // 그 홀 파: 입력값 있으면 그것, 없으면 기본 파4
+      parSum += (typeof h.par === 'number') ? h.par : SC_DEFAULT_PAR;
+      if (typeof h.par === 'number') hasPar = true;
+    } else if (typeof h.par === 'number'){
+      parSum += h.par; hasPar = true;
+    }
   });
-  const strokes = (hasPar && hasScore) ? parSum + diff : null; // 총타수는 파 있어야 산출
+  const strokes = hasScore ? parSum + diff : null; // 점수 있으면 총타수 산출(파는 기본값 보정)
   return { par: parSum, diff, score: strokes, hasPar, hasScore };
 }
-// 라운드 표시용 합계: 홀 데이터 있으면 계산, 없으면(총 타수만 모드) 저장값 사용
+// 라운드 표시용 합계: 홀 데이터 있으면 계산, 없으면 저장값(total_par/total_score) 사용
 function scRoundTotals(r){
   if (r.holes && r.holes.length) return scTotals(r.holes);
   const par = r.total_par || 0;
@@ -1954,7 +1973,7 @@ function renderScorecards(){
 
   meta.innerHTML = `<span>${total}장</span>`;
 
-  // 드롭다운 (날짜 · 코스 · 타수) — 전체 메타 노출(점프용). 합계는 저장값으로 표시.
+  // 드롭다운 (날짜 · 코스 · 타수) — 전체 메타 노출. 합계는 저장값(기본파 보정)으로 표시.
   nav.style.display = 'block';
   navList.innerHTML = roundsMeta.map(r => {
     const t = scRoundTotals(scRoundView(r));
@@ -1964,35 +1983,63 @@ function renderScorecards(){
     </div>`;
   }).join('');
 
-  // 카드 목록 — scShownCount 만큼만 렌더 (상세 이미 로드됨)
+  const moreBtn = document.getElementById('scMoreBtn');
+  const collapseBtn = document.getElementById('scCollapseBtn');
+
+  // ── 단독 보기 모드: 드롭다운에서 고른 1장만 표시 ──
+  if (scSoloId) {
+    const metaRow = roundsMeta.find(r => r.id === scSoloId);
+    if (metaRow) {
+      section.innerHTML = `
+        <button type="button" class="sc-back-btn" id="scBackBtn">← 전체 보기</button>
+        <div class="sc-list">${scCardHtml(scRoundView(metaRow))}</div>`;
+      moreBtn.style.display = 'none';
+      collapseBtn.style.display = 'none';
+      section.querySelector('#scBackBtn')?.addEventListener('click', () => {
+        scSoloId = null;
+        renderScorecards();
+      });
+      section.querySelectorAll('.scorecard').forEach(card => {
+        card.addEventListener('click', () => openScEdit(card.dataset.round));
+      });
+      bindScNavJump(navList);
+      return;
+    }
+    scSoloId = null; // 못 찾으면 목록 모드로
+  }
+
+  // ── 목록 모드: scShownCount 만큼 렌더 ──
   const shownMeta = roundsMeta.slice(0, scShownCount);
   section.innerHTML = `<div class="sc-list">${shownMeta.map(r => scCardHtml(scRoundView(r))).join('')}</div>`;
 
-  // 더 보기(+10) / 닫기 버튼
-  const moreBtn = document.getElementById('scMoreBtn');
+  // 더 보기(+10) — 남은 게 있으면
   if (scShownCount < total) {
     const remain = total - scShownCount;
     moreBtn.style.display = 'block';
     moreBtn.textContent = `${remain}장 더 보기 ▼ (10장씩)`;
-    moreBtn.dataset.mode = 'more';
-  } else if (total > 1) {
-    moreBtn.style.display = 'block';
-    moreBtn.textContent = '닫기 ▲';
-    moreBtn.dataset.mode = 'collapse';
   } else {
     moreBtn.style.display = 'none';
   }
+  // 접기 — 1장 초과로 펼쳐져 있으면 항상 노출
+  collapseBtn.style.display = (scShownCount > 1) ? 'block' : 'none';
 
   // 카드 클릭 → 편집
   section.querySelectorAll('.scorecard').forEach(card => {
     card.addEventListener('click', () => openScEdit(card.dataset.round));
   });
-  // 드롭다운 항목 클릭 → 해당 라운드까지 로드/펼친 뒤 점프
+  bindScNavJump(navList);
+}
+
+// 드롭다운 항목 클릭 → 단독 보기로 전환
+function bindScNavJump(navList){
   navList.querySelectorAll('.sc-nav-item').forEach(item => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', async () => {
       navList.style.display = 'none';
       document.getElementById('scNavChev').classList.remove('open');
-      scJumpToRound(item.dataset.round);
+      await ensureRoundsDetail(roundsMeta.findIndex(r => r.id === item.dataset.round) + 1);
+      scSoloId = item.dataset.round;
+      renderScorecards();
+      document.getElementById('scorecardSectionWrap')?.scrollIntoView({ behavior:'smooth', block:'start' });
     });
   });
 }
@@ -2011,27 +2058,9 @@ async function scLoadMore(){
 // 접기: 다시 1장으로
 function scCollapse(){
   scShownCount = 1;
+  scSoloId = null;
   renderScorecards();
   document.getElementById('scorecardSectionWrap')?.scrollIntoView({ behavior:'smooth', block:'start' });
-}
-
-// 드롭다운 점프: 대상 라운드가 보이도록 필요한 만큼 로드/확장 후 스크롤
-async function scJumpToRound(roundId){
-  const idx = roundsMeta.findIndex(r => r.id === roundId);
-  if (idx < 0) return;
-  if (idx >= scShownCount){
-    const need = idx + 1;
-    const btn = document.getElementById('scMoreBtn');
-    if (btn) { btn.textContent = '불러오는 중...'; btn.disabled = true; }
-    await ensureRoundsDetail(need);
-    scShownCount = need;
-    if (btn) btn.disabled = false;
-    renderScorecards();
-  }
-  setTimeout(() => {
-    const el = document.querySelector(`#scorecardSection .scorecard[data-round="${roundId}"]`);
-    if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
-  }, 90);
 }
 
 // 카드 1장 HTML
@@ -2324,8 +2353,9 @@ async function scSave(){
     const badScore = holes.find(h => h.score !== null && (h.score < -10 || h.score > 10));
     if (badScore){ alert(`+/- 는 -10 ~ +10 사이로 입력해주세요. (${badScore.hole_no}번 홀 확인)`); return; }
     const t = scTotals(holes);
-    totalPar = t.hasPar ? t.par : null;
-    totalScore = (t.score != null) ? t.score : null; // 총타수(파 있을 때만). 없으면 null
+    // 파 미입력 홀은 기본 파4 보정값이 t.par에 반영됨 → total_par/score 항상 저장(드롭다운 정확)
+    totalPar = t.par || null;
+    totalScore = (t.score != null) ? t.score : null;
   }
 
   const btn = document.getElementById('scSaveBtn');
@@ -2397,11 +2427,8 @@ async function scDelete(){
 function bindScorecardEvents(){
   const $ = id => document.getElementById(id);
   $('scAddBtn')?.addEventListener('click', () => openScEdit(null));
-  $('scMoreBtn')?.addEventListener('click', () => {
-    const mode = document.getElementById('scMoreBtn').dataset.mode;
-    if (mode === 'collapse') scCollapse();
-    else scLoadMore();
-  });
+  $('scMoreBtn')?.addEventListener('click', scLoadMore);
+  $('scCollapseBtn')?.addEventListener('click', scCollapse);
   $('scEditClose')?.addEventListener('click', () => $('scEditModal').classList.remove('show'));
   $('scSaveBtn')?.addEventListener('click', scSave);
   $('scDeleteBtn')?.addEventListener('click', scDelete);
@@ -2720,23 +2747,24 @@ function renderHistory(){
 
   const clubLabels = {driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터', wood:'우드'};
 
-  // 더 보기(+10) / 닫기 버튼
+  // 더 보기(+10) + 접기(펼쳐져 있으면 항상 노출)
   const isCollapsed = historyShownCount <= 1;
-  let toggleBtn = '';
+  let moreBtnHtml = '';
   if (historyShownCount < total) {
     const remain = total - historyShownCount;
-    toggleBtn = `
-      <button class="history-toggle-btn" id="historyToggleBtn" data-mode="more">
+    moreBtnHtml = `
+      <button class="history-toggle-btn" id="historyMoreBtn">
         <span>${remain}개 더 보기 (10개씩)</span>
         <span class="history-toggle-icon">▼</span>
       </button>`;
-  } else if (total > 1) {
-    toggleBtn = `
-      <button class="history-toggle-btn expanded" id="historyToggleBtn" data-mode="collapse">
-        <span>닫기</span>
-        <span class="history-toggle-icon">▼</span>
-      </button>`;
   }
+  const collapseBtnHtml = (historyShownCount > 1) ? `
+      <button class="history-toggle-btn expanded" id="historyCollapseBtn">
+        <span>접기</span>
+        <span class="history-toggle-icon">▼</span>
+      </button>` : '';
+  const toggleBtn = (moreBtnHtml || collapseBtnHtml)
+    ? `<div class="history-btn-row">${moreBtnHtml}${collapseBtnHtml}</div>` : '';
 
   // 무료 회원 Pro 안내 박스 (접힌 상태에서만)
   const freeProBox = (!isPro && allLogs.length > 5 && isCollapsed) ? `
@@ -2767,19 +2795,17 @@ function renderHistory(){
     ${freeProBox}
   `;
 
-  const btn = document.getElementById('historyToggleBtn');
-  if (btn) {
-    btn.addEventListener('click', () => {
-      if (btn.dataset.mode === 'collapse') {
-        historyShownCount = 1;
-        renderHistory();
-        document.getElementById('historySection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        historyShownCount = Math.min(historyShownCount + HISTORY_PAGE, total);
-        renderHistory();
-      }
-    });
-  }
+  const moreB = document.getElementById('historyMoreBtn');
+  if (moreB) moreB.addEventListener('click', () => {
+    historyShownCount = Math.min(historyShownCount + HISTORY_PAGE, total);
+    renderHistory();
+  });
+  const collapseB = document.getElementById('historyCollapseBtn');
+  if (collapseB) collapseB.addEventListener('click', () => {
+    historyShownCount = 1;
+    renderHistory();
+    document.getElementById('historySection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 }
 
 // ─── 구독 관리 ───
