@@ -1682,7 +1682,7 @@ async function loadHistory(){
     .select('*')
     .eq('user_id', currentUser.id)
     .order('created_at', { ascending: false })
-    .limit(100);
+    .limit(1000);
   if (error) {
     console.error('[history]', error);
     allLogs = [];
@@ -1777,11 +1777,11 @@ function renderStats(){
       sub: matchPcts.length > 0 ? `${matchPcts.length}회 기준` : '분석 시작 전'
     },
     {
-      icon: 'CARD',
-      label: '스코어카드',
-      value: allRounds.length || '—',
-      unit: allRounds.length ? '장' : '',
-      sub: allRounds.length ? '탭하면 기록 보기 →' : '첫 라운드 기록하기 →',
+      icon: 'SCORE RECORD',
+      label: '라운딩 기록',
+      value: roundsMeta.length || '—',
+      unit: roundsMeta.length ? '장' : '',
+      sub: roundsMeta.length ? '탭하면 기록 보기 →' : '첫 라운드 기록하기 →',
       clickable: true,
       action: 'scorecard'
     },
@@ -1839,7 +1839,16 @@ let scHoleCount = 18;                 // 9 | 18
 let scLinkedVideos = [];              // [{analysis_id, pro_name, match_pct, created_at, video_path}]
 let scExpanded = false;               // 라운딩 기록 자세히 보기 상태
 
-// ─── 데이터 로딩 ───
+// 페이지네이션 / 지연 로딩 상태
+const SC_PAGE = 10;                   // 더 보기 1회당 추가 장수
+let roundsMeta = [];                  // 전체 라운드 메타(rounds 행만, 홀·영상 조인 X) — 드롭다운·개수·합계용
+const roundsDetail = {};              // round_id -> { holes, videos } (필요한 만큼만 로드)
+let scShownCount = 1;                 // 현재 화면에 그린 카드 수 (기본 1)
+
+// allRounds = 화면에 그릴 라운드 배열(메타 + 로드된 상세 병합). renderScorecards에서 구성.
+// 호환 유지를 위해 빈 배열로 둠.
+
+// ─── 데이터 로딩: 메타만 ───
 async function loadRounds(){
   try {
     const { data: rounds, error } = await supabaseClient
@@ -1848,38 +1857,49 @@ async function loadRounds(){
       .eq('user_id', currentUser.id)
       .order('played_on', { ascending: false })
       .order('created_at', { ascending: false });
-    if (error) { console.error('[rounds]', error); allRounds = []; return; }
-    const list = rounds || [];
-    if (list.length === 0) { allRounds = []; return; }
+    if (error) { console.error('[rounds]', error); roundsMeta = []; return; }
+    roundsMeta = rounds || [];
+    // 상태 초기화
+    Object.keys(roundsDetail).forEach(k => delete roundsDetail[k]);
+    scShownCount = 1;
+    scExpanded = false;
+    // 첫 1장 상세 미리 로드
+    await ensureRoundsDetail(scShownCount);
+  } catch (e) {
+    console.error('[loadRounds]', e);
+    roundsMeta = [];
+  }
+}
 
-    const ids = list.map(r => r.id);
-    // 홀 + 영상 연결을 한 번씩만 조회 후 그룹핑
+// 앞에서부터 n장의 홀·영상 상세를 (아직 안 받은 것만) 로드
+async function ensureRoundsDetail(n){
+  const need = roundsMeta.slice(0, n).filter(r => !roundsDetail[r.id]).map(r => r.id);
+  if (!need.length) return;
+  try {
     const [{ data: holes }, { data: links }] = await Promise.all([
-      supabaseClient.from('round_holes').select('*').in('round_id', ids),
-      supabaseClient.from('round_videos').select('*').in('round_id', ids)
+      supabaseClient.from('round_holes').select('*').in('round_id', need),
+      supabaseClient.from('round_videos').select('*').in('round_id', need)
     ]);
-
-    // 연결된 영상의 메타는 allLogs(이미 로드됨)에서 매핑 — 추가 쿼리 없음
     const logById = {};
     (allLogs || []).forEach(l => { logById[l.id] = l; });
-
     const holesByRound = {};
     (holes || []).forEach(h => { (holesByRound[h.round_id] ||= []).push(h); });
     const linksByRound = {};
     (links || []).forEach(v => { (linksByRound[v.round_id] ||= []).push(v); });
-
-    allRounds = list.map(r => {
-      const hs = (holesByRound[r.id] || []).sort((a,b) => a.hole_no - b.hole_no);
-      // 영상 연결: analysis_logs에 존재하는 것만(=삭제 안전망. 없으면 칩 숨김)
-      const vids = (linksByRound[r.id] || [])
-        .map(v => logById[v.analysis_id])
-        .filter(Boolean);
-      return { ...r, holes: hs, videos: vids };
+    need.forEach(id => {
+      const hs = (holesByRound[id] || []).sort((a,b) => a.hole_no - b.hole_no);
+      const vids = (linksByRound[id] || []).map(v => logById[v.analysis_id]).filter(Boolean);
+      roundsDetail[id] = { holes: hs, videos: vids };
     });
   } catch (e) {
-    console.error('[loadRounds]', e);
-    allRounds = [];
+    console.error('[ensureRoundsDetail]', e);
   }
+}
+
+// 메타 + 상세 병합한 표시용 라운드 (상세 없으면 holes/videos 빈 배열, 합계는 저장값 사용)
+function scRoundView(meta){
+  const d = roundsDetail[meta.id];
+  return { ...meta, holes: d ? d.holes : [], videos: d ? d.videos : [] };
 }
 
 // ─── 합계 계산 ───
@@ -1915,9 +1935,12 @@ function renderScorecards(){
   const navList = document.getElementById('scNavList');
   if (!section) return;
 
-  if (!allRounds.length) {
+  const total = roundsMeta.length;
+
+  if (!total) {
     meta.textContent = '';
     nav.style.display = 'none';
+    document.getElementById('scMoreBtn').style.display = 'none';
     section.innerHTML = `
       <div class="empty">
         <div class="empty-icon">⛳</div>
@@ -1929,27 +1952,33 @@ function renderScorecards(){
     return;
   }
 
-  meta.innerHTML = `<span>${allRounds.length}장</span>`;
+  meta.innerHTML = `<span>${total}장</span>`;
 
-  // 드롭다운 (날짜 · 코스 · 타수) — 전체 항목 노출(점프용)
+  // 드롭다운 (날짜 · 코스 · 타수) — 전체 메타 노출(점프용). 합계는 저장값으로 표시.
   nav.style.display = 'block';
-  navList.innerHTML = allRounds.map(r => {
-    const t = scRoundTotals(r);
+  navList.innerHTML = roundsMeta.map(r => {
+    const t = scRoundTotals(scRoundView(r));
     return `<div class="sc-nav-item" data-round="${r.id}">
       <span>${scFmtDate(r.played_on)} · ${escapeHtml(r.course_name)}</span>
       <span class="sc-nav-score">${t.score != null ? `${t.score} (${scDiffLabel(t.diff)})` : (t.hasScore ? scDiffLabel(t.diff) : '—')}</span>
     </div>`;
   }).join('');
 
-  // 카드 목록 — 기본 최근 1장, 자세히 보기 시 전체
-  const shown = scExpanded ? allRounds : allRounds.slice(0, 1);
-  section.innerHTML = `<div class="sc-list">${shown.map(scCardHtml).join('')}</div>`;
+  // 카드 목록 — scShownCount 만큼만 렌더 (상세 이미 로드됨)
+  const shownMeta = roundsMeta.slice(0, scShownCount);
+  section.innerHTML = `<div class="sc-list">${shownMeta.map(r => scCardHtml(scRoundView(r))).join('')}</div>`;
 
-  // 자세히 보기 / 닫기 버튼 (2장 이상일 때만)
+  // 더 보기(+10) / 닫기 버튼
   const moreBtn = document.getElementById('scMoreBtn');
-  if (allRounds.length > 1) {
+  if (scShownCount < total) {
+    const remain = total - scShownCount;
     moreBtn.style.display = 'block';
-    moreBtn.textContent = scExpanded ? '닫기 ▲' : `전체 ${allRounds.length}장 자세히 보기 ▼`;
+    moreBtn.textContent = `${remain}장 더 보기 ▼ (10장씩)`;
+    moreBtn.dataset.mode = 'more';
+  } else if (total > 1) {
+    moreBtn.style.display = 'block';
+    moreBtn.textContent = '닫기 ▲';
+    moreBtn.dataset.mode = 'collapse';
   } else {
     moreBtn.style.display = 'none';
   }
@@ -1958,19 +1987,51 @@ function renderScorecards(){
   section.querySelectorAll('.scorecard').forEach(card => {
     card.addEventListener('click', () => openScEdit(card.dataset.round));
   });
-  // 드롭다운 항목 클릭 → 해당 카드로 점프 (접혀있으면 펼친 뒤 점프)
+  // 드롭다운 항목 클릭 → 해당 라운드까지 로드/펼친 뒤 점프
   navList.querySelectorAll('.sc-nav-item').forEach(item => {
     item.addEventListener('click', () => {
       navList.style.display = 'none';
       document.getElementById('scNavChev').classList.remove('open');
-      const jump = () => {
-        const el = document.querySelector(`#scorecardSection .scorecard[data-round="${item.dataset.round}"]`);
-        if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
-      };
-      if (!scExpanded) { scExpanded = true; renderScorecards(); setTimeout(jump, 80); }
-      else jump();
+      scJumpToRound(item.dataset.round);
     });
   });
+}
+
+// 더 보기: 다음 10장 상세 로드 후 렌더
+async function scLoadMore(){
+  const next = Math.min(scShownCount + SC_PAGE, roundsMeta.length);
+  const btn = document.getElementById('scMoreBtn');
+  if (btn) { btn.textContent = '불러오는 중...'; btn.disabled = true; }
+  await ensureRoundsDetail(next);
+  scShownCount = next;
+  if (btn) btn.disabled = false;
+  renderScorecards();
+}
+
+// 접기: 다시 1장으로
+function scCollapse(){
+  scShownCount = 1;
+  renderScorecards();
+  document.getElementById('scorecardSectionWrap')?.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+// 드롭다운 점프: 대상 라운드가 보이도록 필요한 만큼 로드/확장 후 스크롤
+async function scJumpToRound(roundId){
+  const idx = roundsMeta.findIndex(r => r.id === roundId);
+  if (idx < 0) return;
+  if (idx >= scShownCount){
+    const need = idx + 1;
+    const btn = document.getElementById('scMoreBtn');
+    if (btn) { btn.textContent = '불러오는 중...'; btn.disabled = true; }
+    await ensureRoundsDetail(need);
+    scShownCount = need;
+    if (btn) btn.disabled = false;
+    renderScorecards();
+  }
+  setTimeout(() => {
+    const el = document.querySelector(`#scorecardSection .scorecard[data-round="${roundId}"]`);
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 90);
 }
 
 // 카드 1장 HTML
@@ -2060,7 +2121,8 @@ function scFmtDate(d){
 function openScEdit(roundId){
   scEditingRoundId = roundId || null;
   const modal = document.getElementById('scEditModal');
-  const round = roundId ? allRounds.find(r => r.id === roundId) : null;
+  const metaRow = roundId ? roundsMeta.find(r => r.id === roundId) : null;
+  const round = metaRow ? scRoundView(metaRow) : null;
 
   document.getElementById('scEditTitle').textContent = round ? '⛳ 라운드 편집' : '⛳ 새 라운드';
   document.getElementById('scDeleteBtn').style.display = round ? 'inline-block' : 'none';
@@ -2336,9 +2398,9 @@ function bindScorecardEvents(){
   const $ = id => document.getElementById(id);
   $('scAddBtn')?.addEventListener('click', () => openScEdit(null));
   $('scMoreBtn')?.addEventListener('click', () => {
-    scExpanded = !scExpanded;
-    renderScorecards();
-    if (!scExpanded) document.getElementById('scorecardSectionWrap')?.scrollIntoView({ behavior:'smooth', block:'start' });
+    const mode = document.getElementById('scMoreBtn').dataset.mode;
+    if (mode === 'collapse') scCollapse();
+    else scLoadMore();
   });
   $('scEditClose')?.addEventListener('click', () => $('scEditModal').classList.remove('show'));
   $('scSaveBtn')?.addEventListener('click', scSave);
@@ -2629,25 +2691,24 @@ async function loadVideoThumb(thumbEl, videoPath){
 }
 
 // ─── 히스토리 ───
-let historyExpanded = false;
-const HISTORY_DEFAULT_LIMIT = 1;
+const HISTORY_PAGE = 10;
+let historyShownCount = 1;   // 기본 1개, 더 보기마다 +10
 
 function renderHistory(){
   const section = document.getElementById('historySection');
   const meta = document.getElementById('historyMeta');
 
-  // 무료/Pro 둘 다 동일 로직: 기본 10개 표시 → 더보기 토글
-  // 단, 무료 회원은 전체가 5개 초과여도 5개까지만 (영구 보관은 Pro 특권)
+  // 무료 회원은 최근 5개까지만 접근(영구 보관은 Pro 특권)
   const accessibleLogs = isPro ? allLogs : allLogs.slice(0, 5);
   const total = accessibleLogs.length;
-  const limit = historyExpanded ? total : Math.min(HISTORY_DEFAULT_LIMIT, total);
-  const items = accessibleLogs.slice(0, limit);
+  if (historyShownCount > total) historyShownCount = Math.max(1, total);
+  const items = accessibleLogs.slice(0, historyShownCount);
 
   meta.textContent = isPro
     ? `전체 ${total}개`
     : `최근 5개 (Pro는 영구 보관)`;
 
-  if (items.length === 0) {
+  if (total === 0) {
     section.innerHTML = `
       <div class="empty">
         <div class="empty-icon">📖</div>
@@ -2659,17 +2720,26 @@ function renderHistory(){
 
   const clubLabels = {driver:'드라이버', iron:'아이언', wedge:'웨지', putter:'퍼터', wood:'우드'};
 
-  // 펼치기/접기 버튼 표시 조건
-  const hasMore = total > HISTORY_DEFAULT_LIMIT;
-  const toggleBtn = hasMore ? `
-    <button class="history-toggle-btn ${historyExpanded ? 'expanded' : ''}" id="historyToggleBtn">
-      <span>${historyExpanded ? '접기' : `더 보기 (${total - HISTORY_DEFAULT_LIMIT}개 더)`}</span>
-      <span class="history-toggle-icon">▼</span>
-    </button>` : '';
+  // 더 보기(+10) / 닫기 버튼
+  const isCollapsed = historyShownCount <= 1;
+  let toggleBtn = '';
+  if (historyShownCount < total) {
+    const remain = total - historyShownCount;
+    toggleBtn = `
+      <button class="history-toggle-btn" id="historyToggleBtn" data-mode="more">
+        <span>${remain}개 더 보기 (10개씩)</span>
+        <span class="history-toggle-icon">▼</span>
+      </button>`;
+  } else if (total > 1) {
+    toggleBtn = `
+      <button class="history-toggle-btn expanded" id="historyToggleBtn" data-mode="collapse">
+        <span>닫기</span>
+        <span class="history-toggle-icon">▼</span>
+      </button>`;
+  }
 
-  // 무료 회원 Pro 안내 박스 (전체가 5개 초과일 가능성 — Pro 영구보관 가치 어필)
-  // 단, 펼침 상태에선 안 보이게 (이미 다 봤으니 굳이)
-  const freeProBox = (!isPro && allLogs.length > 5 && !historyExpanded) ? `
+  // 무료 회원 Pro 안내 박스 (접힌 상태에서만)
+  const freeProBox = (!isPro && allLogs.length > 5 && isCollapsed) ? `
     <div style="margin-top:14px;padding:14px;background:var(--bg-card);border:1px dashed var(--border);border-radius:10px;text-align:center">
       <p style="font-size:.82rem;color:var(--text-dim);margin-bottom:8px;line-height:1.6">
         <strong style="color:var(--gold)">Pro 회원</strong>이 되면<br>
@@ -2697,15 +2767,16 @@ function renderHistory(){
     ${freeProBox}
   `;
 
-  // 토글 버튼 이벤트
   const btn = document.getElementById('historyToggleBtn');
   if (btn) {
     btn.addEventListener('click', () => {
-      historyExpanded = !historyExpanded;
-      renderHistory();
-      // 접을 때는 섹션 시작점으로 부드럽게 스크롤
-      if (!historyExpanded) {
+      if (btn.dataset.mode === 'collapse') {
+        historyShownCount = 1;
+        renderHistory();
         document.getElementById('historySection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        historyShownCount = Math.min(historyShownCount + HISTORY_PAGE, total);
+        renderHistory();
       }
     });
   }
