@@ -1076,6 +1076,9 @@
   .sc-add-btn{width:100%;margin-top:18px;background:transparent;border:1.5px dashed #00461F;color:#00461F;
     border-radius:8px;padding:13px;font-family:inherit;font-size:.9rem;cursor:pointer;transition:background .15s}
   .sc-add-btn:hover{background:#EEF4EF}
+  .sc-more-btn{display:block;margin:14px auto 0;background:transparent;border:none;color:var(--gold);
+    font-family:inherit;font-size:.85rem;cursor:pointer;padding:6px 14px}
+  .sc-more-btn:hover{text-decoration:underline}
 
   /* 편집 모달 */
   .sc-form-row{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
@@ -1305,6 +1308,18 @@
     <a href="/subscribe.html" class="btn btn-primary">월 4,900원으로 시작하기</a>
   </div>
 
+  <!-- 내 영상 갤러리 (즐겨찾기만) -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title"><span class="gold-bar"></span>❤️ 즐겨찾기 영상<span id="compareBtnSlot"></span></h2>
+      <span class="section-meta" id="videoMeta"></span>
+    </div>
+    <div id="videoSection">
+      <div class="loading">불러오는 중...</div>
+    </div>
+    <button type="button" class="sc-more-btn" id="videoMoreBtn" style="display:none"></button>
+  </div>
+
   <!-- 라운딩 기록 (스코어카드) -->
   <div class="section" id="scorecardSectionWrap">
     <div class="section-header">
@@ -1322,18 +1337,8 @@
     <div id="scorecardSection">
       <div class="loading">불러오는 중...</div>
     </div>
+    <button type="button" class="sc-more-btn" id="scMoreBtn" style="display:none"></button>
     <button type="button" class="sc-add-btn" id="scAddBtn">+ 새 라운드 기록하기</button>
-  </div>
-
-  <!-- 내 영상 갤러리 (즐겨찾기만) -->
-  <div class="section">
-    <div class="section-header">
-      <h2 class="section-title"><span class="gold-bar"></span>❤️ 즐겨찾기 영상<span id="compareBtnSlot"></span></h2>
-      <span class="section-meta" id="videoMeta"></span>
-    </div>
-    <div id="videoSection">
-      <div class="loading">불러오는 중...</div>
-    </div>
   </div>
 
   <!-- 분석 히스토리 -->
@@ -1562,6 +1567,7 @@ let activeSubscription = null;
 let isPro = false;
 let allLogs = [];
 let allRounds = [];   // 라운딩 기록 (rounds + holes + videos)
+let videoExpanded = false;  // 즐겨찾기 영상 자세히 보기 상태
 let editingLogId = null;
 
 // ─── 비로그인 사용자 안내 화면 ───
@@ -1831,6 +1837,7 @@ function renderStats(){
 let scEditingRoundId = null;          // null = 새 라운드, uuid = 편집
 let scHoleCount = 18;                 // 9 | 18
 let scLinkedVideos = [];              // [{analysis_id, pro_name, match_pct, created_at, video_path}]
+let scExpanded = false;               // 라운딩 기록 자세히 보기 상태
 
 // ─── 데이터 로딩 ───
 async function loadRounds(){
@@ -1924,7 +1931,7 @@ function renderScorecards(){
 
   meta.innerHTML = `<span>${allRounds.length}장</span>`;
 
-  // 드롭다운 (날짜 · 코스 · 타수)
+  // 드롭다운 (날짜 · 코스 · 타수) — 전체 항목 노출(점프용)
   nav.style.display = 'block';
   navList.innerHTML = allRounds.map(r => {
     const t = scRoundTotals(r);
@@ -1934,21 +1941,34 @@ function renderScorecards(){
     </div>`;
   }).join('');
 
-  // 카드 목록
-  section.innerHTML = `<div class="sc-list">${allRounds.map(scCardHtml).join('')}</div>`;
+  // 카드 목록 — 기본 최근 1장, 자세히 보기 시 전체
+  const shown = scExpanded ? allRounds : allRounds.slice(0, 1);
+  section.innerHTML = `<div class="sc-list">${shown.map(scCardHtml).join('')}</div>`;
+
+  // 자세히 보기 / 닫기 버튼 (2장 이상일 때만)
+  const moreBtn = document.getElementById('scMoreBtn');
+  if (allRounds.length > 1) {
+    moreBtn.style.display = 'block';
+    moreBtn.textContent = scExpanded ? '닫기 ▲' : `전체 ${allRounds.length}장 자세히 보기 ▼`;
+  } else {
+    moreBtn.style.display = 'none';
+  }
 
   // 카드 클릭 → 편집
   section.querySelectorAll('.scorecard').forEach(card => {
     card.addEventListener('click', () => openScEdit(card.dataset.round));
   });
-  // 드롭다운 항목 클릭 → 해당 카드로 점프
+  // 드롭다운 항목 클릭 → 해당 카드로 점프 (접혀있으면 펼친 뒤 점프)
   navList.querySelectorAll('.sc-nav-item').forEach(item => {
     item.addEventListener('click', () => {
-      const el = section.querySelector(`.scorecard[data-round="${item.dataset.round}"]`);
-      if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
-      // 닫기
       navList.style.display = 'none';
       document.getElementById('scNavChev').classList.remove('open');
+      const jump = () => {
+        const el = document.querySelector(`#scorecardSection .scorecard[data-round="${item.dataset.round}"]`);
+        if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+      };
+      if (!scExpanded) { scExpanded = true; renderScorecards(); setTimeout(jump, 80); }
+      else jump();
     });
   });
 }
@@ -2315,6 +2335,11 @@ async function scDelete(){
 function bindScorecardEvents(){
   const $ = id => document.getElementById(id);
   $('scAddBtn')?.addEventListener('click', () => openScEdit(null));
+  $('scMoreBtn')?.addEventListener('click', () => {
+    scExpanded = !scExpanded;
+    renderScorecards();
+    if (!scExpanded) document.getElementById('scorecardSectionWrap')?.scrollIntoView({ behavior:'smooth', block:'start' });
+  });
   $('scEditClose')?.addEventListener('click', () => $('scEditModal').classList.remove('show'));
   $('scSaveBtn')?.addEventListener('click', scSave);
   $('scDeleteBtn')?.addEventListener('click', scDelete);
@@ -2379,6 +2404,7 @@ function renderVideoGallery(){
     if (ftitle) ftitle.innerHTML = `<span class="gold-bar"></span>🎬 내 스윙 영상`;
     const freeVideoLogs = allLogs.filter(l => l.video_path);
     meta.innerHTML = `<span>${freeVideoLogs.length} / 1</span>`;
+    const fmore = document.getElementById('videoMoreBtn'); if (fmore) fmore.style.display = 'none';
     // 무료회원은 비교 불가(영상 1개) → 제목 옆 비교 버튼 숨김
     const fslot = document.getElementById('compareBtnSlot');
     if (fslot) fslot.innerHTML = '';
@@ -2446,6 +2472,7 @@ function renderVideoGallery(){
 
   // 즐겨찾기가 하나도 없을 때
   if (favoriteVideoLogs.length === 0) {
+    const m0 = document.getElementById('videoMoreBtn'); if (m0) m0.style.display = 'none';
     section.innerHTML = `
       <div class="empty">
         <div class="empty-icon">❤️</div>
@@ -2463,7 +2490,7 @@ function renderVideoGallery(){
 
   section.innerHTML = `
     <div class="video-grid">
-      ${favoriteVideoLogs.map(l => {
+      ${(videoExpanded ? favoriteVideoLogs : favoriteVideoLogs.slice(0, 4)).map(l => {
         const memo = (l.result_json && l.result_json.memo) || '';
         const hasMemo = memo.trim().length > 0;
         const memoPreview = hasMemo ? escapeHtml(memo.replace(/\n/g, ' ').slice(0, 60)) : '';
@@ -2495,9 +2522,18 @@ function renderVideoGallery(){
     const videoPath = card.dataset.videoPath;
     if (videoPath && thumbEl) loadVideoThumb(thumbEl, videoPath);
   });
-}
 
-// ─── 전체 영상 모달 (영상 저장 카드 클릭 시 열림) ───
+  // 자세히 보기 / 닫기 (즐겨찾기 4개 초과일 때만)
+  const vmore = document.getElementById('videoMoreBtn');
+  if (vmore) {
+    if (favoriteVideoLogs.length > 4) {
+      vmore.style.display = 'block';
+      vmore.textContent = videoExpanded ? '닫기 ▲' : `전체 ${favoriteVideoLogs.length}개 자세히 보기 ▼`;
+    } else {
+      vmore.style.display = 'none';
+    }
+  }
+}
 function openAllVideosModal(){
   const allVideoLogs = allLogs.filter(l => l.video_path);
 
@@ -2528,11 +2564,10 @@ function openAllVideosModal(){
       </div>`;
   }).join('');
 
-  // 미니 카드 클릭 → 메모 모달 + 썸네일 비동기 로드
+  // 미니 카드 클릭 → 메모 모달 (전체목록 모달은 닫지 않고 그 위에 띄움 → 닫으면 목록으로 복귀)
   grid.querySelectorAll('.video-card-mini').forEach(card => {
     card.addEventListener('click', () => {
-      closeAllVideosModal();
-      setTimeout(() => openMemoModal(card.dataset.id), 100);
+      openMemoModal(card.dataset.id);
     });
     const thumbEl = card.querySelector('.video-thumb-mini');
     const videoPath = card.dataset.videoPath;
@@ -2595,7 +2630,7 @@ async function loadVideoThumb(thumbEl, videoPath){
 
 // ─── 히스토리 ───
 let historyExpanded = false;
-const HISTORY_DEFAULT_LIMIT = 10;
+const HISTORY_DEFAULT_LIMIT = 1;
 
 function renderHistory(){
   const section = document.getElementById('historySection');
@@ -2824,6 +2859,12 @@ function renderSubscription(){
 // ─── 이벤트 바인딩 ───
 function bindEvents(){
   bindScorecardEvents();
+  // 즐겨찾기 영상 자세히 보기 / 닫기
+  document.getElementById('videoMoreBtn')?.addEventListener('click', () => {
+    videoExpanded = !videoExpanded;
+    renderVideoGallery();
+    if (!videoExpanded) document.getElementById('videoMoreBtn')?.closest('.section')?.scrollIntoView({ behavior:'smooth', block:'start' });
+  });
   // 로그아웃
   document.getElementById('logoutLink').addEventListener('click', async (e) => {
     e.preventDefault();
@@ -2862,8 +2903,9 @@ function bindEvents(){
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (document.getElementById('memoModal').classList.contains('show')) closeMemoModal();
-      if (document.getElementById('allVideosModal').classList.contains('show')) closeAllVideosModal();
+      // 최상단 모달부터 하나씩 닫기 (메모 → 전체목록). 메모 닫으면 목록은 유지.
+      if (document.getElementById('memoModal').classList.contains('show')) { closeMemoModal(); return; }
+      if (document.getElementById('allVideosModal').classList.contains('show')) { closeAllVideosModal(); return; }
     }
   });
 
