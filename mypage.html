@@ -1118,6 +1118,21 @@
   .sc-mini.is-par{color:var(--text-faint)}
   .sc-mini.is-score{font-family:'Caveat','Nanum Pen Script',cursive;font-size:1.05rem}
 
+  /* 📷 스코어 사진 자동 입력 (OCR) */
+  .sc-ocr-row{margin:4px 0 14px}
+  .sc-ocr-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    background:#FAFAF7;border:1px dashed #00461F;border-radius:8px;padding:13px;
+    font-family:inherit;font-size:.86rem;color:#00461F;cursor:pointer;transition:all .18s}
+  .sc-ocr-btn:hover{background:#EEF4EF}
+  .sc-ocr-btn:disabled{opacity:.55;cursor:default}
+  .sc-ocr-ico{font-size:1.05rem}
+  .sc-ocr-hint{font-size:.72rem;color:var(--text-faint);margin:7px 2px 0;line-height:1.45}
+  .sc-ocr-status{font-size:.78rem;margin:9px 2px 0;padding:9px 11px;border-radius:6px;line-height:1.5}
+  .sc-ocr-status.is-loading{background:#EEF4EF;color:#00461F}
+  .sc-ocr-status.is-ok{background:#E8F3EC;color:#1c6b3a}
+  .sc-ocr-status.is-warn{background:#FBF1E3;color:#92591b}
+  .sc-ocr-status.is-err{background:#FBE9E9;color:#9a3434}
+
   .sc-total-bar{display:flex;justify-content:space-between;align-items:center;
     background:#EEF4EF;border-radius:8px;padding:12px 16px;font-size:.85rem;color:#00461F}
   .sc-total-nums strong{font-family:'Caveat','Nanum Pen Script',cursive;font-size:1.25rem;margin:0 2px}
@@ -1408,6 +1423,17 @@
           <button type="button" class="sc-holes-opt" data-holes="0">총 타수만</button>
         </div>
       </div>
+    </div>
+
+    <!-- 📷 스코어 사진 자동 입력 (OCR) -->
+    <div class="sc-ocr-row" id="scOcrRow">
+      <button type="button" class="sc-ocr-btn" id="scOcrBtn">
+        <span class="sc-ocr-ico">📷</span>
+        <span class="sc-ocr-txt">스코어 사진으로 자동 입력</span>
+      </button>
+      <input type="file" id="scOcrFile" accept="image/*" style="display:none">
+      <p class="sc-ocr-hint">스마트스코어 결과 화면 캡처 · 스코어카드 사진 모두 OK. AI가 읽어 채우면 확인 후 저장하세요.</p>
+      <div class="sc-ocr-status" id="scOcrStatus" style="display:none"></div>
     </div>
 
     <div id="scHolesWrap" class="sc-holes-wrap"><!-- JS로 채움 --></div>
@@ -2191,6 +2217,7 @@ function openScEdit(roundId){
   scRenderChips();
 
   scRecalcTotals();
+  if (typeof scOcrSetStatus === 'function') scOcrSetStatus(null); // 이전 OCR 상태 메시지 초기화
   modal.classList.add('show');
 }
 
@@ -2423,6 +2450,112 @@ async function scDelete(){
   }
 }
 
+// ─── 📷 스코어 사진 OCR 자동 입력 ───
+//   사진/스크린샷 1장 → 백엔드 /api/scorecard-ocr → 홀별 par/score 초안 → 그리드 자동채움.
+//   ⚠️ 자동채움일 뿐 자동저장 아님. 사용자가 그리드에서 검수 후 [저장] 눌러야 DB 반영.
+function scOcrSetStatus(kind, msg){
+  const el = document.getElementById('scOcrStatus');
+  if (!el) return;
+  if (!kind){ el.style.display = 'none'; el.className = 'sc-ocr-status'; el.textContent = ''; return; }
+  el.style.display = 'block';
+  el.className = 'sc-ocr-status is-' + kind;
+  el.textContent = msg;
+}
+
+async function scOcrHandleFile(e){
+  const input = e.target;
+  const file = input.files && input.files[0];
+  if (!file) return;
+
+  const btn = document.getElementById('scOcrBtn');
+
+  // 총 타수만 모드면 홀 그리드가 없음 → 18홀 모드로 전환해 채울 자리 마련
+  if (scHoleCount === 0){
+    scHoleCount = 18;
+    document.querySelectorAll('.sc-holes-opt').forEach(b => b.classList.toggle('active', Number(b.dataset.holes) === 18));
+    scRenderHoleGrid({});
+    scApplyMode();
+  }
+
+  if (btn) btn.disabled = true;
+  scOcrSetStatus('loading', '사진을 읽는 중이에요… (5~15초)');
+
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const token = session ? session.access_token : null;
+
+    const fd = new FormData();
+    fd.append('image', file);
+
+    const res = await fetch(BACKEND_URL + '/api/scorecard-ocr', {
+      method: 'POST',
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+      body: fd
+    });
+
+    let data = {};
+    try { data = await res.json(); } catch (_) {}
+
+    if (!res.ok){
+      const m = (data && data.error) ? data.error : '인식에 실패했어요. 다시 시도해주세요.';
+      scOcrSetStatus('err', m);
+      return;
+    }
+
+    const holes = Array.isArray(data.holes) ? data.holes : [];
+    if (!holes.length){
+      scOcrSetStatus('warn', '홀 정보를 읽지 못했어요. 더 밝고 선명한 사진으로 다시 시도하거나 직접 입력해주세요.');
+      return;
+    }
+
+    // 9홀만 읽혔는데 현재 18홀 모드면 그대로 두고(나머지 빈칸), 10홀 이상이면 18홀 보장
+    const maxHole = holes.reduce((m, h) => Math.max(m, h.hole_no || 0), 0);
+    if (maxHole >= 10 && scHoleCount !== 18){
+      scHoleCount = 18;
+      document.querySelectorAll('.sc-holes-opt').forEach(b => b.classList.toggle('active', Number(b.dataset.holes) === 18));
+      scRenderHoleGrid({});
+      scApplyMode();
+    }
+
+    // 그리드 자동채움: 기존 입력 보존하되, OCR이 읽은 값이 있으면 덮어씀
+    const wrap = document.getElementById('scHolesWrap');
+    let filledPar = 0, filledScore = 0;
+    holes.forEach(h => {
+      const n = h.hole_no;
+      if (h.par !== null && h.par !== undefined){
+        const pi = wrap.querySelector(`.sc-mini[data-hole="${n}"][data-kind="par"]`);
+        if (pi){ pi.value = h.par; filledPar++; }
+      }
+      if (h.score !== null && h.score !== undefined){
+        const si = wrap.querySelector(`.sc-mini[data-hole="${n}"][data-kind="score"]`);
+        if (si){ si.value = h.score; filledScore++; }
+      }
+    });
+
+    // 골프장·날짜도 비어있을 때만 채움 (사용자가 이미 적었으면 보존)
+    if (data.course){
+      const cEl = document.getElementById('scCourse');
+      if (cEl && !cEl.value.trim()) cEl.value = data.course;
+    }
+    if (data.date){
+      const dEl = document.getElementById('scDate');
+      if (dEl && /^\d{4}-\d{2}-\d{2}$/.test(data.date)) dEl.value = data.date;
+    }
+
+    scRecalcTotals();
+
+    const conf = (data._meta && data._meta.confidence) || 'low';
+    const confTxt = conf === 'high' ? '' : ' 일부 숫자는 확신이 낮으니';
+    scOcrSetStatus('ok', `✓ ${filledScore}개 홀을 채웠어요.${confTxt} 값이 맞는지 확인하고 저장해주세요.`);
+  } catch (err){
+    console.error('[ScorecardOCR] 프론트 오류:', err);
+    scOcrSetStatus('err', '네트워크 오류로 인식하지 못했어요. 잠시 후 다시 시도해주세요.');
+  } finally {
+    if (btn) btn.disabled = false;
+    input.value = ''; // 같은 파일 다시 선택 가능하도록 초기화
+  }
+}
+
 // ─── 이벤트 바인딩 ───
 function bindScorecardEvents(){
   const $ = id => document.getElementById(id);
@@ -2433,6 +2566,9 @@ function bindScorecardEvents(){
   $('scSaveBtn')?.addEventListener('click', scSave);
   $('scDeleteBtn')?.addEventListener('click', scDelete);
   $('scVideoAddBtn')?.addEventListener('click', openScVideoPicker);
+  // 📷 스코어 사진 OCR: 버튼 → 파일선택창, 파일 선택되면 업로드·인식
+  $('scOcrBtn')?.addEventListener('click', () => $('scOcrFile')?.click());
+  $('scOcrFile')?.addEventListener('change', scOcrHandleFile);
   $('scVideoPickClose')?.addEventListener('click', () => $('scVideoPickModal').classList.remove('show'));
 
   // 총 타수만 입력 → 합계 갱신
